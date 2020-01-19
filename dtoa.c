@@ -109,9 +109,11 @@
  *	all dtoa conversions in single-threaded executions with 8-byte
  *	pointers, PRIVATE_MEM >= 7400 appears to suffice; with 4-byte
  *	pointers, PRIVATE_MEM >= 7112 appears adequate.
- * #define INFNAN_CHECK on IEEE systems to cause strtod to check for
- *	Infinity and NaN (case insensitively).  On some systems (e.g.,
- *	some HP systems), it may be necessary to #define NAN_WORD0
+ * #define NO_INFNAN_CHECK if you do not wish to have INFNAN_CHECK
+ *	#defined automatically on IEEE systems.  On such systems,
+ *	when INFNAN_CHECK is #defined, strtod checks
+ *	for Infinity and NaN (case insensitively).  On some systems
+ *	(e.g., some HP systems), it may be necessary to #define NAN_WORD0
  *	appropriately -- to the most significant word of a quiet NaN.
  *	(On HP Series 700/800 machines, -DNAN_WORD0=0x7ff40000 works.)
  *	When INFNAN_CHECK is #defined and No_Hex_NaN is not #defined,
@@ -207,6 +209,15 @@ static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 #endif
 #ifdef IEEE_8087
 #define IEEE_Arith
+#endif
+
+#ifdef IEEE_Arith
+#ifndef NO_INFNAN_CHECK
+#undef INFNAN_CHECK
+#define INFNAN_CHECK
+#endif
+#else
+#undef INFNAN_CHECK
 #endif
 
 #include "errno.h"
@@ -1423,10 +1434,6 @@ static CONST double tinytens[] = { 1e-16, 1e-32 };
 #endif
 #endif
 
-#ifndef IEEE_Arith
-#undef INFNAN_CHECK
-#endif
-
 #ifdef INFNAN_CHECK
 
 #ifndef NAN_WORD0
@@ -1475,6 +1482,11 @@ hexnan
 	havedig = xshift = 0;
 	udx0 = 1;
 	s = *sp;
+	/* allow optional initial 0x or 0X */
+	while((c = *(CONST unsigned char*)(s+1)) && c <= ' ')
+		++s;
+	if (s[1] == '0' && (s[2] == 'x' || s[2] == 'X'))
+		s += 2;
 	while(c = *(CONST unsigned char*)++s) {
 		if (c >= '0' && c <= '9')
 			c -= '0';
@@ -1489,12 +1501,24 @@ hexnan
 				}
 			continue;
 			}
+#ifdef GDTOA_NON_PEDANTIC_NANCHECK
 		else if (/*(*/ c == ')' && havedig) {
 			*sp = s + 1;
 			break;
 			}
 		else
 			return;	/* invalid form: don't change *sp */
+#else
+		else {
+			do {
+				if (/*(*/ c == ')') {
+					*sp = s + 1;
+					break;
+					}
+				} while(c = *++s);
+			break;
+			}
+#endif
 		havedig = 1;
 		if (xshift) {
 			xshift = 0;

@@ -31,7 +31,7 @@ THIS SOFTWARE.
 extern "C" {
 #endif
 
-extern jmp_buf fpe_jmpbuf;
+jmp_buf fpe_jmpbuf_ASL;
 
 #ifndef Sig_ret_type
 #define Sig_ret_type void
@@ -44,7 +44,7 @@ fpecatch_ASL(int n)
 #endif
 {
 	n = n; /* shut up warning of non-use */
-	longjmp(fpe_jmpbuf, 1);
+	longjmp(fpe_jmpbuf_ASL, 1);
 	}
 
 #ifdef __cplusplus

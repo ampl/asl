@@ -965,7 +965,18 @@ f_OPNUM_ASL(e) expr_n *e;
 #else
 f_OPNUM_ASL(expr_n *e)
 #endif
-{ return e->v; }
+{
+#ifdef _WIN32	/* Work around a Microsoft liner bug... */
+		/* Without the following test, f_OPNUM gets confused */
+		/* with f_OPVARVAL.  Both get mapped to the same address */
+		/* in the r_ops_ASL array defined in fg_read.c. */
+	if (!e) {
+		printf("f_OPNUM(e) has e = 0\n");
+		return 0.;
+		}
+#endif
+	return e->v;
+	}
 
  void
 #ifdef KR_headers

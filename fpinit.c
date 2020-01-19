@@ -22,6 +22,22 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
+#undef ASL_USE_FPINITMT
+#ifdef __powerpc__
+#undef  ASL_NO_FPINITMT
+#define ASL_NO_FPINITMT
+#endif
+
+#ifndef ASL_NO_FPINITMT
+#ifdef _WIN32
+#define ASL_USE_FPINITMT
+#endif /*_WIN32*/
+#endif /*ASL_NO_FPINITMT*/
+
+#ifdef ASL_USE_FPINITMT
+#include "fpinitmt.c"
+#else
+
 int isatty_ASL; /* for use with "sw" under NT */
 
 #ifndef MSpc
@@ -53,6 +69,32 @@ extern "C" {
 #endif
 #undef FP_INIT_DONE
 
+#ifdef __APPLE__
+#if (defined (__i386__) || defined( __x86_64__ ))
+#define _FPU_EXTENDED	0x300
+#define _FPU_DOUBLE	0x200
+#define _FPU_IEEE	0x37f
+#define _FPU_GETCW(cw) __asm__ __volatile__ ("fnstcw %0" : "=m" (*&cw))
+#define _FPU_SETCW(cw) __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw))
+
+ void
+fpinit_ASL(Void)
+{
+	unsigned int __fpu_control;
+#ifdef ASL_FPINIT_KEEP_TRAPBITS
+	_FPU_GETCW(__fpu_control);
+	__fpu_control &= ~_FPU_EXTENDED;	/* clear rounding precision bits */
+	__fpu_control |= _FPU_DOUBLE;		/* set the ones we want set */
+#else
+	__fpu_control = _FPU_IEEE - _FPU_EXTENDED + _FPU_DOUBLE;
+#endif
+	_FPU_SETCW(__fpu_control);
+	}
+#define ASL_NO_FP_INIT
+#define FP_INIT_DONE
+#endif /* __i386 */
+#endif /*APPLE*/
+
 #ifndef ASL_NO_FP_INIT
 
 #ifdef __linux__
@@ -66,6 +108,7 @@ extern "C" {
 #endif
 #endif
 
+
 #ifndef _FPU_SETCW
 #undef  Can_use__setfpucw
 #define Can_use__setfpucw
@@ -77,7 +120,13 @@ fpinit_ASL(Void)
 #ifdef Can_use__setfpucw /* Has __setfpucw gone missing from S.u.S.E. 6.3? */
 	__setfpucw(_FPU_IEEE - _FPU_EXTENDED + _FPU_DOUBLE);
 #else
+#ifdef ASL_FPINIT_KEEP_TRAPBITS
+	_FPU_GETCW(__fpu_control);
+	__fpu_control &= ~_FPU_EXTENDED;	/* clear rounding precision bits */
+	__fpu_control |= _FPU_DOUBLE;		/* set the ones we want set */
+#else
 	__fpu_control = _FPU_IEEE - _FPU_EXTENDED + _FPU_DOUBLE;
+#endif
 	_FPU_SETCW(__fpu_control);
 #endif
 	}
@@ -107,12 +156,21 @@ fpinit_ASL(Void)
 extern int _8087;
 #endif
 #ifndef MCW_EM
+#ifndef _MCW_EM	/* for cygwin with -mno-cygwin */
+#define _MCW_EM 0x0008001F
+#endif
 #define MCW_EM _MCW_EM
 #endif
 #ifndef PC_53
+#ifndef _PC_53
+#define _PC_53 0x00010000
+#endif
 #define PC_53 _PC_53
 #endif
 #ifndef MCW_PC
+#ifndef _MCW_PC
+#define _MCW_PC 0x00030000
+#endif
 #define MCW_PC _MCW_PC
 #endif
 
@@ -166,3 +224,5 @@ fpinit_ASL(Void)
 #ifndef FP_INIT_DONE
 void fpinit_ASL(Void) {}
 #endif
+
+#endif /*ASL_USE_FPINITMT*/

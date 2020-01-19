@@ -1,6 +1,8 @@
 asldate.obj
 atof.obj
 auxinfo.obj
+avldelete.obj
+avltree.obj
 b_search.obj
 basename.obj
 bscanf.obj
@@ -34,7 +36,9 @@ getstub.obj
 htcl.obj
 jac0dim.obj
 jacdim.obj
+jac2dim.obj
 jacinc.obj
+jacinc1.obj
 mach.obj
 mainexit.obj
 mip_pri.obj

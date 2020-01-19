@@ -27,7 +27,7 @@
 # Invoke with "nmake -f makefile.vc" .
 
 CC = cl
-CFLAGS = -nologo -Ot1
+CFLAGS = -nologo -Ot1 -MT
 # For DEC Alpha processors, use
 # CFLAGS = -nologo -QAieee -Ot1 -DNo_Control87
 # The math libraries associated with some (older?) versions of VC++
@@ -64,6 +64,8 @@ a = \
 	asldate.obj \
 	atof.obj \
 	auxinfo.obj \
+	avldelete.obj \
+	avltree.obj \
 	b_search.obj \
 	basename.obj \
 	bscanf.obj \
@@ -96,8 +98,10 @@ a = \
 	getstub.obj \
 	htcl.obj \
 	jac0dim.obj \
+	jac2dim.obj \
 	jacdim.obj \
 	jacinc.obj \
+	jacinc1.obj \
 	mach.obj \
 	mainexit.obj \
 	mip_pri.obj \
@@ -147,11 +151,12 @@ amplsolv.lib: $a
 Aslh = arith.h asl.h funcadd.h stdio1.h
 auxinfo.obj: funcadd.h stdio1.h
 mach.obj: arith.h
-bscanf.obj conscale.obj derprop.obj dynlink.obj func_add.obj\
+avldelete.obj avltree.obj bscanf.obj conscale.obj derprop.obj dynlink.obj func_add.obj\
  funcadd.obj funcadd1.obj funcaddk.obj funcaddr.obj funcadd0.obj g_fmt.obj\
- genrowno.obj jac0dim.obj jacdim.obj jacinc.obj names.obj obj_prec.obj\
- objval_.obj repwhere.obj sigcatch.obj sjac0dim.obj studchk0.obj:\
+ genrowno.obj jac0dim.obj jacdim.obj jac2dim.obj jacinc.obj jacinc1.obj names.obj\
+ obj_prec.obj objval_.obj repwhere.obj sigcatch.obj sjac0dim.obj studchk0.obj:\
  $(Aslh)
+avldelete.obj avltree.obj: avltree.h
 xp1known.obj: asl_pfg.h psinfo.h nlp.h $(Aslh)
 duthes.obj fullhes.obj htcl.obj sphes.obj: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 getstub.obj value.obj writesol.obj wrtsol_.obj: getstub.h $(Aslh)

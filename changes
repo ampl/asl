@@ -1424,3 +1424,217 @@ modifying it for MS VC++ 7.
 20060423
   names.c:  change _slcon to _slogcon (in names for logical constraints
 when no .row file is present).
+
+20061007
+  fg_read.c fgh_read.c pfg_read.c pfghread.c: adjust to handle long
+character strings (>= 80 characters) in arguments to imported
+functions when reading ASCII .nl files ("g" format).  Long strings in
+the default binary ("b") format were already correctly handled.
+  arithchk.c:  when using binary IEEE (P754) arithmetic, emit #defines
+for a quiet NaN (a facility not yet used in the ASL or examples thereof).
+
+20061119
+  fg_read.c fgh_read.c pfg_read.c pfghread.c: only attempt to load
+amplfunc.dll if the .nl file references imported functions.
+  fpintit.c fpinitmt.c: tweaks for cygwin.
+  New files configure and configurehere.  Invoke ./configure to create
+$OBJDIR/amplsolver.a (with OBJDIR = sys.`uname -m`.`uname -s` unless
+otherwise specified).  Variants of amplsolver.a for several systems
+can thus be created in system-specific $OBJDIR directories.  Invoking
+./configurehere creates "makefile" as per former practice.
+  rops.c rops2.c:  for functions such as objval and objgrd that
+take nerror as an argument, set *nerror = 2 when the function but
+not its gradient can be computed.  In this case, if you assign
+
+	want_deriv = 0;
+	x0kind = ASL_first_x;
+
+and repeat the function evaluation, it will succeed (barring subsequent
+detection of another error), but gradient evaluations will not work
+properly.  To restore gradient computations, assign
+
+	want_deriv = 1;
+	x0kind = ASL_first_x;
+
+before any gradient computations.  (For Hessian evaluations to work
+right, want_deriv = 1 must be in effect during the related function
+evaluations.)
+
+20061125
+  README: document ./configure and ./configurehere.
+  configurehere, makefile.u: adjustments for MinGW.
+
+20070124
+  funcadd1.c:  __APPLE__ (for stuff necessary with earlier versions
+of MacOSX -- how early is unclear) changed to Old_APPLE.  Error-message
+glitch (possible fault, depending on the compiler) fixed.
+  fpecatch.c, asl.h:  move definition of fpe_jmpbuf here,
+renamed fpe_jmpbuf_ASL and now declared in asl.h.  (This is mainly of
+interest on the now rarely seen systems that do not use IEEE
+arithmetic.  Examples of use appear in the sample minos and snopt
+drivers.)
+
+20070611
+  configure: correct a comment (omit "and maybe MacOSX").
+  wrtsol_.c: add variant wrsolw_ of wrtsol_ with Fortran signature
+
+	subroutine wrsolw(msg, nlines, x, y, wantsol)
+	integer nlines, wantsol
+	character*(*) msg(nlines)
+	double precision x(*), y(*)
+
+and new final argument wantsol, with value the sum of
+
+	1	for write the .sol file
+	2	for writing x (primal variables) to stdout
+	4	for writing y (dual variables) to stdout
+
+Change wrtsol_ so the Fortran "call wrtsol(msg, nlines, x, y)"
+is the same as "call wrsolw(msg, nlines, x, y, 7)".  (Previously wrtsol
+acted like wrsolw with wantsol == 3 rather than 7.)
+  New source file jacinc1.c adds jacinc1_ for a Fortran-callable variant
+of jacinc(...), with Fortran signature
+
+	subroutine jacinc1(M,N,NO,NZ,JP,JI,X,L,U,Lrhs,Urhs,Inf,Objdir)
+	integer M, N, NO, NZ, JP(N+1), JI(NZ), Objdir(NO)
+	double precision X(N), L(N), U(N), Lrhs(M), Urhs(M), Inf
+
+Compared with jacinc_(), jacinc1_() has two extra arguments, NO
+and Objdir, with (in Fortran syntax, with first subscript == 1)
+Objdir(i) == 0 if objective i is to be minimized and
+Objdir(i) == 1 if objective i is to be maximized, 1 <= i <= NO.
+Also, JP is of type INTEGER rather than INTEGER*2.
+Input arguments M, N, NO, NZ are not currently checked for validity.
+  New source file jac2dim.c adds jac2dim_ for a Fortran callable variant
+of jacdim_ with Fortran signature
+
+	subroutine jac2dim(stub, M, N, NO, NZ, MXROW, MXCOL)
+	integer M, N, NO, NZ, MXROW, MXCOL
+	character*(*) stub
+
+(same signature as jacdim_), which arranges for function, gradient,
+and Hessian evaluations rather than just the function and gradient
+evaluations made available by jacdim.
+  stderr.c: add some #ifdef _WIN32 goo so error messages won't fault
+when the solver-interface library is in a .dll, e.g., when used in a
+MATLAB mex function.
+  rops.c, rops2.c:  make a couple of things (f_OPVARVAL in rops.c,
+f_OPIMPELSE in rops2.c) externally visible (not file static), in an
+attempt to bypass a bug in the linker of Microsoft Visual C++ 8.
+
+20070618
+  fpinitmt.c:  change "#ifdef WATCOM" to "#ifdef oldWATCOM", to avoid
+trouble with the current Open Watcom 1.6.
+  arithchk.c: "invisible" tweaks to banish some compiler warnings.
+  rops2.c:  Fix bug in Hessians that involve tanh.
+
+20070619
+  rops2.c: fix bug in Hessians involveing sinh(x) for x < 0.
+
+20070630
+  configurehere: tweak for Alpha systems, to get CFLAGS right when
+cc == gcc.
+
+20070805
+  sjac0dim.c:  add fflush(Stderr) invocation, which matters with MiNGW;
+asldate.c not changed -- this only affects student binaries.
+
+20070809
+  funcadd.h:  supply a missing */ that only matters for a forthcoming
+feature.
+
+20070827
+  pfg_read.c, pfghread.c: fix a fault in Hessian computations involving
+max or min functions of two arguments.
+
+20070905
+  Update netlib URLs and some access details in
+	README
+	donlp2/README
+	examples/README
+	minos551/README.1st
+	nlc/README
+
+20070913
+  dtoa.c, dtoa1.c: make INFNAM_CHECK the default to avoid surprises
+(since the strtod() logic this implies has been in the C99 standard
+for some years now).
+
+20070922
+  xp2known.c:  fix a bug that caused a fault in hvcomp on certain
+(unusual) problems.
+
+20071029
+  jacinc1.c: omit an unused file-static routine.
+  fpinitmt.c: tweak for use with (new makefile variant) makefile.lc.
+  makefile.u: adjust xsum computation to include makefile.lc.
+  makefile.lc: new makefile variant for use with the PC version of
+lcc available from http://www.cs.virginia.edu/~lcc-win32/ .  Note
+that lcc's -O misbehaves on some of the source files.
+
+20071103
+  asl.h, writesol.c:  write_solx_ASL replaced by write_solf_ASL and
+write_solfx_ASL (the former soon to be used in an updated
+cplex/cplex.c, the latter in an eventually forthcoming
+examples/solconv.c).
+
+20071111
+  Add AVL-tree routines (source = avltree.[ch]), for expected later use.
+
+20071118
+  Make AVL-tree routines politically correct w.r.t. const; add
+avldelete.c for AVL_delete(...).
+
+20071122
+  New source file fpsetprec64.s, mentioned in updated makefile.u, for
+use with Solaris and -xarch=generic64 or -xarch=amd64; asldate.c not
+changed.
+
+20071128
+  "Invisible" tweaks to avldelete.c, fg_read.c, pfg_read.c to banish
+warnings of unused variables.
+
+20071201
+  misc.c: add "#ifdef _WIN32" stuff to f_OPNUM_ASL to circumvent a
+Microsoft linker bug (seen under MSVC6 and MSVC8).
+
+20071210
+  configurehere: adjust for Solaris on Intel (x86) processors.
+  fpinit.c: adjust for Linux on PowrPC.
+  asldate.c: not changed.
+
+20071215
+  avltree.c avltree.h:  Adjust to permit use independent of the
+AMPL/solver interace library.
+
+20080101
+  value.c:  Extend C_val so =?  will show the current value, which
+will either be <NULL> (with no quotes) or a string enclosed in double
+quotes, within which " is represented as "", i.e., is doubled.  Allow
+values for C_val to be enclosed in single or double quotes, in which
+case the quoting character can appear within the string if it is
+doubled, so "a funny ""value""" and 'a funny "value"' are treated
+alike.
+
+20080119
+  fpinit.c:  tweak to fix a #define glitch when making arith.h under
+AIX; asldate.c not changed.
+
+20080204
+  avltree.[ch]:  add AVL_Tree_alloc2() for supplying free() (for
+debugging); asldate.c not changed.
+
+20080229
+  con2val.c:  Have jac2dim_ASL call pfgh_read() rather than fgh_read()
+(for consistency with the Fortran wrapper in jac2dim.c).
+
+20080302
+  stderr.c:  add an explict "= 0" to "FILE *Stderr;" to circumvent
+a bug with gcc on Macintosh systems; asldate.c not changed.
+
+20080315
+  dtoa.c: obscure change (to C99 spec) in handling of NaN(...), a
+change unlikely to affect solvers, but asldate.c nonetheless updated.
+
+20080413
+  makefile.u:  add comment about -D_NONSTD_SOURCE for MacOSX.

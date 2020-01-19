@@ -1,4 +1,4 @@
-README	d546f81	4685
+README	10f02af0	4679
 README.gjh	f7831fa4	21107
 amplfun4.c	f5166977	5414
 amplfunc.c	fd078f89	6583
@@ -18,10 +18,10 @@ lin1.c	eb9778a	2275
 lin2.c	fe2df350	2322
 lin3.c	13e37cae	2726
 linrc.c	ffb5438	4508
-makefile.sy	6eee0d4	5769
-makefile.u	e757fc95	7751
-makefile.vc	6c991f6	5491
-makefile.wat	eef2b13c	5362
+makefile.sy	aa6ad36	5759
+makefile.u	b84e6b	7741
+makefile.vc	fd1266e	5481
+makefile.wat	e30cd23f	5352
 mng.c	a9366c3	3574
 mng1.c	c56154e	2598
 mnh.c	eeaa3b61	5409

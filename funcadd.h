@@ -106,23 +106,25 @@ typedef real (ufunc) ANSI((arglist *));
 
  enum FUNCADD_TYPE {			/* bits in "type" arg to addfunc */
 
-		/* The type arg to funcadd should consist of one of the */
+		/* The type arg to addfunc should consist of one of the */
 		/* following values ... */
 
 	FUNCADD_REAL_VALUED = 0,	/* real (double) valued function */
-	FUNCADD_STRING_VALUED = 2,	/* char* valued function */
+	FUNCADD_STRING_VALUED = 2,	/* char* valued function (AMPL only) */
 	FUNCADD_RANDOM_VALUED = 4,	/* real random valued */
 	FUNCADD_012ARGS = 6,		/* Special case: real random valued */
 					/* with 0 <= nargs <= 2 arguments */
 					/* passed directly, rather than in */
-					/* an arglist structure. */
-
-	/* FUNCADD_TUPLE_VALUED = 8, */	/* possible later extension */
+					/* an arglist structure (AMPL only). */
 
 		/* possibly or-ed with the following... */
 
 	FUNCADD_STRING_ARGS = 1,	/* allow string args */
-	FUNCADD_OUTPUT_ARGS = 16	/* allow output args (AMPL only) */
+	FUNCADD_OUTPUT_ARGS = 16,	/* allow output args (AMPL only) */
+	FUNCADD_TUPLE_VALUED = 32,	/* not yet allowed */
+
+		/* internal use */
+	FUNCADD_NO_ARGLIST = 8
 	};
 
 /* If a constraint involves an imported function and presolve fixes all
@@ -145,6 +147,17 @@ typedef void AddFunc ANSI((
 		const char *name,
 		rfunc f,	/* cast f to (rfunc) if it returns char* */
 		int type,	/* see FUNCADD_TYPE above */
+		int nargs,	/* >=  0 ==> exactly that many args
+				 * <= -1 ==> at least -(nargs+1) args
+				 */
+		void *funcinfo,	/* for use by the function (if desired) */
+		AmplExports *ae
+		));
+
+typedef void AddRand ANSI((
+		const char *name,
+		rfunc f,	/* assumed to be a random function */
+		rfunc icdf,	/* inverse CDF */
 		int nargs,	/* >=  0 ==> exactly that many args
 				 * <= -1 ==> at least -(nargs+1) args
 				 */
@@ -230,6 +243,8 @@ AmplExports {
 	/* Items available with ASLdate >= 20020501 start here. */
 	int (*SnprintF) ANSI((char*, size_t, const char*, ...));
 	int (*VsnprintF) ANSI((char*, size_t, const char*, VA_LIST));
+
+	AddRand *Addrand;	/* for random function/inverse CDF pairs */
 	};
 
 extern char *i_option_ASL, *ix_details_ASL[];
@@ -309,6 +324,7 @@ enum {	/* bits in flags field of TableInfo */
 #undef vsnprintf
 #define Stderr (ae->StdErr)
 #define addfunc(a,b,c,d,e) (*ae->Addfunc)(a,b,c,d,e,ae)
+#define addrand(a,b,c,d,e) (*ae->Addrand)(a,b,c,d,e,ae)
 #define printf	(*ae->PrintF)
 #define fprintf (*ae->FprintF)
 #define snprintf (*ae->SnprintF)

@@ -173,5 +173,5 @@ jac2dim_ASL(ASL *asl, char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 	if (!nl)
 		return ASL_readerr_nofile;
 	X0 = (real *)M1alloc(n_var*sizeof(real));
-	return fgh_read_ASL(asl, nl, ASL_return_read_err);
+	return pfgh_read_ASL(asl, nl, ASL_return_read_err);
 	}

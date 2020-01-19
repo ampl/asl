@@ -83,6 +83,7 @@ typedef Long ftnlen;
 #endif
 #include "setjmp.h"
 
+ typedef size_t (*Fwrite) ANSI((const void*, size_t, size_t, FILE*));
  typedef struct {jmp_buf jb;} Jmp_buf;
  typedef struct ASL ASL;
  typedef struct Option_Info Option_Info;
@@ -674,6 +675,7 @@ NewVCO {
 #define edag_peek	edag_peek_ASL
 #define edagread_one	edag_one_ASL
 #define fpecatch	fpecatch_ASL
+#define fpe_jmpbuf	fpe_jmpbuf_ASL
 #define func_add	func_add_ASL
 #define func_lookup	func_lookup_ASL
 #define g_fmt		g_fmt_ASL
@@ -785,6 +787,9 @@ enum ASL_writer_error_codes {
 #define f_OPNUM f_OPNUM_ASL
 #undef basename
 #define basename basename_ASL
+#ifndef Sig_ret_type
+#define Sig_ret_type void
+#endif
 
  extern ASL *ASL_alloc ANSI((int));
  extern void ASL_free ANSI((ASL**));
@@ -860,6 +865,8 @@ enum ASL_writer_error_codes {
 		fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len));
  extern void jacval_ ANSI((fint *M, fint *N, fint *NZ, real *X,
 			real *JAC, fint *nerror));
+ extern Sig_ret_type fpecatch ANSI((int));
+ extern jmp_buf fpe_jmpbuf_ASL;
  extern void lagscale_ASL ANSI((ASL*, real, fint*));
  extern char *lcon_name_ASL ANSI((ASL*,int));
  extern void mainexit_ASL ANSI((int));
@@ -904,6 +911,12 @@ enum ASL_writer_error_codes {
  extern void varscale_ASL ANSI((ASL*, int, real, fint*));
  extern void what_prog(VOID);
  extern void write_sol_ASL ANSI((ASL*, char *msg, double *x, double *y, Option_Info*));
+ extern int  write_solf_ASL ANSI((ASL*, char *msg, double *x, double *y, Option_Info *,
+			const char*));
+ extern int  write_solfx_ASL ANSI((ASL*, char *msg, double *x, double *y, Option_Info *,
+			Fwrite, Fwrite, Fwrite, const char*));
+ extern void wrsolw_ ANSI((char *msg, fint *nmsg, real *x, real *y, fint *wantsol,
+			ftnlen msg_len));
  extern void wrtsol_ ANSI((char *msg, fint *nmsg, real *x, real *y,
 			ftnlen msg_len));
  extern real xectim_(VOID);

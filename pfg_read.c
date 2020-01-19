@@ -4338,34 +4338,35 @@ aholread(EdRead *R)
 {
 	int i, k;
 	expr_h *rvh;
-	char *s, *s1;
+	char *s1;
 	FILE *nl = R->nl;
 	Static *S = (Static *)R->S;
 
-	s = read_line(R);
-	k = *s;
+	k = getc(nl);
 	if (k < '1' || k > '9')
 		badline(R);
 	i = k - '0';
-	while((k = *++s) != ':') {
+	while((k = getc(nl)) != ':') {
 		if (k < '0' || k > '9')
 			badline(R);
 		i = 10*i + k - '0';
 		}
 	rvh = (expr_h *)mem_ASL(R->asl, memadj(sizeof(expr_h) + i));
-	for(s1 = rvh->sym; *s1 = *++s; s1++)
+	for(s1 = rvh->sym;;) {
+		if ((k = getc(nl)) < 0) {
+			fprintf(Stderr,
+				 "Premature end of file in aholread, line %ld of %s\n",
+					R->Line, R->asl->i.filename_);
+				exit_ASL(R,1);
+			}
+		if (k == '\n') {
+			R->Line++;
+			if (!i)
+				break;
+			}
 		if (--i < 0)
 			badline(R);
-	if (i) {
-		for(*s1++ = '\n'; --i > 0; ) {
-			k = getc(nl);
-			if (k <= 0)
-				badline(R);
-			if ((*s1++ = k) == '\n')
-				R->Line++;
-			}
-		if (getc(nl) != '\n')
-			badline(R);
+		*s1++ = k;
 		}
 	*s1 = 0;
 	rvh->op = (efunc *)f_OPHOL;
@@ -4698,7 +4699,8 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		size_expr_n = sizeof(expr_n);
 	S->size_exprn = size_expr_n;
 	asl->P.rlist.next = asl->P.rlist.prev = (range*)&asl->P.rlist;
-	func_add(a);
+	if (nfunc)
+		func_add(a);
 	if (binary_nl) {
 		holread = bholread;
 		xscanf = bscanf;
@@ -5091,7 +5093,7 @@ heswork(expr *e)
 
 
 		case Hv_vararg:
-			d = e->L.d;
+			d = ((expr_va*)e)->L.d;
 			i = heswork(d->e);
 			while(e1 = (++d)->e) {
 				j = heswork(e1);

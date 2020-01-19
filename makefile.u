@@ -61,11 +61,17 @@ SHELL=/bin/sh
 # and for AIX versions less than 4.3, remove funcadd1.c from the "a ="
 # assignment below.
 
+# For some versions of MacOSX (e.g., 10.5), it is necessary to add
+# -D_NONSTD_SOURCE to CFLAGS (for reasons that perhaps Apple can explain):
+# CFLAGS = -O2 -D_NONSTD_SOURCE
+
 # For compilation by PGI's pgcc compiler, try using
 # CFLAGS = -fast -Kieee -DNO_fpu_control -pc 64
 
 # For Solaris on the i386 architecture, add fpsetprec.s to the "a ="
-# assignment below.
+# assignment below.  For compilation with Sun's cc and -xarch=generic64
+# or -xarch=amd64, add fpsetprec64.s rather than fpsetprec.s to the "a ="
+# assignment.
 
 # For cygwin, change a.out to a.exe in the rule below for arith.h, and use
 # CC = gcc
@@ -85,6 +91,8 @@ a = \
 	asldate.c \
 	atof.c \
 	auxinfo.c \
+	avldelete.c \
+	avltree.c \
 	b_search.c \
 	basename.c \
 	bscanf.c \
@@ -117,8 +125,10 @@ a = \
 	getstub.c \
 	htcl.c \
 	jac0dim.c \
+	jac2dim.c \
 	jacdim.c \
 	jacinc.c \
+	jacinc1.c \
 	mach.c \
 	mainexit.c \
 	mip_pri.c \
@@ -175,10 +185,11 @@ amplsolver.a: $a
 Aslh = arith.h asl.h funcadd.h stdio1.h
 auxinfo.o: funcadd.h stdio1.h
 mach.o: arith.h
-bscanf.o conscale.o derprop.o dynlink.o func_add.o\
+avldelete.o avltree.o bscanf.o conscale.o derprop.o dynlink.o func_add.o\
  funcadd.o funcadd1.o funcaddk.o funcaddr.o funcadd0.o g_fmt.o\
- genrowno.o jac0dim.o jacdim.o jacinc.o names.o obj_prec.o\
- objval_.o repwhere.o sigcatch.o sjac0dim.o studchk0.o: $(Aslh)
+ genrowno.o jac0dim.o jacdim.o jac2dim.o jacinc.o jacinc1.o names.o\
+ obj_prec.o objval_.o repwhere.o sigcatch.o sjac0dim.o studchk0.o: $(Aslh)
+avldelete.o avltree.o: avltree.h
 xp1known.o: asl_pfg.h psinfo.h nlp.h $(Aslh)
 duthes.o fullhes.o htcl.o sphes.o: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 getstub.o value.o writesol.o wrtsol_.o: getstub.h $(Aslh)
@@ -209,7 +220,7 @@ dtoa1.o: dtoa.c arith.h stdio1.h
 # add such options to CFLAGS.)
 
 arith.h: arithchk.c fpinit.c
-	$(CC) -c $(CFLAGS) fpinit.c
+	$(CC) -c $(CFLAGS) -DASL_NO_FPINITMT fpinit.c
 	$(CC) $(CFLAGS) arithchk.c fpinit.o -lm ||\
 	 $(CC) -DNO_LONG_LONG $(CFLAGS) arithchk.c fpinit.o -lm
 	./a.out >arith.h
@@ -263,10 +274,12 @@ systemprintf:
 	echo '#define NO_STDIO1' >stdio1.h
 	cat stdio1.h0 >>stdio1.h
 
-# make xsum.out to check for transmission errors.
-# This assumes you have the xsum program, whose source
-# you can get by asking netlib@netlib.bell-labs.com to
-#	send xsum.c from f2c/src
+# "make xsum.out" to check for transmission errors.
+# This assumes you have the xsum program, whose source is
+# /netlib/f2c/src/xsum.c, e.g.,
+#	http://www.netlib.org/f2c/src/xsum.c
+# or
+#	http://netlib.sandia.gov/f2c/src/xsum.c.gz
 
 xs0 = \
 	README \
@@ -282,6 +295,9 @@ xs0 = \
 	asldate.c \
 	atof.c \
 	auxinfo.c \
+	avldelete.c \
+	avltree.c \
+	avltree.h \
 	b_search.c \
 	basename.c \
 	bscanf.c \
@@ -292,6 +308,8 @@ xs0 = \
 	con2ival.c \
 	con2val.c \
 	conadj.c \
+	configure \
+	configurehere \
 	conpval.c \
 	conscale.c \
 	conval.c \
@@ -312,6 +330,7 @@ xs0 = \
 	fpinit.c \
 	fpinitmt.c \
 	fpsetprec.s \
+	fpsetprec64.s \
 	fullhes.c \
 	func_add.c \
 	funcadd.c \
@@ -327,12 +346,15 @@ xs0 = \
 	getstub.h \
 	htcl.c \
 	jac0dim.c \
+	jac2dim.c \
 	jac2dim.h \
 	jacdim.c \
 	jacinc.c \
+	jacinc1.c \
 	jacpdim.h \
 	mach.c \
 	mainexit.c \
+	makefile.lc \
 	makefile.sy \
 	makefile.u \
 	makefile.vc \

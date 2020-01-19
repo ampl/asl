@@ -52,7 +52,7 @@ funcadd(AmplExports *ae)
 #include "funcadd.h"
 #include "string.h"
 
-#ifdef __APPLE__	/* Mac OS X */
+#ifdef Old_APPLE	/* formerly __APPLE__, for earlier versions of Mac OS X */
 #define FUNCADD "_funcadd_ASL"
 #endif
 #ifndef FUNCADD
@@ -154,7 +154,7 @@ reg_file(char *name)
 #define dlclose(x) shl_unload((shl_t)x)
 #define NO_DLERROR
 #else
-#ifdef __APPLE__
+#ifdef Old_APPLE
 #include <mach-o/dyld.h>
 typedef struct {
 	NSObjectFileImage ofi;
@@ -192,7 +192,7 @@ typedef void *shl_t;
 #define RTLD_NOW RTLD_LAZY
 #endif
 #endif /* sun */
-#endif /* __APPLE__ */
+#endif /* Old_APPLE */
 #endif /* __hpux */
 #endif /* WIN32 */
 
@@ -214,7 +214,7 @@ dl_open(AmplExports *ae, char *name, int *warned)
 #endif
 	      char *s;
 
-#ifdef __APPLE__
+#ifdef Old_APPLE
 	NS_pair p;
 	NSObjectFileImageReturnCode irc;
 	irc = NSCreateObjectFileImageFromFile(name,&p.ofi);
@@ -247,7 +247,8 @@ dl_open(AmplExports *ae, char *name, int *warned)
 			fprintf(Stderr, "Cannot load library %s.\n", name);
 #else
 			fprintf(Stderr, "Cannot load library %s", name);
-			fprintf(Stderr, (s = dlerror()) ? ":\n%s\n" : ".\n", s);
+			s = dlerror();
+			fprintf(Stderr, s ? ":\n%s\n" : ".\n", s);
 #endif
 			}
 		}

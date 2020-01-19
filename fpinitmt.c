@@ -37,7 +37,13 @@ int isatty_ASL; /* for use with "sw" under NT */
 #include "asl.h"
 
 #undef Need_set_errno
+#undef errno_defined
 #ifdef errno
+#ifndef Keep_errno
+#define errno_defined
+#endif
+#endif /*errno*/
+#ifdef errno_defined
 #ifndef No_set_errno_ASL
 #define Need_set_errno
 #undef errno
@@ -46,9 +52,9 @@ static int set_errno(int);
 #endif /*No_set_errno_ASL*/
 #else
 #define set_errno(x) x
-#endif /*errno*/
+#endif /*errno_defined*/
 
-#ifdef WATCOM
+#ifdef oldWATCOM
 #define matherr_rettype double
 #else
 #ifndef matherr_rettype
@@ -174,12 +180,21 @@ fpinit_ASL(void)
 
 #ifndef No_Control87 /* for DEC Alpha */
 #ifndef MCW_EM
+#ifndef _MCW_EM	/* for cygwin with -mno-cygwin */
+#define _MCW_EM 0x0008001F
+#endif
 #define MCW_EM _MCW_EM
 #endif
 #ifndef PC_53
+#ifndef _PC_53
+#define _PC_53 0x00010000
+#endif
 #define PC_53 _PC_53
 #endif
 #ifndef MCW_PC
+#ifndef _MCW_PC
+#define _MCW_PC 0x00030000
+#endif
 #define MCW_PC _MCW_PC
 #endif
 	_control87(MCW_EM | PC_53, MCW_EM | MCW_PC);
@@ -189,6 +204,10 @@ fpinit_ASL(void)
 		siglisten();
 		}
 	}
+
+#ifdef __MINGW32__
+#define matherr _matherr
+#endif
 
  matherr_rettype
 matherr( struct _exception *e )
