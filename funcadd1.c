@@ -87,7 +87,7 @@ char *ix_details_ASL[] = {
 	"-ix and -i x are treated alike.",
 	0 };
 #define afdll afdll_ASL
-extern int aflibname_ASL ANSI((AmplExports*, char*, char*, int, Funcadd*, int));
+extern int aflibname_ASL ANSI((AmplExports*, char*, char*, int, Funcadd*, int, void(*)(void*), void*));
 extern char *i_option_ASL;
 
 #ifdef __cplusplus
@@ -305,18 +305,14 @@ libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 		 || find_dlsym(fa, h, "funcadd")) {
 			rc = 0;
 #ifdef CLOSE_AT_RESET
-			if (aflibname_ASL(ae,buf,s,ns,fa,0))
+			aflibname_ASL(ae,buf,s,ns,fa,0,dl_close,h);
 				/* -DCLOSE_AT_RESET is for use in shared */
 				/* libraries, such as MATLAB mex functions, */
 				/* that may be loaded and unloaded several */
 				/* times during execution of the program. */
-				at_reset(dl_close, h);
 #else
-			if (aflibname_ASL(ae,buf,s,ns,fa,1))
-				at_exit(dl_close, h);
+			aflibname_ASL(ae,buf,s,ns,fa,1,dl_close,h);
 #endif
-			else
-				dl_close(h);
 			}
 		else {
 			fprintf(stderr, "Could not find funcadd in %s\n", buf);
