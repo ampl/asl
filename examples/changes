@@ -174,3 +174,30 @@ return a vector of zeros for g.
 on linear problems, so "display H;", "display HS;" and "display SH;"
 will not give an error message when SH (the set of structurally
 nonzero Hessian elements) is empty.  Fix a glitch in "gjh -?" output.
+
+20140915
+  amplfunc.c, spamfunc.c: adjust order of includes for MS Windows.
+(Thanks to Victor Zverovich for reporting this issue.)
+
+20141105
+  Add bspline.c (mentioned in a forthcoming paper).
+
+20160215
+  gjh.c:  when constraints are present but no dual values are supplied,
+so all Lagrange multipliers vanish, still provide the sparsity of
+the full Hessian of the Lagrangian (allowing for nonzero Lagrange
+multipliers).  Thanks to Victor Zverovich for reporting this issue.
+Previously only the sparsity of the objective was returned.
+
+20170711
+  Updates for solvers2.tgz.  Minor changes to evalchk.c, makefile.u,
+makefile.vc, qtest.c, ve08.c.
+  bspline.c: add some initial comments.
+  nlcopy.c: add command-line option -b.
+  hs100.nl: regenerate to reflect changed order of sections in .nl
+files introduced 20160519.
+
+20170719
+  Tweak amplfunc.c and spamfunc.c to banish an inane warning.  Add
+comments about Octave to makefile.u.  Withdraw makefile.sy and
+makefile.wat.

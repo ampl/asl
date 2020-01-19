@@ -1,5 +1,5 @@
-/****************************************************************
-Copyright (C) 2009 David M. Gay
+/*******************************************************************
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -7,14 +7,14 @@ provided that the above copyright notice appear in all copies and that
 both that the copyright notice and this permission notice and warranty
 disclaimer appear in supporting documentation.
 
-The author disclaims all warranties with regard to this software,
-including all implied warranties of merchantability and fitness.
-In no event shall the author be liable for any special, indirect or
-consequential damages or any damages whatsoever resulting from loss of
-use, data or profits, whether in an action of contract, negligence or
-other tortious action, arising out of or in connection with the use or
-performance of this software.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 /* Check for numerical errors in evaluating constraints and objectives
  * at the given starting point, setting suffix .numerr to 1 for those
@@ -22,6 +22,16 @@ performance of this software.
  */
 
 #include "getstub.h"
+
+/* cv_index is normally just used internally by ASL routines; the */
+/* following CV_index definition allows this example to work with */
+/* both solvers and solvers2. */
+
+#ifdef _ASL_EW_ /* solvers2 */
+#define CV_index asl->i.Ew0->cv_index
+#else
+#define CV_index asl->i.cv_index_
+#endif
 
  static SufDecl
 suftab[] = {
@@ -70,7 +80,7 @@ main(int argc, char **argv)
 	if (nc)
 		suf_iput("numerr", ASL_Sufkind_con, z);
 	bad = nbad = nbadc = nbadcomm = nbado = 0;
-	asl->p.Xknown(asl, x, &bad);
+	xknowne(x, &bad);
 	if (bad) {
 		nbadcomm = 1;
 		nbad = -1;
@@ -79,7 +89,7 @@ main(int argc, char **argv)
 			suf_iput("numerr", ASL_Sufkind_obj, z);
 			z += no;
 			}
-		if (i = cv_index) {
+		if (i = CV_index) {
 			fmt = fmtnoname;
 			strcpy(stub_end, ".fix");
 			j = 0;

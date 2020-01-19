@@ -1,32 +1,26 @@
-# /****************************************************************
-# Copyright (C) 1997-2000 Lucent Technologies
-# All Rights Reserved
+# /*******************************************************************
+# Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 #
-# Permission to use, copy, modify, and distribute this software and
-# its documentation for any purpose and without fee is hereby
-# granted, provided that the above copyright notice appear in all
-# copies and that both that the copyright notice and this
-# permission notice and warranty disclaimer appear in supporting
-# documentation, and that the name of Lucent or any of its entities
-# not be used in advertising or publicity pertaining to
-# distribution of the software without specific, written prior
-# permission.
+# Permission to use, copy, modify, and distribute this software and its
+# documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright notice appear in all copies and that
+# both that the copyright notice and this permission notice and warranty
+# disclaimer appear in supporting documentation.
 #
-# LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-# IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-# SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-# ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-# THIS SOFTWARE.
-# ****************************************************************/
+# The author and AMPL Optimization, Inc. disclaim all warranties with
+# regard to this software, including all implied warranties of
+# merchantability and fitness.  In no event shall the author be liable
+# for any special, indirect or consequential damages or any damages
+# whatsoever resulting from loss of use, data or profits, whether in an
+# action of contract, negligence or other tortious action, arising out
+# of or in connection with the use or performance of this software.
+# *******************************************************************/
 
-# For compiling examples with Microsoft Visual C++.
+# For compiling solvers/examples with Microsoft Visual C++.
 
 # Invoke with "nmake -f makefile.vc" ,
 # or "copy makefile.vc makefile", possibly edit makefile,
-# and just invoke with "nmake".
+# and then invoke with "nmake".
 
 .SUFFIXES: .c .f .obj
 
@@ -34,29 +28,32 @@ CC = cl
 S = ..
 # "S = .." assumes this directory is solvers/examples .
 
-CFLAGS = -I$S
+CFLAGS = -nologo -Ot1 -I$S
+
+# If things don't run right, you may need to change -Ot1 to -Zi
+# so you can poke around with a debugger.
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*.c
 
 .f.obj:
-	f2cx -A $*.f
+	f2c -A $*.f
 	$(CC) -c $(CFLAGS) $*.c
 	del $*.c
 
 Lmt = libcmt.lib /link /NODEFAULTLIB:libc.lib
 Lf2c = $S\vcf2c.lib
 Lp = cport.lib $(Lf2c)
-# cport.lib = PORT subroutine library.
-# Ask netlib@netlib.org to
-#	send dmngb dmnhb dn2g dn2gb dq7rgs from port
-# to get source for the relevant (small) part of PORT.
-# f2c.lib is for f2c's version of Fortran I/O: we assume
-# cport.lib was compiled by f2c and $CC.
+
+# $(cport) = PORT subroutine library.  For the present examples,
+# it suffices to build cport.lib from a subset of the port/*.f files in
+# http://www.netlib.org/port.tar
+# For your possible convenience, solvers/examples/cport.zip contains some
+# sample makefiles along with the result of running port.tar through f2c.
 
 A = $S\amplsolv.lib
 Af = $S\funcadd0.obj $A
-all1 = lin1.exe lin2.exe lin3.exe linrc.exe dualconv.exe qtest.exe
+all1 = evalchk.exe lin1.exe lin2.exe lin3.exe linrc.exe dualconv.exe nlcopy.exe qtest.exe et.exe
 all = mng1.exe fmng1.exe nl21.exe fnl21.exe mng.exe mnh.exe nl2.exe tn.exe v8.exe ve08.exe
 
 all: $(all1) $(all)
@@ -68,98 +65,113 @@ all: $(all1) $(all)
 
 all1: $(all1)
 
-lin1 = lin1.obj $(Af)
+evalchk = evalchk.c $A
+evalchk.exe: $(evalchk)
+	$(CC) $(CFLAGS) $(evalchk)
+	del evalchk.exp evalchk.lib
+
+lin1 = lin1.c $(Af)
 lin1.exe: $(lin1)
-	$(CC) $(CFLAGS) -Felin1.exe $(lin1) $(Lmt)
+	$(CC) $(CFLAGS) $(lin1) $(Lmt)
+	del lin1.exp lin1.lib lin1.obj
 
-lin2 = lin2.obj $A
+lin2 = lin2.c $A
 lin2.exe: $(lin2)
-	$(CC) $(CFLAGS) -Felin2.exe $(lin2) $(Lmt)
+	$(CC) $(CFLAGS) $(lin2) $(Lmt)
+	del lin2.exp lin2.lib lin2.obj
 
-lin3 = lin3.obj $A
+lin3 = lin3.c $A
 lin3.exe: $(lin3)
-	$(CC) $(CFLAGS) -Felin3.exe $(lin3) $(Lmt)
+	$(CC) $(CFLAGS) $(lin3) $(Lmt)
+	del lin3.exp lin3.lib lin3.obj
 
-linrc = linrc.obj $A
+linrc = linrc.c $A
 linrc.exe: $(linrc)
-	$(CC) $(CFLAGS) -Felinrc.exe $(linrc) $(Lmt)
+	$(CC) $(CFLAGS) $(linrc) $(Lmt)
+	del linrc.exp linrc.lib linrc.obj
 
-mng1 = mng1.obj $(Af)
-
+mng1 = mng1.c $(Af)
 mng1.exe: $(mng1)
-	$(CC) $(CFLAGS) -Femng1.exe $(mng1) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(mng1) $(Lp) $(Lmt)
+	del mng1.exp mng1.lib mng1.obj
 
-nl21 = nl21.obj $(Af)
-
+nl21 = nl21.c $(Af)
 nl21.exe: $(nl21)
-	$(CC) $(CFLAGS) -Fenl21.exe $(nl21) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(nl21) $(Lp) $(Lmt)
+	del nl21.exp nl21.lib nl21.obj
 
-mng = mng.obj rvmsg.obj keywds.obj $A
-
+mng = mng.c rvmsg.obj keywds.obj $A
 mng.exe: $(mng)
-	$(CC) $(CFLAGS) -Femng.exe $(mng) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(mng) $(Lp) $(Lmt)
+	del mng.exp mng.lib mng.obj
 
-mnh = mnh.obj rvmsg.obj hkeywds.obj $A
-
+mnh = mnh.c rvmsg.obj hkeywds.obj $A
 mnh.exe: $(mnh)
-	$(CC) $(CFLAGS) -Femnh.exe $(mnh) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(mnh) $(Lp) $(Lmt)
+	del mnh.exp mnh.lib mnh.obj
 
-nl2 = nl2.obj rvmsg.obj keywds.obj $A
-
+nl2 = nl2.c rvmsg.obj keywds.obj $A
 nl2.exe: $(nl2)
-	$(CC) $(CFLAGS) -Fenl2.exe $(nl2) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(nl2) $(Lp) $(Lmt)
+	del nl2.exp nl2.lib nl2.obj
 
 fmng1 = fmng1.obj $(Af)
-
 fmng1.exe: $(fmng1)
-	$(CC) $(CFLAGS) -Fefmng1.exe $(fmng1) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(fmng1) $(Lp) $(Lmt)
+	del fmng1.exp fmng1.lib
 
 fnl21 = fnl21.obj $(Af)
-
 fnl21.exe: $(fnl21)
-	$(CC) $(CFLAGS) -Fefnl21.exe $(fnl21) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(fnl21) $(Lp) $(Lmt)
+	del fnl21.exp fnl21.lib
 
 # tn.f and blas.f are available from netlib.exe: ask for "tn from opt".
 
-tn = tnmain.obj tn.obj blas.obj $(Af)
-
+tn = tnmain.c tn.obj blas.obj $(Af)
 tn.exe: $(tn)
 	$(CC) $(CFLAGS) -Fetn.exe $(tn) $(Lf2c) $(Lmt)
+	del tn.exp tn.lib tnmain.obj
 
 # ve08ad.f is available from netlib.exe: ask for "ve08 from opt".
 # See comments in README about a possible adjustment to ve08ad.f .
 
-v8.o.exe: ve08.c
-
-v8 = v8.obj ve08ad.obj $(Af)
-
+v8 = v8.c ve08ad.obj $(Af)
 v8.exe: $(v8)
-	$(CC) $(CFLAGS) -Fev8.exe $(v8) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(v8) $(Lp) $(Lmt)
+	del v8.exp v8.lib v8.obj
 
-ve08 = ve08.obj ve08ad.obj $(Af)
-
+ve08 = ve08.c ve08ad.obj $(Af)
 ve08.exe: $(ve08)
-	$(CC) $(CFLAGS) -Feve08.exe $(ve08) $(Lp) $(Lmt)
+	$(CC) $(CFLAGS) $(ve08) $(Lp) $(Lmt)
+	del ve08.exp ve08.lib ve08.obj
 
-dualconv = dualconv.obj $A
+dualconv = dualconv.c $A
 dualconv.exe: $(dualconv)
-	$(CC) $(CFLAGS) -Fedualconv.exe $(dualconv) $(Lmt)
+	$(CC) $(CFLAGS) $(dualconv) $(Lmt)
+	del dualconv.exp dualconv.lib dualconv.obj
 
-nlcopy = nlcopy.obj $A
+nlcopy = nlcopy.c $A
 nlcopy.exe: $(nlcopy)
-	$(CC) $(CFLAGS) -Fenlcopy.exe $(nlcopy) $(Lmt)
+	$(CC) $(CFLAGS) $(nlcopy) $(Lmt)
+	del nlcopy.exp nlcopy.lib nlcopy.obj
 
-qtest.exe: qtest.obj
-	$(CC) $(CFLAGS) -Feqtest.exe qtest.obj $(Af) $(Lmt)
+qtest.exe: qtest.c
+	$(CC) $(CFLAGS) -Feqtest.exe qtest.c $(Af) $(Lmt)
+	del qtest.exp qtest.lib qtest.obj
 
-gjh.exe: gjh.obj
-	$(CC) $(CFLAGS) -Fegjh.exe gjh.obj $A $(Lmt)
+gjh.exe: gjh.c
+	$(CC) $(CFLAGS) gjh.c $A $(Lmt)	
+	del gjh.exp gjh.lib gjh.obj
+
+et.exe: et.c $A
+	$(CC) $(CFLAGS) et.c $A $(Lmt)
+	del et.exp et.lib et.obj
 
 $S\amplsolv.lib:
 	cd $S; make amplsolv.lib
 
 clean:
-	deltree /Y *.exe *.obj all test test1 dietd.duw
+	del /Q *.exe *.obj all test test1 dietd.duw
 
 ### "make test" to compare outputs.
 
@@ -182,10 +194,13 @@ test1:
 	dualconv -u dietd foo
 	rmcr foo.sol >goo
 	diff goo dietu.sol
-	del foo.nl
-	del foo.sol
+	del foo.nl foo.sol foo.duw
 	qtest ch3 | rmcr >foo
 	diff foo ch3qtest.out
+	et -ft et.in >foo
+	rmcr foo >goo
+	diff goo et.out1
+	del foo goo
 	echo test1 done >test1
 
 test: all test1

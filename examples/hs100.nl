@@ -8,6 +8,28 @@ g3 0 1 0	# problem hs100
  12 7	# nonzeros in Jacobian, gradients
  0 0	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
+b
+3
+3
+3
+3
+3
+3
+3
+3
+x8
+0 1
+1 2
+2 0
+3 4
+4 0
+5 1
+6 1
+7 0
+r
+2 -127
+2 0
+4 0
 C0
 o54
 3
@@ -54,16 +76,16 @@ O0 0
 o54
 8
 o5
-o1
+o0
+n-10
 v0
-n10
 n2
 o2
 n5
 o5
-o1
+o0
+n-12
 v1
-n12
 n2
 o5
 v2
@@ -71,9 +93,9 @@ n4
 o2
 n3
 o5
-o1
+o0
+n-11
 v3
-n11
 n2
 o2
 n10
@@ -94,28 +116,6 @@ o2
 n4
 v5
 v6
-x8
-0 1
-1 2
-2 0
-3 4
-4 0
-5 1
-6 1
-7 0
-r
-2 -127
-2 0
-4 0
-b
-3
-3
-3
-3
-3
-3
-3
-3
 k7
 3
 5

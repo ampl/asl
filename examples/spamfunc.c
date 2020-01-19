@@ -66,13 +66,14 @@ THIS SOFTWARE.
 
 #include "mex.h"
 #undef printf
-#include "asl_pfgh.h"
 
 #ifdef _WIN32
 /* Omit sw "signal" catching and x86 precision adjustment. */
 #define ASL_NO_FP_INIT
 #include "fpinit.c"
 #endif /* _WIN32 */
+
+#include "asl_pfgh.h"
 
 static char msgbuf[256];
 
@@ -82,7 +83,7 @@ sizechk(const mxArray *mp, char *who, fint m)
 	int m1, n1;
 	m1 = mxGetM(mp);
 	n1 = mxGetN(mp);
-	if (m1 != m || n1 != 1 && m1) {
+	if (m1 != m || (n1 != 1 && m1)) {
 		sprintf(msgbuf,
 			"Expected %s to be %d x 1 rather than %d x %d\n",
 			who, m, m1, n1);
