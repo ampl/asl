@@ -26,3 +26,8 @@ THIS SOFTWARE.
 op_type_ASL[] = {
 #include "op_type.hd"
 	};
+
+ char
+op_typeb_ASL[] = {
+#include "op_typeb.hd"
+	};

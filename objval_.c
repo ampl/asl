@@ -28,11 +28,7 @@ THIS SOFTWARE.
 /* objval_, objgrd_, conval_, jacval_, hvcomp_, cnival_, congrd_ */
 
  static void
-#ifdef KR_headers
-bad_N(asl, N, who) ASL *asl; fint *N; char *who;
-#else
-bad_N(ASL *asl, fint *N, char *who)
-#endif
+bad_N(ASL *asl, fint *N, const char *who)
 {
 	what_prog();
 	fprintf(Stderr, "%s: got N = %ld; expected %d\n", who, (long)*N, n_var);
@@ -40,11 +36,7 @@ bad_N(ASL *asl, fint *N, char *who)
 	}
 
  real
-#ifdef KR_headers
-objval_(N, X, NOBJ, nerror) fint *N; real *X; fint *NOBJ; fint *nerror;
-#else
 objval_(fint *N, real *X, fint *NOBJ, fint *nerror)
-#endif
 {
 	ASL *a;
 	static char who[] = "objval_";
@@ -56,11 +48,7 @@ objval_(fint *N, real *X, fint *NOBJ, fint *nerror)
 	}
 
  void
-#ifdef KR_headers
-objgrd_(N, X, NOBJ, G, nerror) fint *N; real *X; fint *NOBJ; real *G; fint *nerror;
-#else
 objgrd_(fint *N, real *X, fint *NOBJ, real *G, fint *nerror)
-#endif
 {
 	ASL *a;
 	static char who[] = "objgrd_";
@@ -72,11 +60,7 @@ objgrd_(fint *N, real *X, fint *NOBJ, real *G, fint *nerror)
 	}
 
  void
-#ifdef KR_headers
-conval_(M, N, X, F, nerror) fint *M; fint *N; real *X; real *F; fint *nerror;
-#else
 conval_(fint *M, fint *N, real *X, real *F, fint *nerror)
-#endif
 {
 	ASL *a;
 	static char who[] = "conval_";
@@ -92,23 +76,15 @@ conval_(fint *M, fint *N, real *X, real *F, fint *nerror)
 	}
 
  void
-#ifdef KR_headers
-jacval_(M, N, NZ, X, JAC, nerror) fint *M; fint *N; fint *NZ; real *X; real *JAC; fint *nerror;
-#else
 jacval_(fint *M, fint *N, fint *NZ, real *X, real *JAC, fint *nerror)
-#endif
 {
 	ASL *a = cur_ASL;
-	mnnzchk_ASL(a, M, N, NZ, "jacval_");
+	mnnzchk_ASL(a, M, N, *NZ, "jacval_");
 	(*a->p.Jacval)(a, X, JAC, nerror);
 	}
 
  void
-#ifdef KR_headers
-hvcomp_(hv, p, nobj, ow, y) real *hv, *p, *ow, *y; fint *nobj;
-#else
 hvcomp_(real *hv, real *p, fint *nobj, real *ow, real *y)
-#endif
 {
 	ASL *a;
 	if (!(a = cur_ASL))
@@ -117,11 +93,7 @@ hvcomp_(real *hv, real *p, fint *nobj, real *ow, real *y)
 	}
 
  void
-#ifdef KR_headers
-hvinit_(nobj, ow, y) fint *nobj; real *ow, *y;
-#else
 hvinit_(fint *nobj, real *ow, real *y)
-#endif
 {
 	ASL *a;
 	if (!(a = cur_ASL))
@@ -130,11 +102,7 @@ hvinit_(fint *nobj, real *ow, real *y)
 	}
 
  static ASL *
-#ifdef KR_headers
-NI_check(I, N, who) fint *I, *N; char *who;
-#else
-NI_check(fint *I, fint *N, char *who)
-#endif
+NI_check(fint *I, fint *N, const char *who)
 {
 	ASL *asl;
 	fint i, m;
@@ -155,29 +123,21 @@ NI_check(fint *I, fint *N, char *who)
 	}
 
  void
-#ifdef KR_headers
-congrd_(N, I, X, G, nerror) fint *N, *I, *nerror; real *X, *G;
-#else
 congrd_(fint *N, fint *I, real *X, real *G, fint *nerror)
-#endif
 {
 	ASL *a = NI_check(I, N, "congrd_");
 	(*a->p.Congrd)(a, (int)*I, X, G, nerror);
 	}
 
  real
-#ifdef KR_headers
-cnival_(N, I, X, nerror) fint *N; fint *I; real *X; fint *nerror;
-#else
 cnival_(fint *N, fint *I, real *X, fint *nerror)
-#endif
 {
 	ASL *a = NI_check(I, N, "cnival_");
 	return (*a->p.Conival)(a, (int)*I, X, nerror);
 	}
 
  void
-delprb_(VOID)
+delprb_(void)
 {
 	ASL_free(&cur_ASL);
 	}

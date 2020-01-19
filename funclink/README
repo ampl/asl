@@ -71,8 +71,8 @@ For use with appropriately linked AMPL processors, silly.x is an AMPL
 input script that invokes the functions in funcadd.c .
 
 See the section on "User-defined functions" in "Hooking Your Solver to
-AMPL" (http://www.ampl.com/cm/cs/what/ampl/REFS/hooking2.ps.gz or
-http://www.ampl.com/cm/cs/what/ampl/REFS/HOOKING/index.html#userdefinedfuncs).
+AMPL" (http://www.ampl.com/REFS/hooking2.pdf or
+http://www.ampl.com/REFS/HOOKING/index.html#userdefinedfuncs).
 Also see the comments in funcadd.c, $S/funcadd.h, and silly.x.
 
 After you have issued the appropriate make command to create a

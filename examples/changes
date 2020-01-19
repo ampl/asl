@@ -137,3 +137,40 @@ Tue Aug  9 22:58:01 MDT 2005
 and makefile.vc.  README.gjh describes "solver" gjh, whose source is gjh.c,
 which computes gradients, Jacobian matrices and Hessian matrices and makes
 their values available in an AMPL session (via an "include" command).
+
+Tue Dec  2 20:37:41 MST 2008
+  gjh.c: omit declaration of the unused w0 array.
+  Add hist.c (a way to provide command-line history to interactive programs,
+such as ampl).  Requires the GNU history and readline libraries.  For use with
+ampl, invoke "hist ampl -vi2 ..." (where -vi2 causes prompts to appear).
+
+Wed May 13 21:30:40 MDT 2009
+  spamfunc.c: adjust to accord with a changed return type (mwIndex* rather
+than int*) from functions mxGetIr and mxGetJc) in recent versions of Matlab.
+(For older versions, use -DmwIndex=int when compiling spamfunc.c.)
+  hist.c:  add author name to comments.
+
+Sun Jul 12 23:08:18 MDT 2009
+  Adding source evalchk.c for "solver" evalchk that sets suffix .numerr
+on objectives and constraints to 0 if they can be evalated at the given
+starting point, to 1 if not, and to 2 if the entity but not its gradient
+can be evaluated.
+
+20120216
+  amplfunc.c, spamfunc.c: when there is no objective (n_obj == 0), have
+	[f,c] = amplfunc(x,0)
+and
+	[f,c] = spamfunc(x,0)
+return f = 0, and similarly have
+	[g,J] = amplfunc(x,1)
+and
+	[g,J] = spamfunc(x,1)
+return a vector of zeros for g.
+  makefile.u: omit mention of spamfun4.c.
+  hist.c:  behave better when the client program stops.
+
+20131209
+  gjh.c:  when "sparse" is specified, provide data for SH and HS even
+on linear problems, so "display H;", "display HS;" and "display SH;"
+will not give an error message when SH (the set of structurally
+nonzero Hessian elements) is empty.  Fix a glitch in "gjh -?" output.

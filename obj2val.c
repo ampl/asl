@@ -28,11 +28,7 @@ THIS SOFTWARE.
 #define x2_check(x) x2_check_ASL(asl,x)
 
  static void
-#ifdef KR_headers
-NNOBJ_chk(asl, i, who) ASL *asl; int i; char *who;
-#else
-NNOBJ_chk(ASL *asl, int i, char *who)
-#endif
+NNOBJ_chk(ASL *asl, int i, const char *who)
 {
 	ASL_CHECK(asl, ASL_read_fgh, who);
 	if (i < 0 || i >= n_obj) {
@@ -44,27 +40,23 @@ NNOBJ_chk(ASL *asl, int i, char *who)
 	}
 
  real
-#ifdef KR_headers
-obj2val_ASL(a, i, X, nerror) ASL *a; int i; real *X; fint *nerror;
-#else
 obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
+	ASL_fgh *asl;
+	Jmp_buf err_jmp0;
 	cde *d;
 	expr *e1;
 	expr_v *V;
-	real f;
 	int ij;
 	ograd *gr, **gr0;
-	Jmp_buf err_jmp0;
-	ASL_fgh *asl;
+	real f;
 
 	NNOBJ_chk(a, i, "obj2val");
 	asl = (ASL_fgh*)a;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij) {
+		if ((*nerror = ij)) {
 			f = 0.;
 			goto done;
 			}
@@ -88,7 +80,7 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	f = (*e1->op)(e1 C_ASL);
 	asl->i.noxval[i] = asl->i.nxval;
 	gr = *gr0;
-	if (asl->i.vscale)
+	if (asl->i.vscale || asl->i.vmap)
 		for(V = var_e; gr; gr = gr->next)
 			f += gr->coef * V[gr->varno].v;
 	else
@@ -100,19 +92,16 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  void
-#ifdef KR_headers
-obj2grd_ASL(a, i, X, G, nerror) ASL *a; int i; real *X; real *G; fint *nerror;
-#else
 obj2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
-#endif
 {
+	ASL_fgh *asl;
+	Jmp_buf err_jmp0;
 	cde *d;
+	fint ne0;
+	int ij, j, *vmi, xksave, *z;
 	ograd *gr, **gr0;
 	real *Adjoints, *vscale;
-	Jmp_buf err_jmp0;
-	int L, ij, xksave, *z;
-	fint ne0;
-	ASL_fgh *asl;
+	size_t L;
 	static char who[] = "obj2grd";
 
 	NNOBJ_chk(a, i, who);
@@ -123,7 +112,7 @@ obj2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
+		if ((*nerror = ij))
 			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
@@ -137,6 +126,8 @@ obj2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			goto done;
 		}
+	if (asl->i.Derrs)
+		deriv_errchk_ASL(a, nerror, -(i+1), 1);
 	if (f_b)
 		funnelset(asl, f_b);
 	if (f_o)
@@ -146,7 +137,7 @@ obj2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	gr0 = Ograd + i;
 	for(gr = *gr0; gr; gr = gr->next)
 		Adjoints[gr->varno] = gr->coef;
-	if (L = d->zaplen) {
+	if ((L = d->zaplen)) {
 		memset(adjoints_nv1, 0, L);
 		derprop(d->d);
 		}
@@ -155,11 +146,26 @@ obj2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		while((i = *z++) >= 0)
 			G[i] = 0;
 		}
+	vmi = 0;
+	if (a->i.vmap)
+		vmi = get_vminv_ASL(a);
 	gr = *gr0;
-	if (vscale = asl->i.vscale)
+	if ((vscale = asl->i.vscale)) {
+		if (vmi)
+			for(; gr; gr = gr->next) {
+				j = vmi[i = gr->varno];
+				G[j] = vscale[j] * Adjoints[i];
+				}
+		else
+			for(; gr; gr = gr->next) {
+				i = gr->varno;
+				G[i] = vscale[i] * Adjoints[i];
+				}
+		}
+	else if (vmi)
 		for(; gr; gr = gr->next) {
 			i = gr->varno;
-			G[i] = vscale[i] * Adjoints[i];
+			G[vmi[i]] = Adjoints[i];
 			}
 	else
 		for(; gr; gr = gr->next) {

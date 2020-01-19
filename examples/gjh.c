@@ -56,7 +56,7 @@ suftab[] = {
 	"\t\tg = gradient",
 	"\t\tJ = Jacobian",
 	"\t\tH = Hessian",
-	"Unless \"dense\" appears in $gjh_options, sparse variants JS{SJ} of J",
+	"If \"sparse\" appears in $gjh_options, sparse variants JS{SJ} of J",
 	"and HS{SH} of H are also defined.",
 	"Assignments in $gjh_options can change these names.",
 	"For multiple objectives, suffix objweight gives objective weights.",
@@ -83,9 +83,10 @@ main(int argc, char **argv)
 	SufDesc *ow;
 	cgrad *cg, **cgx;
 	char *s;
+	const char *sc;
 	fint *hcs, *hrow, i1, i2, nh, nn;
 	int i, j, m, n, no;
-	real *g, *g1, t, *x, *w, w0[1], *y;
+	real *g, *g1, t, *x, *w, *y;
 
 	asl = ASL_alloc(ASL_read_pfgh);
 	s = getstops(argv, &Oinfo);
@@ -191,12 +192,13 @@ main(int argc, char **argv)
 		fprintf(f, ";\n");
 		}
 
+	sc = nh ? "" : " ;";
+	if (dense)
+		fprintf(f, "param %s :=%s\n", Hname, sc);
+	else
+		fprintf(f, "param :S%s: %sS :=%s\n", Hname, Hname, sc);
 	if (nh) {
 		sphes(g, no, w, y);
-		if (dense)
-			fprintf(f, "param %s :=\n", Hname);
-		else
-			fprintf(f, "param :S%s: %sS :=\n", Hname, Hname);
 		hcs = sputinfo->hcolstarts;
 		hrow = sputinfo->hrownos;
 		i1 = 0;

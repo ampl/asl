@@ -28,15 +28,13 @@ THIS SOFTWARE.
  * precisions allowed for %f.
  */
 
-#ifdef KR_headers
-#include "varargs.h"
-#else
 #include "stddef.h"
 #include "stdarg.h"
 #include "stdlib.h"
-#endif
 
-#define VA_LIST va_list
+#ifndef NO_PRINTF_A_FMT
+#include "arith.h"
+#endif
 
 #include "stdio1.h"
 #include "string.h"
@@ -218,14 +216,9 @@ pfput(Finfo *f, int *rvp)
 #endif /* PF_BUF */
 
  static char *
-Fput
-#ifdef KR_headers
-	(f, rvp) register Finfo *f; int *rvp;
-#else
-	(register Finfo *f, int *rvp)
-#endif
+Fput ( Finfo *f, int *rvp)
 {
-	register char *ob0 = f->ob0;
+	char *ob0 = f->ob0;
 
 	*rvp += f->obe1 - ob0;
 	*f->obe1 = 0;
@@ -238,14 +231,9 @@ Fput
 int stdout_fileno_ASL = 1;
 
  static char *
-Wput
-#ifdef KR_headers
-	(f, rvp) register Finfo *f; int *rvp;
-#else
-	(register Finfo *f, int *rvp)
-#endif
+Wput(Finfo *f, int *rvp)
 {
-	register char *ob0 = f->ob0;
+	char *ob0 = f->ob0;
 
 	*rvp += f->obe1 - ob0;
 	*f->obe1 = 0;
@@ -254,35 +242,190 @@ Wput
 	}
 #endif /*_windows_*/
 
+#ifdef QUOTIFY /*{*/
+ static char qtype[256];
+ static char dig[256] = {
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 10, 13, 10, 13, 13,
+	 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 11, 11, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 11, 11, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+	13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13
+	};
+
+ static int
+lcstrcmp(const char *a, const char *b)
+{
+	int c, d;
+
+	for(;;) {
+		if ((c = *a++) >= 'A' && c <= 'Z')
+			c += 'a' - 'A';
+		if (d = c - *b++)
+			return d;
+		if (!c)
+			break;
+		}
+	return 0;
+	}
+
+ static int
+valid_param(char *t, int ekeep)
+	/* return 0 unless valid decimal fp number */
+	/* also adjust Fortran exponent notations to C style */
+{
+	char *Dig = dig, *e = 0, *se;
+	int dc = 0;
+	/* digit types: 0 <= d <= 9 ==> d, +- = 10, e,E,d,D = 11 */
+
+#define D(n) Dig[*(unsigned char *)n]
+
+	if (D(t) == 10)
+		t++;
+	switch(*t) {
+	 case '0':
+		if ((t[1] == 'x' || t[1] == 'X')) {
+			strtod(t,&se);
+			return *se == 0;
+			}
+		break;
+	 case 'I':
+	 case 'i':
+		if (!lcstrcmp(t,"infinity"))
+			return 1;
+		break;
+	 case 'N':
+	 case 'n':
+		if (Arith_Kind_ASL < 3 && !lcstrcmp(t,"nan"))
+			return 1;
+	 }
+	while(D(t) < 10)
+		{ t++; dc++; }
+	if (*t == '.')
+		while(D(++t) < 10)
+			dc++;
+	if (D(t) == 11) {
+		e = t;
+		if (D(++t) == 10)
+			t++;
+		if (D(t) >= 10)
+			return 0;
+		while(D(t) < 10)
+			t++;
+		}
+	if (dc && !*t) {
+		if (e && !ekeep)
+			*e = 'e';
+		return 1;
+		}
+	return 0;
+	}
+#undef D
+
+ void
+qt_init(void)
+{
+	int n1;
+	const char *t;
+	for(t = "\"'\n.+-_"; *t; t++)
+		qtype[(int)*t] = *t;
+	for(n1 = 'A'; n1 <= 'Z'; n1++)
+		qtype[n1] = qtype[n1+'a'-'A'] = 1;
+	for(n1 = '0'; n1 <= '9'; n1++)
+		qtype[n1] = 2;
+	}
+
+ static void
+qkind(char *s, int prec, int *quote, int *widthp)
+{
+	int n0, n1, n2, ne;
+	char *s0;
+
+	if (!*s)
+		goto quote_it;
+	if (!qtype['"'])
+		qt_init();
+	n0 = n1 = n2 = ne = 0;
+	s0 = s;
+	while(prec-- > 0)
+		switch(qtype[*(unsigned char *)s++]) {
+			case '\'': n1++; break;
+			case '"':  n2++; break;
+			case '\n': ne++; break;
+			case 0:	   n0++;
+			}
+	if ((ne + n1 + n2) || n0) {
+		if (n1 > n2) {
+			ne += n2;
+			*quote = '"';
+			}
+		else {
+			ne += n1;
+			*quote = '\'';
+			}
+		*widthp -= ne + 2;
+		}
+	else if (valid_param(s0,1)) {
+ quote_it:
+		*widthp -= 2;
+		*quote = '\'';
+		}
+	}
+#endif /*QUOTIFY*/ /*}*/
 
 #define put(x) { *outbuf++ = x; if (outbuf == obe) outbuf = (*fput)(f,&rv); }
 
  static int
-x_sprintf
-#ifdef KR_headers
-	(obe, fput, f, fmt, ap)
-	char *obe, *fmt; Finfo *f; Putfunc fput; va_list ap;
-#else
-	(char *obe, Putfunc fput, Finfo *f, const char *fmt, va_list ap)
-#endif
+x_sprintf(char *obe, Putfunc fput, Finfo *f, const char *fmt, va_list ap)
 {
 	char *digits, *ob0, *outbuf, *s, *s0, *se;
 	Const char *fmt0;
 	char buf[32];
-	long i;
-	unsigned long j, u;
 	double x;
 	int alt, base, c, decpt, dot, conv, i1, k, lead0, left,
 		len, prec, prec1, psign, rv, sgn, sign, width;
-	long Ltmp, *ip;
+#ifdef QUOTIFY
+	int quote;
+#endif /*QUOTIFY*/
 	short sh;
+	size_t Ltmp, *ip, j, u;
+	ssize_t i;
 	unsigned short us;
 	unsigned int ui;
-	static char hex[] = "0123456789abcdef";
-	static char Hex[] = "0123456789ABCDEF";
+#ifndef NO_PRINTF_A_FMT /*{*/
+#ifdef IEEE_8087 /*{{*/
+#define I0 1
+#define I1 0
+#else /*}{*/
+#ifdef IEEE_MC68k /*{{*/
+#define I0 0
+#define I1 1
+#else /*}{*/
+#define NO_PRINTF_A_FMT
+#endif /*}} IEEE_MC68k */
+#endif /*}} IEEE_8087  */
+#ifndef NO_PRINTF_A_FMT
+	typedef union U { double d; unsigned int u[2]; } U;
+	U uu;
+	int bex, bw;
+#endif
+#endif /*} NO_PRINTF_A_FMT */
+	static char hex[] = "0123456789abcdefpx";
+	static char Hex[] = "0123456789ABCDEFPX";
+	static char NullStr[] = "<NULL>";
 
 	ob0 = outbuf = f->ob0;
-	rv = 0;
+	i = rv = 0;
 	for(;;) {
 		for(;;) {
 			switch(c = *fmt++) {
@@ -296,6 +439,9 @@ x_sprintf
 				}
 			break;
 			}
+#ifdef QUOTIFY
+		quote =
+#endif /*QUOTIFY*/
 		alt=dot=lead0=left=len=prec=psign=sign=width=0;
 		fmt0 = fmt;
  fmtloop:
@@ -343,9 +489,11 @@ x_sprintf
 			case 'l':
 				len = 1;
 				goto fmtloop;
+			case 'z':
+				len = 3;
+				goto fmtloop;
 			case '.':
 				dot = 1;
-				lead0 = 0;
 				goto fmtloop;
 			case '*':
 				k = va_arg(ap, int);
@@ -378,6 +526,9 @@ x_sprintf
 				  case 2:
 					us = va_arg(ap, int);
 					i = us;
+					break;
+				  case 3:
+					i = va_arg(ap, size_t);
 				  }
 				sign = 0;
 				goto have_i;
@@ -394,6 +545,9 @@ x_sprintf
 				  case 2:
 					sh = va_arg(ap, int);
 					i = sh;
+					break;
+				  case 3:
+					i = va_arg(ap, ssize_t);
 				  }
 				if (i < 0) {
 					sign = '-';
@@ -404,6 +558,8 @@ x_sprintf
 				u = i;
 				digits = hex;
  baseloop:
+				if (dot)
+					lead0 = 0;
 				s = buf;
 				if (!u)
 					alt = 0;
@@ -411,7 +567,7 @@ x_sprintf
 					j = ULDIV(u, base);
 					*s++ = digits[u - base*j];
 					}
-					while(u = j);
+					while((u = j));
 				prec -= c = s - buf;
 				if (alt && conv == 'o' && prec <= 0)
 					prec = 1;
@@ -461,7 +617,7 @@ x_sprintf
 					while(s > buf);
 				continue;
 			case 'n':
-				ip = va_arg(ap, long*);
+				ip = va_arg(ap, size_t*);
 				if (!ip)
 					ip = &Ltmp;
 				c = outbuf - ob0 + rv;
@@ -470,10 +626,13 @@ x_sprintf
 					*(int*)ip = c;
 					break;
 				  case 1:
-					*ip = c;
+					*(long*)ip = c;
 					break;
 				  case 2:
 					*(short*)ip = c;
+					break;
+				  case 3:
+					*ip = c;
 				  }
 				break;
 			case 'p':
@@ -504,6 +663,9 @@ x_sprintf
 				  case 2:
 					us = va_arg(ap, int);
 					u = us;
+					break;
+				  case 3:
+					u = va_arg(ap, size_t);
 				  }
 				if (!u)
 					sign = alt = 0;
@@ -512,11 +674,17 @@ x_sprintf
 				base = 8;
 				digits = hex;
 				goto get_u;
+#ifdef QUOTIFY
+			case 'Q':
+				conv = 'q';
+				quote = '\'';
+			case 'q':
+#endif /*QUOTIFY*/
 			case 's':
 				s0 = 0;
 				s = va_arg(ap, char*);
 				if (!s)
-					s = "<NULL>";
+					s = NullStr;
 				if (prec < 0)
 					prec = 0;
  have_s:
@@ -529,9 +697,27 @@ x_sprintf
 				else
 					prec = strlen(s);
 				width -= prec;
+#ifdef QUOTIFY
+				if (conv == 'q')
+					qkind(s,prec,&quote,&width);
+#endif /*QUOTIFY*/
 				if (!left)
 					while(--width >= 0)
 						put(' ')
+#ifdef QUOTIFY
+				if (quote) {
+					put(quote)
+					while(--prec >= 0) {
+						if ((c = *s++) == quote)
+							put(quote)
+						else if (c == '\n')
+							put('\\')
+						put(c)
+						}
+					put(quote)
+					}
+				else
+#endif /*QUOTIFY*/
 				while(--prec >= 0)
 					put(*s++)
 				while(--width >= 0)
@@ -543,6 +729,7 @@ x_sprintf
 				if (!dot)
 					prec = 6;
 				x = va_arg(ap, double);
+ infnan:
 				s = s0 = dtoa(x, 3, prec, &decpt, &sgn, &se);
 				if (decpt == 9999) {
  fmt9999:
@@ -597,7 +784,7 @@ x_sprintf
 					}
 				else {
 					do {
-						if (c = *s)
+						if ((c = *s))
 							s++;
 						else
 							c = '0';
@@ -608,7 +795,7 @@ x_sprintf
 						put('.')
 					}
 				while(--prec >= 0) {
-					if (c = *s)
+					if ((c = *s))
 						s++;
 					else
 						c = '0';
@@ -693,7 +880,7 @@ x_sprintf
 				if (prec || alt)
 					put('.')
 				while(--prec >= 0) {
-					if (c = *s)
+					if ((c = *s))
 						s++;
 					else
 						c = '0';
@@ -719,6 +906,171 @@ x_sprintf
 					put(' ')
 				freedtoa(s0);
 				continue;
+#ifndef NO_PRINTF_A_FMT
+			case 'a':
+				digits = hex;
+				goto more_a;
+			case 'A':
+				digits = Hex;
+ more_a:
+				uu.d = va_arg(ap, double);
+				if ((uu.u[I0] & 0x7ff00000) == 0x7ff00000) {
+					x = uu.d;
+					goto infnan;
+					}
+				if (uu.d) {
+					c = '1';
+					if (uu.u[I0] & 0x80000000) {
+						sign = '-';
+						uu.u[I0] &= 0x7fffffff;
+						}
+					bex = (uu.u[I0] >> 20) - 1023;
+					uu.u[I0] &= 0xfffff;
+					if (bex == -1023) {
+						++bex;
+						if (uu.u[I0])
+							do {
+								--bex;
+								uu.u[I0] <<= 1;
+								if (uu.u[I1] & 0x80000000)
+									uu.u[I0] |= 1;
+								uu.u[I1] <<= 1;
+								} while (uu.u[I0] < 0x100000);
+						else {
+							while(!(uu.u[I1] & 0x80000000)) {
+								--bex;
+								uu.u[I1] <<= 1;
+								}
+							bex -= 21;
+							uu.u[I0] = uu.u[I1] >> 11;
+							uu.u[I1] <<= 21;
+							}
+						}
+					}
+				else {
+					c = '0';
+					bex = 0;
+					}
+				if (dot) {
+					if (prec > 13)
+						prec = 13;
+					if (uu.d && prec < 13) {
+						uu.u[I0] |= 0x100000;
+						if (prec < 5) {
+						    ui = 1 << ((5-prec)*4 - 1);
+						    if (uu.u[I0] & ui) {
+							if (uu.u[I0] & ((ui-1) | (ui << 1))
+							 || uu.u[I1]) {
+							    uu.u[I0] += ui;
+ bex_check:
+							    if (uu.u[I0] & 0x200000) {
+								++bex;
+								uu.u[I0] >>= 1;
+								}
+							    }
+							}
+						    }
+						else if (prec == 5) {
+						    if (uu.u[I1] & 0x80000000) {
+ u0_bump:
+							++uu.u[I0];
+							goto bex_check;
+							}
+						    }
+						else {
+						    i1 = (13 - prec) * 4;
+						    ui = 1 << (i1 - 1);
+						    if (uu.u[I1] & ui
+						     && uu.u[I1] & ((ui-1) | (ui << 1))) {
+							uu.u[I1] += ui;
+							if (!(uu.u[I1] >> i1))
+								goto u0_bump;
+							}
+						    }
+						}
+					}
+				else {
+					if ((ui = uu.u[I1]))
+						for(prec = 6;
+							(ui = (ui << 4) & 0xffffffff);
+							++prec);
+					else
+						for(prec = 0, ui = uu.u[I0] & 0xfffff;
+							ui;
+							++prec, ui = (ui << 4) & 0xfffff);
+					}
+				bw = 1;
+				if (bex) {
+					if ((i1 = bex) < 0)
+						i1 = -i1;
+					while(i1 >= 10) {
+						++bw;
+						i1 /= 10;
+						}
+					}
+				if ((sgn = uu.u[I0] & 0x80000000)) {
+					uu.u[I0] &= 0x7fffffff;
+					if (uu.d||sign)
+						sign = '-';
+					}
+				if ((width -= bw + 5) > 0) {
+					if (sign)
+						--width;
+					if (prec || alt)
+						--width;
+					}
+				if (width > 0 && !left) {
+					if (lead0) {
+						if (sign) {
+							put(sign)
+							sign = 0;
+							}
+						do put('0')
+							while(--width > 0);
+						}
+					else do put(' ')
+						while(--width > 0);
+					}
+				if (sign)
+					put(sign)
+				put('0')
+				put(digits[17])
+				put(c)
+				if (prec > 0 || alt)
+					put('.')
+				if (prec > 0) {
+					if ((i1 = prec) > 5)
+						i1 = 5;
+					prec -= i1;
+					do {
+						put(digits[(uu.u[I0] >> 16) & 0xf])
+						uu.u[I0] <<= 4;
+						}
+						while(--i1 > 0);
+					while(prec > 0) {
+						--prec;
+						put(digits[(uu.u[I1] >> 28) & 0xf])
+						uu.u[I1] <<= 4;
+						}
+					}
+				put(digits[16])
+				if (bex < 0) {
+					put('-')
+					bex = -bex;
+					}
+				else
+					put('+')
+				for(c = 1; 10*c <= bex; c *= 10);
+				for(;;) {
+					i1 = bex / c;
+					put('0' + i1)
+					if (!--bw)
+						break;
+					bex -= i1 * c;
+					bex *= 10;
+					}
+				continue;
+#endif /* NO_PRINTF_A_FMT */
 			default:
 				put('%')
 				while(fmt0 < fmt)
@@ -731,26 +1083,10 @@ x_sprintf
 	return (f->lastlen = outbuf - ob0) + rv;
 	}
 
-#define Bsize 256
+#define Bsize 4096
 
  int
-Printf
-#ifdef KR_headers
-	(va_alist)
- va_dcl
-{
-	char *fmt;
-
-	va_list ap;
-	int rv;
-	Finfo f;
-	char buf[Bsize];
-
-	va_start(ap);
-	fmt = va_arg(ap, char*);
-	/*}*/
-#else
-	(const char *fmt, ...)
+Printf(const char *fmt, ...)
 {
 	va_list ap;
 	int rv;
@@ -758,7 +1094,6 @@ Printf
 	char buf[Bsize];
 
 	va_start(ap, fmt);
-#endif
 	f.u.cf = stdout;
 	f.ob0 = buf;
 	f.obe1 = buf + Bsize - 1;
@@ -785,12 +1120,7 @@ Printf
 	}
 
  static char *
-Sput
-#ifdef KR_headers
-	(f, rvp) Finfo *f; int *rvp;
-#else
-	(Finfo *f, int *rvp)
-#endif
+Sput(Finfo *f, int *rvp)
 {
 	if (Printf("\nBUG! Sput called!\n", f, rvp))
 		/* pass vp, rvp and return 0 to shut diagnostics off */
@@ -799,29 +1129,13 @@ Sput
 	}
 
  int
-Sprintf
-#ifdef KR_headers
-	(va_alist)
- va_dcl
-{
-	char *s, *fmt;
-	va_list ap;
-	int rv;
-	Finfo f;
-
-	va_start(ap);
-	s = va_arg(ap, char*);
-	fmt = va_arg(ap, char*);
-	/*}*/
-#else
-	(char *s, const char *fmt, ...)
+Sprintf(char *s, const char *fmt, ...)
 {
 	va_list ap;
 	int rv;
 	Finfo f;
 
 	va_start(ap, fmt);
-#endif
 	f.ob0 = s;
 	rv = x_sprintf(s, Sput, &f, fmt, ap);
 	va_end(ap);
@@ -829,24 +1143,7 @@ Sprintf
 	}
 
  int
-Fprintf
-#ifdef KR_headers
-	(va_alist)
- va_dcl
-{
-	FILE *F;
-	char *s, *fmt;
-	va_list ap;
-	int rv;
-	Finfo f;
-	char buf[Bsize];
-
-	va_start(ap);
-	F = va_arg(ap, FILE*);
-	fmt = va_arg(ap, char*);
-	/*}*/
-#else
-	(FILE *F, const char *fmt, ...)
+Fprintf(FILE *F, const char *fmt, ...)
 {
 	va_list ap;
 	int rv;
@@ -854,7 +1151,6 @@ Fprintf
 	char buf[Bsize];
 
 	va_start(ap, fmt);
-#endif
 	f.u.cf = F;
 	f.ob0 = buf;
 	f.obe1 = buf + Bsize - 1;
@@ -899,24 +1195,14 @@ Fprintf
 	}
 
  int
-Vsprintf
-#ifdef KR_headers
-	(s, fmt, ap) char *s, *fmt; va_list ap;
-#else
-	(char *s, const char *fmt, va_list ap)
-#endif
+Vsprintf(char *s, const char *fmt, va_list ap)
 {
 	Finfo f;
 	return x_sprintf(f.ob0 = s, Sput, &f, fmt, ap);
 	}
 
  int
-Vfprintf
-#ifdef KR_headers
-	(F, fmt, ap) FILE *F; char *fmt; va_list ap;
-#else
-	(FILE *F, const char *fmt, va_list ap)
-#endif
+Vfprintf(FILE *F, const char *fmt, va_list ap)
 {
 	char buf[Bsize];
 	int rv;
@@ -966,12 +1252,7 @@ Vfprintf
 	}
 
  void
-Perror
-#ifdef KR_headers
-	(s) char *s;
-#else
-	(const char *s)
-#endif
+Perror(const char *s)
 {
 	if (s && *s)
 		Fprintf(Stderr, "%s: ", s);
@@ -979,12 +1260,7 @@ Perror
 	}
 
  static char *
-Snput
-#ifdef KR_headers
-	(f, rvp) Finfo *f; int *rvp;
-#else
-	(Finfo *f, int *rvp)
-#endif
+Snput(Finfo *f, int *rvp)
 {
 	char *s, *s0;
 	size_t L;
@@ -1005,12 +1281,7 @@ Snput
 	}
 
  int
-Vsnprintf
-#ifdef KR_headers
-	(s, n, fmt, ap) char *s; size_t n; char *fmt; va_list ap;
-#else
-	(char *s, size_t n, const char *fmt, va_list ap)
-#endif
+Vsnprintf(char *s, size_t n, const char *fmt, va_list ap)
 {
 	Finfo f;
 	char buf[Bsize];
@@ -1034,29 +1305,12 @@ Vsnprintf
 	return rv;
 	}
  int
-Snprintf
-#ifdef KR_headers
-	(va_alist)
- va_dcl
-{
-	char *s, *fmt;
-	int rv;
-	size_t n;
-	va_list ap;
-
-	va_start(ap);
-	s = va_arg(ap, char*);
-	n = va_arg(ap, size_t);
-	fmt = va_arg(ap, char*);
-	/*}*/
-#else
-	(char *s, size_t n, const char *fmt, ...)
+Snprintf(char *s, size_t n, const char *fmt, ...)
 {
 	int rv;
 	va_list ap;
 
 	va_start(ap, fmt);
-#endif
 	rv = Vsnprintf(s, n, fmt, ap);
 	va_end(ap);
 	return rv;

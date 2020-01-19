@@ -1,5 +1,5 @@
 # /****************************************************************
-# Copyright (C) 1997 Lucent Technologies
+# Copyright (C) 1997-1999, 2001 Lucent Technologies
 # All Rights Reserved
 #
 # Permission to use, copy, modify, and distribute this software and
@@ -21,6 +21,12 @@
 # ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 # THIS SOFTWARE.
 # ****************************************************************/
+
+# For compiling solvers/examples on Unix and Linux systems.
+
+# Invoke with "make -f makefile.u",
+# or "cp makefile.u makefile", edit makefile as necessary,
+# and just invoke with "make".
 
 .SUFFIXES: .c .f .o
 CC = cc
@@ -46,14 +52,14 @@ L = -lm
 Lf2c = -lf2c
 cport = cport.a
 # $(cport) = PORT subroutine library.
-# Ask netlib@netlib.bell-labs.com to
+# Ask netlib@netlib.org to
 #	send dmngb dmnhb dn2g dn2gb dq7rgs from port
 # to get source for the relevant (small) part of PORT.
 # -lf2c is for f2c's version of Fortran I/O: we assume
 # $(cport) was compiled by f2c and cc.
 Lp = $(cport) $(Lf2c)
 
-FC = fc
+FC = f77
 FFLAGS =
 # Fortran compiler (fc script provided with f2c)
 
@@ -63,7 +69,7 @@ FFLAGS =
 A = $S/amplsolver.a
 Af = $S/funcadd0.o $A
 
-all1 = lin1 lin2 lin3 linrc dualconv qtest
+all1 = evalchk lin1 lin2 lin3 linrc dualconv nlcopy qtest
 all = mng1 fmng1 nl21 fnl21 mng mnh nl2 tn v8 ve08
 
 all: $(all1) $(all)
@@ -73,6 +79,10 @@ all: $(all1) $(all)
 # this directory.
 
 all1: $(all1)
+
+evalchk = evalchk.o $A
+evalchk: $(evalchk)
+	$(CC) - o evalchk $(evalchk)
 
 lin1 = lin1.o $(Af)
 lin1: $(lin1)
@@ -151,6 +161,10 @@ dualconv = dualconv.o $(Af)
 dualconv: $(dualconv)
 	$(CC) -o dualconv $(dualconv)
 
+nlcopy = nlcopy.o $A
+nlcopy: $(nlcopy)
+	$(CC) -o nlcopy $(nlcopy) $L
+
 qtest: qtest.o $(Af)
 	$(CC) -o qtest qtest.o $(Af) $L
 
@@ -158,18 +172,19 @@ $S/amplsolver.a:
 	cd $S; make amplsolver.a
 
 clean:
-	rm -f $(all1) $(all) *.o dietd.duw *.mex*
+	rm -rf $(all1) $(all) *.o dietd.duw *.mex* t bad bad1
 
 # make xsum.out to check for transmission errors.
 # This assumes you have the xsum program, whose source
 # you can get by asking research!netlib to
 #	send xsum.c from f2c/src
 
-xs0 = README amplfun4.c amplfunc.c dminos dualconv.c enewt.m evalf.m evalg.m\
- evalw.m fmng1.f fnl21.f hkeywds.c init.m keywds.c lin1.c lin2.c\
- lin3.c linrc.c makefile makefile.sy makefile.vc makefile.wat\
- mng.c mng1.c mnh.c nl2.c nl21.c qtest.c rvmsg.c rvmsg.h\
- savesol.m spamfun4.c spamfunc.c tnmain.c v8.c ve08.c\
+xs0 = README README.gjh amplfun4.c amplfunc.c dminos dualconv.c\
+ enewt.m evalchk.c evalf.m evalg.m evalw.m fmng1.f fnl21.f gjh.c\
+ hist.c hkeywds.c init.m keywds.c lin1.c lin2.c\
+ lin3.c linrc.c makefile.sy makefile.u makefile.vc makefile.wat\
+ mng.c mng1.c mnh.c nl2.c nl21.c nlcopy.c qtest.c rvmsg.c rvmsg.h\
+ savesol.m spamfunc.c tnmain.c v8.c ve08.c\
  diet.amp diet.nl diet.row diet.col dietl1.out dietl2.out dietl3.out\
  dietd.nl diet.sol dietd.sol dietu.sol ch3.amp ch3.nl\
  ch3mng.out ch3mng.sol ch3mnh.out ch3mnh.sol ch3nl21.out ch3nl2.out\
@@ -182,56 +197,73 @@ xsum.out: $(xs0)
 	xsum $(xs0) >xsum1.out
 	cmp xsum0.out xsum1.out && mv xsum1.out xsum.out || diff xsum[01].out
 
-### "make test" to compare outputs.
+### "make test" to compare outputs; equivalent to "make test1 test2".
 
 ### "make test1" to compare outputs that do not require things
 ### from other netlib directories.
 
+### Anything left in directory "bad" or "bad1" may indicate something
+### amiss.  Trivial differences in function and gradient values in the
+### *.out files (particularly ve08ch3.out) may be due to differences in
+### special-function implementations among math libraries.  Other
+### differences are cause for concern.
+
+test: test1 test2
+
 test1: all1
+	mkdir bad1
 	lin1 diet >foo
-	cmp foo lin1diet.out
+	cmp foo lin1diet.out || mv foo bad1/lin1diet.out
 	lin2 diet >foo
-	cmp foo lin2diet.out
+	cmp foo lin2diet.out || mv foo bad1/lin2diet.out
 	lin3 diet >foo
-	cmp foo lin3diet.out
+	cmp foo lin3diet.out || mv foo bad1/lin3diet.out
 	linrc diet >foo
-	cmp foo linrcdie.out
+	cmp foo linrcdie.out || mv foo bad1/linrcdie.out
 	dualconv diet foo
-	cmp foo.nl dietd.nl
+	cmp foo.nl dietd.nl || mv foo.nl bad1/dietd.nl
 	mv foo.duw dietd.duw
 	dualconv -u dietd foo
-	cmp foo.sol dietu.sol
-	rm foo.nl foo.sol
+	cmp foo.sol dietu.sol || mv foo.sol bad1/dietu.sol
+	rm -f foo.nl foo.sol
 	qtest ch3 >foo
-	cmp foo ch3qtest.out
+	cmp foo ch3qtest.out || mv foo bad1/ch3qtest.out
+	mkdir t
+	nlcopy -g hs100 t/hs100
+	cmp hs100.nl t/hs100.nl
+	rm -rf t
+	rmdir bad1
 
-test: all test1
+test2: all
+	mkdir bad
 	mng ch3 >foo 2>&1
-	cmp foo ch3mng.out
+	cmp foo ch3mng.out || mv foo bad/ch3mng.out
 	mnh ch3 >foo 2>&1
-	cmp foo ch3mnh.out
+	cmp foo ch3mnh.out || mv foo bad/ch3mnh.out
 	nl2 ch3 >foo 2>&1
-	cmp foo ch3nl2.out
+	cmp foo ch3nl2.out || mv foo bad/ch3nl2.out
 	nl21 ch3 >foo 2>&1
-	cmp foo ch3nl21.out
+	cmp foo ch3nl21.out || mv foo bad/ch3nl21.out
 	tn ch3 >foo 2>&1
-	cmp foo ch3tn.out
+	cmp foo ch3tn.out || mv foo bad/ch3tn.out
 	mng ch3 -AMPL
-	cmp ch3.sol ch3mng.sol
+	cmp ch3.sol ch3mng.sol || mv ch3.sol bad/ch3mng.sol
 	mnh ch3 -AMPL
-	cmp ch3.sol ch3mnh.sol
+	cmp ch3.sol ch3mnh.sol || mv ch3.sol bad/ch3mnh.sol
 	nl2 ch3 -AMPL
-	cmp ch3.sol ch3nl2.sol
+	cmp ch3.sol ch3nl2.sol || mv ch3.sol bad/ch3nl2.sol
 	tn ch3 -AMPL
-	cmp ch3.sol ch3tn.sol
-	rm foo ch3.sol
+	cmp ch3.sol ch3tn.sol || mv ch3.sol bad/ch3tn.sol
+	rm -f ch3.sol
 	v8 ch3 >foo 2>&1
-	cmp foo v8ch3.out
+	cmp foo v8ch3.out || mv foo bad/v8ch3.out
 	ve08 ch3 >foo 2>&1
-	cmp foo ve08ch3.out
+	cmp foo ve08ch3.out || mv foo bad/ve08ch3.out
+	rmdir bad
 	echo tests done.
 
-## For use with MATLAB 5.x, "make amplfunc.mex" or "make spamfunc.mex".
+## For use with MATLAB 5.x or 6.x, "make amplfunc.mex" or
+## "make spamfunc.mex".
 ## Make sure your PATH includes MATLAB's "bin" directory.
 
 af = amplfunc.c $S/funcaddr.o $A
@@ -262,3 +294,11 @@ saf4 = spamfun4.c $A
 spamfun4.mex: $(saf4)
 	cmex -I$S $(saf4)
 	touch spamfun4.mex
+
+gjh: gjh.o
+	$(CC) -o gjh gjh.o $A $L
+
+# To make "hist", you must have the GNU history and readline packages installed.
+# When using "hist" with "ampl", invoke "hist ampl -vi2 ..." to see prompts.
+hist: hist.o
+	$(CC) -o hist hist.o -lhistory -lreadline
