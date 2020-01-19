@@ -59,9 +59,11 @@ extern "C" {
 extern int Fprintf ANSI((FILE*, const char*, ...));
 extern int Printf ANSI((const char*, ...));
 extern int Sprintf ANSI((char*, const char*, ...));
+extern int Snprintf ANSI((char*, size_t, const char*, ...));
 extern void Perror ANSI((const char*));
 extern int Vfprintf ANSI((FILE*, const char*, va_list));
 extern int Vsprintf ANSI((char*, const char*, va_list));
+extern int Vsnprintf ANSI((char*, size_t, const char*, va_list));
 
 #ifdef PF_BUF
 extern FILE *stderr_ASL;
@@ -87,9 +89,11 @@ extern void fflush_ASL ANSI((FILE*));
 #undef vsprintf
 #define printf Printf
 #define fprintf Fprintf
+#define snprintf Snprintf
 #define sprintf Sprintf
 #define perror Perror
 #define vfprintf Vfprintf
+#define vsnprintf Vsnprintf
 #define vsprintf Vsprintf
 
 #endif /* NO_STDIO1 */

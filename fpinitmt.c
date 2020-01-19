@@ -33,6 +33,7 @@ int isatty_ASL; /* for use with "sw" under NT */
 #include <math.h>
 #include <signal.h>
 #include <windows.h>
+#include "asl.h"
 
 #undef Need_set_errno
 #ifdef errno
@@ -59,8 +60,27 @@ static int set_errno(int);
 #ifdef __cplusplus
 extern "C" {
  void fpinit_ASL(void);
+ void catch_SIGINT_ASL(void (*)(int,void*), void*);
  }
 #endif
+
+ extern void (*breakfunc_ASL)(int,void*), *breakarg_ASL;
+
+ void
+intcatch_ASL(ASL *a, void (*f)(int,void*), void *v)
+{
+	AmplExports *ae;
+	if (f) {
+		breakfunc_ASL = f;
+		breakarg_ASL = v;
+		}
+	else
+		signal(SIGINT, SIG_DFL);
+	if (ae = a->i.ae) {
+		ae->Breakfunc = f;
+		ae->Breakarg = v;
+		}
+	}
 
  static void
 siglistener(void *arg)
@@ -89,7 +109,12 @@ siglistener(void *arg)
 				sig = 0;
 				break;
 				}
-			signal(sig, oldsig);
+			if (breakfunc_ASL) {
+				(*breakfunc_ASL)(sig, breakarg_ASL);
+				breakfunc_ASL = 0;
+				}
+			else
+				signal(sig, oldsig);
 			break;
 		  case 15:
 			sig = SIGTERM;

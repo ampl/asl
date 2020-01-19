@@ -71,11 +71,12 @@ x1known_ASL(ASL *asl, real *X, fint *nerror)
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
 		if (*nerror = ij)
-			return;
+			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	x0_check_ASL((ASL_fg*)asl, X);
 	asl->i.x_known = 1;
+ done:
 	err_jmp = 0;
 	}
 
@@ -117,8 +118,10 @@ obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
-			return 0.;
+		if (*nerror = ij) {
+			f = 0.;
+			goto done;
+			}
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -146,6 +149,7 @@ obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
 	else
 		for(; gr; gr = gr->next)
 			f += gr->coef * X[gr->varno];
+ done:
 	err_jmp = 0;
 	return f;
 	}
@@ -175,7 +179,7 @@ obj1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
 		if (*nerror = ij)
-			return;
+			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
@@ -186,7 +190,7 @@ obj1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		obj1val_ASL(a, i, X, nerror);
 		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
-			return;
+			goto done;
 		}
 	if (f_b)
 		funnelset_ASL(asl, f_b);
@@ -217,5 +221,6 @@ obj1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			i = gr->varno;
 			G[i] = Adjoints[i];
 			}
+ done:
 	err_jmp = 0;
 	}

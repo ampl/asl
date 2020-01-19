@@ -77,3 +77,5 @@ wrtsol_(char *msg, fint *nmsg, real *x, real *y, ftnlen msg_len)
 	write_sol_ASL(asl, buf, x, y, &oi);
 	free(buf);
 	}
+
+/* Affected by ASL update of 20020503 */

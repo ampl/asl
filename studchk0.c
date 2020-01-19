@@ -24,6 +24,8 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
+ Const char *Version_Qualifier_ASL = "";	/* for show_version in gestub.c */
+
  void
 #ifdef KR_headers
 student_check_ASL(asl) ASL *asl;

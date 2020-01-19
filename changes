@@ -1131,3 +1131,161 @@ Thu Aug 23 09:42:07 EDT 2001
   suf_sos.c: When processing .sosno and .ref, if .priority is available,
 give each SOS1 and SOS2 set specified by .sosno the maximum priority
 of any of its variables (rather than the minimum).
+
+Wed Feb  6 16:57:53 EST 2002
+  New function int_catch(void(*f)(int,void*), void *v) lets a solver
+interface provide a function f such that f(SIGINT,v) should be
+invoked the first time a SIGINT signal is received.  This could
+instruct the solver to terminate gracefully.  Argument v is passed
+without change to f.  Imported functions can also call f as follows:
+
+	AmplExports *ae = al->AE;
+	if (ae->ASLdate >= 20011004 && ae->Breakfunc)
+		(*ae->Breakfunc)(2, ae->Breakarg);
+
+  Fix glitches with printf:
+	printf "%3.0f\n", .1;	# gave " 0" rather than "  0"
+	printf "%3.-2f\n", 1;	# gave "   00" rather than "  0"
+  Fix a memory leak that occurred when sphes_setup() was called with
+several times with different arguments.
+  Fix a fault in pfg_read() and pfgh_read() in handling a nonlinear
+defined variable involving (variable expression)*(sum of nonlinear
+terms), where the linear terms cancel or there are two or more
+explicit zeros in certain positions.  Example (that results in two
+explicit zeros with AMPL versions prior to 20011218):
+	set I := 1..5;
+	var w{I} := 2 >= 0 <= 5;
+	var x{I} := 1 >= 0 <= 4;
+	var y <= 4 := 1;
+	var z = y * sum{i in I} i*w[i]*x[i];
+	maximize zot: y*z;
+	s.t. zap: z <= 10;
+	s.t. fix25{i in {2,5}}: x[i] = 0;
+Here is a uuencoded, gzipped foo.nl resulting from the above with
+	option nl_comments 1;
+	write gfoo;
+(with an AMPL version prior to 20011218):
+begin 644 foo.nl.gz
+M'XL("`"U'SP``V9O;RYN;`"-4CV3FS`0K=E?H1F*G#,4PH!M[LH4F;DF79I,
+M"H%EK!Q(CB0XGW]]GO@XA^(R&<U*@GUO]^VNFHRE6#R*V<6:JI4=.QE#K)Q^
+MCXY!6)>PVFCGK5#:X\-4OV3MU2!QMT(WX92_M:-``T4;W2HMA?V(1G-L+?VK
+ML2]_PQ[O[(1-9]"#M0H<5#&E/]95&7\>TV`%33-OR0B^$BC8/;%3KT%"G">&
+MG_Z<L%,K&K>0)Z5'Y6HKO;P3'UFEM+!O"61XV4C(O<M[J)(Z,1NZZ[Y):T;%
+MSZ(VE1(Z88T51R6A?&E')ZY,BTZR5NK&GY%B5=Y[:IJ&,[-JTW5&,WF]V"`J
+M)$[J-#$I?2\GR(W,-HH_TW"(XC<R11[%KN]:Y3P5BPNPUQ_I3QJ**+Z&B^:S
+M:]IU1L,V8#)@=@&#RPJ0TY`%0`[`/@#R,<B7($!<:"B#D&_C-&[&KR1-OFMH
+ME=+**]&RII?.$6=;2F%;6`;+805+:0?;PPXP&\7I_`S9@SV[3VX#3LJIBN(2
+M[Z#71SC0H??^;2CTKOCGGJ_V%/8"J6'4MI-')?`4EDEB`FW?Z65JE!+$4H[>
+I[FA/!WKFK`QQ$(6C$HY*."KAJ(2C$HY*."KA]/5_@7\`*&=WP+@#````
+`
+end
+
+  Adjust arithchk.c so it will emit #define NANCHECK in at
+least some cases when the math library fails to set errno.
+README is correspondingly modified.
+  asl.h, suf_sos.c:  the ASL_suf_sos_just_SOS1 flags bit is
+withdrawn.  In its place is a new routine, sos_add() (source
+file sos_add.c) for use by solvers that handle integer variables
+and perhaps know about SOS1 constraints, but do not fully
+support SOS sets -- e.g., do not supply the convexity constraint
+that implies the SOS1 condition.  For such solvers, one now invokes
+
+	void *SI = sos_add(nl,flags);
+
+before calling the .nl reader.  This routine scans the incoming
+suffixes and arranges for the .nl reader to leave room for adding
+constraints and variables needed to properly treat .sosno and .ref.
+After calling the .nl reader, one then invokes either
+
+	nsos = sos_finish(&SI, flags, &nsosnz, &sospri, copri, &sosbeg,
+		&sosind, &sosref);
+
+if the solver wants to know about SOS1 constraints, or
+
+	sos_finish(&SI, flags, 0,0,0,0,0,0);
+
+if not.  Both sos_finish invocations are no-ops, returning 0, if SI
+is null.  When SI is not null, both may adjust n_con, nzc, etc.
+
+  func_add.c: on Linux systems, supply private tempnam and tmpnam
+(which are only there in case imported functions want to use them on
+Microsoft systems) to banish warnings about use of dangerous functions.
+
+Tue Feb 12 08:29:04 EST 2002
+  fgh_read.c:  omit a check that printed Cgrad[nnn] = 0 on trivial
+constraints (that are eliminated unless one inappropriately specifies
+"option presolve 0").
+  pfg_read.c, pfghread.c:  fix a bug in pfgh_read() whereby partially
+separable constant terms other than numerical constants were treated as
+zero.  Such terms can arise when one (inappropriately) specifies
+"option presolve 0" in examples with defined variables and fixed
+variables, such as
+
+	var x{i in 0..2} := i;
+	var y = x[1] - x[2];
+	var z = y^2;
+	minimize f: x[0]^2 + z;
+	fix {i in 1..2} x[i];
+
+and in examples with imported functions that are unavailable to the
+AMPL processor (but available to the solver), as in
+
+	function ginv; var x;
+	minimize zot: (x-1)^2 + ginv(2);
+
+  makefile.u: add sos_add.c to the rule for xsum.out.
+
+Thu Feb 21 14:07:02 EST 2002
+  pfg_read.c, pfghread.c:  fix longstanding bug in handling unary
+minus in some contexts:  too much got negated (by pfg_read() and
+pfgh_read()).  An example where the bug bit:
+
+	var x := 1; var y := sin(-1.5);
+	s.t. c1: sin(-.5 + -x) == y;
+
+Tue Apr  9 18:44:03 EDT 2002
+  writesol.c:  when invoked by AMPL versions >= 20020401, omit
+the backspaces that hitherto appeared when properly behaving
+solvers did not report any option settings.
+ fgh_read.c: omit an unused variable.
+
+Mon Apr 22 11:13:39 EDT 2002
+  sos_add.c:  fix bugs in handling fewer new variables than might have
+been required (because some turned out already to be binary) and in
+working with pfg_read() and pfgh_read().
+
+Tue Apr 30 18:22:33 EDT 2002
+  getstub.c:  extend Ver_val (for "version") to accept an optional
+value (as in "version=1").
+  value.c:  use *(unsigned char*) in some comparisons (an invisible
+change with ASCII characters).
+
+Tue May  7 15:58:54 EDT 2002
+  funcadd.h, func_add.c, printf.c, stdio1.h:  make C99 snprintf and
+vsnprintf available to imported functions when ae->ASLdate >= 20020501.
+  New source file details.c0 meant for conversion to details.c either
+automatically (under Linux and Unix, where the makefile can use sed
+and "uname -sr"), or by hand editing (on Microsoft systems).  Ver_val
+now uses char sysdetails_ASL[] (unless it is ""), which can be
+supplied by details.c or by individual drivers.
+  getstub.[ch]: new field driver_date in Option_Info: if positive,
+its decimal value should be a date string YYYYMMDD, which will appear
+with command-line option -v or keyword "version" (if associated with
+Ver_val -- the recommended arrangement).
+  In the sample drivers in the ampl/solvers subdirectories, YYYYMMDD
+has now been derived automatically by the mkfile rule
+	sed "s/YYYYMMDD/`Dt -8 $prereq`/" $prereq >$target
+and explicitly loading $S/sjac0dim.o (or $S/sjac0dim.obj) to make a
+student version causes "-v" and "version" output to mention "Student ".
+  sos_add.c and the .nl readers:  correct dmg misunderstanding of SOS1
+sets:  at most one variable in an SOS1 set should be nonzero, rather
+than exactly one.  Fix a glitch (leading to an error message about a
+bad .nl file) using sos_add on problems with defined variables.
+
+Wed May  8 16:53:58 EDT 2002
+  sos_add.c, suf_sos.c: adjust to avoid a fault when used with a
+forthcoming AMPL extension for "var in union_of_intervals".
+
+Mon Jun 17 14:07:07 EDT 2002
+  getstub.c:  if $solver_msg is an odd positive integer (such as 1),
+suppress the initial "($solver): " and the echoing of solver options.

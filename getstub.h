@@ -62,6 +62,7 @@ Option_Info {
 	Fileeq_func *feq;	/* for nnn=filename */
 	keyword *options;	/* command-line options (with -) before stub */
 	int n_options;		/* number of options */
+	long driver_date;	/* YYYYMMDD for driver */
 
 	/* For write_sol: */
 
@@ -92,7 +93,8 @@ Option_Info {
 
  enum { /* bits for Option_Info.flags */
 	ASL_OI_want_funcadd = 1,
-	ASL_OI_keep_underscores = 2
+	ASL_OI_keep_underscores = 2,
+	ASL_OI_show_version = 4
 	} ;
 
  enum { /* bits for Option_Info.option_echo */
@@ -117,6 +119,7 @@ extern char* get_opt_ASL  ANSI((Option_Info*, char*));
 extern int   getopts_ASL  ANSI((ASL*, char **argv, Option_Info*));
 extern char* getstops_ASL ANSI((ASL*, char **argv, Option_Info*));
 extern char* getstub_ASL ANSI((ASL*, char ***pargv, Option_Info*));
+extern char  sysdetails_ASL[];
 extern void  usage_ASL ANSI((Option_Info*, int exit_code));
 
 #define getstub(a,b)	getstub_ASL((ASL*)asl,a,b)

@@ -93,6 +93,7 @@ a = \
 	conscale.c \
 	conval.c \
 	derprop.c \
+	details.c \
 	dtoa1.c \
 	duthes.c \
 	dynlink.c \
@@ -140,6 +141,7 @@ a = \
 	rops.c \
 	rops2.c \
 	sigcatch.c \
+	sos_add.c \
 	sphes.c \
 	sscanf.c \
 	stderr.c \
@@ -170,7 +172,7 @@ mach.o: arith.h
 bscanf.o conscale.o derprop.o dynlink.o func_add.o\
  funcadd.o funcadd1.o funcaddk.o funcaddr.o funcadd0.o g_fmt.o\
  genrowno.o jac0dim.o jacdim.o jacinc.o names.o obj_prec.o\
- objval_.o repwhere.o sjac0dim.o studchk0.o: $(Aslh)
+ objval_.o repwhere.o sigcatch.o sjac0dim.o studchk0.o: $(Aslh)
 xp1known.o: asl_pfg.h psinfo.h nlp.h $(Aslh)
 duthes.o fullhes.o htcl.o sphes.o: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 getstub.o value.o writesol.o wrtsol_.o: getstub.h $(Aslh)
@@ -180,7 +182,7 @@ conpval.o pshvprod.o xp2known.o:\
 	jacpdim.h asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 comeval.o con1ival.o conval.o mip_pri.o objval.o qpcheck.o\
  readsol.o: nlp.h $(Aslh)
-misc.o nl_obj.o suf_sos.o:\
+misc.o nl_obj.o sos_add.o suf_sos.o:\
 	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 op_type.o: op_type.hd
 fgh_read.o: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
@@ -202,7 +204,8 @@ dtoa1.o: dtoa.c arith.h stdio1.h
 
 arith.h: arithchk.c fpinit.c
 	$(CC) -c $(CFLAGS) fpinit.c
-	$(CC) $(CFLAGS) arithchk.c fpinit.o || $(CC) -DNO_LONG_LONG $(CFLAGS) arithchk.c fpinit.o
+	$(CC) $(CFLAGS) arithchk.c fpinit.o -lm ||\
+	 $(CC) -DNO_LONG_LONG $(CFLAGS) arithchk.c fpinit.o -lm
 	./a.out >arith.h
 	rm -f a.out arithchk.o fpinit.o
 
@@ -224,6 +227,9 @@ arith.h: arithchk.c fpinit.c
 #         make memory.h
 #
 # as appropriate.
+
+details.c: details.c0
+	sed "s/System_details/`uname -sr`/" details.c0 >details.c
 
 float.h: float.h0
 	ln float.h0 float.h
@@ -284,6 +290,7 @@ xs0 = \
 	conscale.c \
 	conval.c \
 	derprop.c \
+	details.c0 \
 	dtoa.c \
 	dtoa1.c \
 	duthes.c \
@@ -361,6 +368,7 @@ xs0 = \
 	rops2.c \
 	sigcatch.c \
 	sjac0dim.c \
+	sos_add.c \
 	sphes.c \
 	sprintf.c \
 	sscanf.c \
@@ -384,4 +392,4 @@ xsum.out: xsum0.out $(xs0)
 	cmp xsum0.out xsum1.out && mv xsum1.out xsum.out || diff xsum[01].out
 
 clean:
-	rm -f amplsolver.a *.o arith.h
+	rm -f amplsolver.a *.o arith.h details.c float.h stdio1.h

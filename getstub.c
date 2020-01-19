@@ -275,17 +275,13 @@ get_opt_ASL(Option_Info *oi, char *s)
 	return s1;
 	}
 
- char *
-#ifdef KR_headers
-Ver_val_ASL(oi, kw, v) Option_Info *oi; keyword *kw; char *v;
-#else
-Ver_val_ASL(Option_Info *oi, keyword *kw, char *v)
-#endif
+ void
+show_version_ASL(Option_Info *oi)
 {
 	char *s;
+	Const char *ver;
 	int L;
-
-	Not_Used(kw);
+	extern Const char *Version_Qualifier_ASL;
 
 	if (!(s = oi->version)
 	 && !(s = oi->bsname)
@@ -294,10 +290,41 @@ Ver_val_ASL(Option_Info *oi, keyword *kw, char *v)
 	L = strlen(s);
 	while(L > 0 && s[L-1] == '\n')
 		--L;
-	printf("%.*s%s, ASL(%ld)\n", L, s, oi->nnl ? "\n" : "", ASLdate_ASL);
-	if (oi->option_echo & ASL_OI_clopt)	/* -v */
-		exit(0);
-	oi->option_echo &= ~ASL_OI_echothis;
+	if (!(ver = Version_Qualifier_ASL))
+		ver = "";
+	printf("%s%.*s%s", ver, L, s, oi->nnl ? "\n" : "");
+	if (*sysdetails_ASL)
+		printf(" (%s)", sysdetails_ASL);
+	if (oi->driver_date > 0)
+		printf(", driver(%ld)", oi->driver_date);
+	printf(", ASL(%ld)\n", ASLdate_ASL);
+	}
+
+ char *
+#ifdef KR_headers
+Ver_val_ASL(oi, kw, v) Option_Info *oi; keyword *kw; char *v;
+#else
+Ver_val_ASL(Option_Info *oi, keyword *kw, char *v)
+#endif
+{
+	char *s;
+	int wantver;
+
+	if (!v || *v < '0' || *v > '9')
+		goto showver;
+	wantver = (int)strtol(s = v, &v, 10);
+	if (*(unsigned char*)v > ' ')
+		return badval_ASL(oi,kw,s,v);
+	if (wantver) {
+ showver:
+		if (oi->option_echo & ASL_OI_clopt) {	/* -v */
+			show_version_ASL(oi);
+			exit(0);
+			}
+		oi->flags |= ASL_OI_show_version;
+		}
+	else
+		oi->flags &= ~ASL_OI_show_version;
 	return v;
 	}
 
@@ -336,6 +363,11 @@ getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
 		oi->nnl = 0;
 		oi->asl = asl;
 		okw = oi->options;
+		if (s = getenv("solver_msg")) {
+			i = (int)strtol(s, &s1, 10);
+			if (s1 > s && !*s1 && i >= 0 && !(i & 1))
+				oi->option_echo = ASL_OI_never_echo;
+			}
 		oi->option_echo = (oi->option_echo & ASL_OI_never_echo)
 			? ASL_OI_never_echo : ASL_OI_clopt | ASL_OI_echo;
 		oi->n_badopts = 0;
@@ -414,7 +446,8 @@ getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
 		if ((s1 = *++argv) && !strncmp(s1,"-AMPL",5)) {
 			amplflag = 1;
 			argv++;
-			if (oi && oi->bsname)
+			if (oi && oi->bsname
+			 && !(oi->option_echo & ASL_OI_never_echo))
 				need_nl = oi->nnl = printf("%s: ", oi->bsname);
 			}
 		i = strlen(s) - 3;
@@ -455,6 +488,8 @@ getopts_ASL(ASL *asl, char **argv, Option_Info *oi)
 			while(*s);
 
 	need_nl = oi->nnl;
+	if (oi->flags & ASL_OI_show_version)
+		show_version_ASL(oi);
 	fflush(stdout);
 	return oi->n_badopts;
 	}

@@ -4,6 +4,6 @@
 #define OPDIV 3
 #define OPUMINUS 16
 #define OPSUMLIST 54
-#define OP2POW 60
-#define OPNUM 63
-#define OPVARVAL 67
+#define OP2POW 76
+#define OPNUM 79
+#define OPVARVAL 81

@@ -148,6 +148,7 @@ Static {
 	int _wantCgroups;
 	int _wantOgroups;
 	int _zc_lim;
+	int nvar0, nvinc;
 	la_ref *_laref_free;
 	linarg **_lthash;		/* hash table */
 	linarg *_ltfree;		/* free list */
@@ -676,7 +677,7 @@ eread(EdRead *R)
 			al->derivs = al->hes = 0;
 			al->funcinfo = fi->funcinfo;
 			al->AE = asl->i.ae;
-			sa = al->sa = (char **)(al + 1);
+			al->sa = (Const char**)(sa = (char **)(al + 1));
 			ap = rvf->ap = (argpair *)(sa + symargs);
 			sap = rvf->sap = ap + k;
 			at = al->at = (int *)(sap + ks);
@@ -731,7 +732,11 @@ eread(EdRead *R)
 			break;
 
 		case 'v':
-			if (xscanf(R,"%d",&k) != 1 || k < 0 || k > max_var)
+			if (xscanf(R,"%d",&k) != 1 || k < 0)
+				badline(R);
+			if (k >= S->nvar0)
+				k += S->nvinc;
+			if (k > max_var)
 				badline(R);
 			return (expr *)(var_e + k);
 
@@ -817,7 +822,7 @@ eread(EdRead *R)
 			return (expr *)rvif;
 
 		case 6: /* sumlist */
-			i = j = 0;
+			i = 0;
 			xscanf(R, "%d", &i);
 			if (i <= 2)
 				badline(R);
@@ -1705,8 +1710,7 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 				rv = Laf;
 				goto delscratch;
 				}
-			if (Laf)
-				sumlist_afree(S, Laf, e, argso, sls, slscr);
+			sumlist_afree(S, Laf, e, argso, sls, slscr);
  delscratch:
 			--slscratchlev;
 			if (asl)
@@ -2224,14 +2228,15 @@ dv_walk(S) Static *S;
 dv_walk(Static *S)
 #endif
 {
-	int i;
+	int i, m;
 	expr_v *v;
 	ASLTYPE *asl = S->asl;
 
+	m = asl->i.n_con0;
 	if (Ncom) {
 		for(i = 0; i < n_obj; i++)
 			colindvref(S, obj_de[i].e, -1);
-		for(i = 0; i < n_con; i++)
+		for(i = 0; i < m; i++)
 			colindvref(S, con_de[i].e, -1);
 		larvlist = &v;
 		for(i = 0; i < Ncom; i++)
@@ -2354,7 +2359,7 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	nzc2 = k;
 	if (zc[-1])
 		--nzc2;	/* ignore constant */
-	if (n <= 0)
+	if (n <= 0 && Intcast (*ep)->op == f_OPNUM)
 		goto done;
 
 	r->n = n;
@@ -2541,8 +2546,6 @@ ltermwalk(Static *S, real scale, expr **ep, PSfind *p)
 			goto top;
 		case f_OPUMINUS:
 			ep = &e->L.e;
-			for(og = rv; og; og = og->next)
-				og->coef = -og->coef;
 			scale = -scale;
 			goto top;
 		case f_OPSUMLIST:
@@ -2804,7 +2807,7 @@ psfind(S) Static *S;
 psfind(Static *S)
 #endif
 {
-	int i, j;
+	int i, j, m;
 	fint x;
 	ps_func *f, *f1;
 	range *r, *r0;
@@ -2815,14 +2818,15 @@ psfind(Static *S)
 #endif
 	ASLTYPE *asl = S->asl;
 
-	x = (n_obj+n_con)*sizeof(ps_func)
+	m = asl->i.n_con0;
+	x = (n_obj+m)*sizeof(ps_func)
 		+ nlthash*sizeof(linarg*)
 		+ nrangehash*sizeof(range*)
 		+ slmax*sizeof(expr*)
 		+ (Ncom+1)*sizeof(int);
 	asl->P.ops = f = (ps_func *)M1alloc(x);
 	asl->P.cps = f1 = f + n_obj;
-	lthash = (linarg**)(f1 + n_con);
+	lthash = (linarg**)(f1 + m);
 	rangehash = (range**)(lthash + nlthash);
 	slscratch = (expr**)(rangehash + nrangehash);
 	memset(lthash, 0, (nlthash+nrangehash)*sizeof(linarg*));
@@ -2850,7 +2854,7 @@ psfind(Static *S)
 		}
 	PSHV(asl->P.nobjgroups = n);
 	PSHV(n = 0);
-	for(i = 0; i < n_con; i++, f1++) {
+	for(i = 0; i < m; i++, f1++) {
 		Conno = i;
 		Cgrad[i] = cf_sum(S, Cgrad[i], cotermwalk(S, &con_de[i].e, f1,
 							wantCgroups, 1));
@@ -4062,7 +4066,7 @@ goff_comp(ASLTYPE *asl)
 	cgrad *cg;
 
 	cgx = Cgrad;
-	cgxe = cgx + n_con;
+	cgxe = cgx + asl->i.n_con0;
 	while(cgx < cgxe)
 		for(cg = *cgx++; cg; cg = cg->next)
 			cg->goff = ka[cg->varno]++;
@@ -4075,9 +4079,10 @@ colstart_inc(S) Static *S;
 colstart_inc(Static *S)
 #endif
 {
+	ASLTYPE *asl = S->asl;
 	int *ka, *kae;
-	ka = S->asl->i.A_colstarts_;
-	kae = ka + nv0;
+	ka = asl->i.A_colstarts_;
+	kae = ka + asl->i.n_var0;
 	while(ka <= kae)
 		++*ka++;
 	}
@@ -4143,7 +4148,7 @@ cg_zzap(ASLTYPE *asl)
 	cgrad *cg, **cgp,**cgp1, **cgpe;
 
 	cgp1 = Cgrad;
-	cgpe = cgp1 + n_con;
+	cgpe = cgp1 + asl->i.n_con0;
 	while(cgp1 < cgpe) {
 		cgp = cgp1++;
 		while(cg = *cgp)
@@ -4179,11 +4184,11 @@ adjust(Static *S)
 	vargadjust(asl, varglist);
 	if (Ncom)
 		funneladjust(S);
-	co_adjust(asl->P.cps, n_con);
+	co_adjust(asl->P.cps, asl->i.n_con0);
 	co_adjust(asl->P.ops, n_obj);
 	if (n_obj)
 		zerograd_chk(S);
-	if (n_con && !allJ)
+	if (asl->i.n_con0 && !allJ)
 		cg_zzap(asl);
 	if (k_seen) {
 		if (!A_vals)
@@ -4195,17 +4200,21 @@ adjust(Static *S)
 
  static void
 #ifdef KR_headers
-br_read(R, nc, Lp, U, Cvar, nv) EdRead *R; real **Lp, *U; int *Cvar, nv;
+br_read(R, nc, nc1, Lp, U, Cvar, nv)
+	EdRead *R; real **Lp, *U; int nc, nc1, *Cvar, nv;
 #else
-br_read(EdRead *R, int nc, real **Lp, real *U, int *Cvar, int nv)
+br_read(EdRead *R, int nc, int nc1, real **Lp, real *U, int *Cvar, int nv)
 #endif
 {
 	int i, inc, j, k;
 	real *L;
 	ASL *asl = R->asl;
 
-	if (!(L = *Lp))
-		L = *Lp = (real *)M1alloc(2*sizeof(real)*nc);
+	if (!(L = *Lp)) {
+		if (nc1 < nc)
+			nc1 = nc;
+		L = *Lp = (real *)M1alloc(2*sizeof(real)*nc1);
+		}
 	if (U)
 		inc = 1;
 	else {
@@ -4529,7 +4538,7 @@ do_ewalk(Static *S)
 	f_c = funnelfix(f_c);
 	f_o = funnelfix(f_o);
 
-	asl->I.c_class_max = co_walkloop(S, asl->P.cps, n_con,
+	asl->I.c_class_max = co_walkloop(S, asl->P.cps, asl->i.n_con0,
 					asl->I.c_class, (ograd**)Cgrad);
 	asl->I.o_class_max = co_walkloop(S, asl->P.ops, n_obj,
 					asl->I.o_class, Ograd);
@@ -4656,6 +4665,9 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		+ nfunc*sizeof(func_info *)
 		+ nvref*sizeof(int)
 		+ no;
+	SS.nvar0 = a->i.n_var0;
+	if (!(SS.nvinc = a->i.n_var_ - SS.nvar0))
+		SS.nvar0 += ncom0 + ncom1;
 	if (flags & ASL_find_co_class)
 		x += nco;
 	if (X0)
@@ -4791,8 +4803,11 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 				funcs[i] = fi;
 				break;
 			case 'V':
-				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3
-				 || k < nv0 || k >= nv)
+				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
+					badline(R);
+				if (k >= SS.nvar0)
+					k += SS.nvinc;
+				if (k < nv0 || k >= nv)
 					badline(R);
 				cexp_read(R, k, nlin);
 				break;
@@ -4866,19 +4881,24 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 				Suf_read_ASL(R, readall);
 				break;
 			case 'r':
-				br_read(R, nc, &LUrhs, Urhsx, cvar, nv0);
+				br_read(R, asl->i.n_con0, nc, &LUrhs,
+					Urhsx, cvar, asl->i.n_var0);
 				break;
 			case 'b':
-				br_read(R, nv0, &LUv, Uvx, 0, 0);
+				br_read(R, asl->i.n_var0, nv0, &LUv,
+					Uvx, 0, 0);
 				break;
 			case 'k':
 				k_seen++;
-				k = nv0;
+				k = asl->i.n_var0;
 				if (!xscanf(R,"%d",&j) || j != k - 1)
 					badline(R);
-				if (!(ka = A_colstarts))
+				if (!(ka = A_colstarts)) {
+					if ((i = k) < n_var)
+						i = n_var;
 					ka = A_colstarts = (int *)
-						M1alloc((k+1)*Sizeof(int));
+						M1alloc((i+1)*Sizeof(int));
+					}
 				*ka++ = 0;
 				*ka++ = 0;	/* sic */
 				while(--k > 0)

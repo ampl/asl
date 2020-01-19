@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1998, 2000 Lucent Technologies
+Copyright (C) 1997-1998, 2000-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -216,6 +216,7 @@ expr2_h {
  typedef struct
 Edag2info {
 	cde2	*con2_de_;	/* constraint deriv. and expr. info */
+	cde2	*lcon2_de_;	/* logical constraints */
 	cde2	*obj2_de_;	/* objective  deriv. and expr. info */
 	expr2_v	*var2_e_;	/* variable values (and related items) */
 
@@ -271,6 +272,7 @@ extern efunc2 f2_OPVARVAL_ASL;
 #define f_b		asl->I.f2_b_
 #define f_c		asl->I.f2_c_
 #define f_o		asl->I.f2_o_
+#define lcon_de		asl->I.lcon2_de_
 #define obj_de		asl->I.obj2_de_
 #define var_e		asl->I.var2_e_
 #define var_ex1		asl->I.var2_ex1_

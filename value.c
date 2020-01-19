@@ -79,7 +79,7 @@ Dval_ASL(Option_Info *oi, keyword *kw, char *value, real *v)
 		return value+1;
 		}
 	t = strtod(value, &rv);
-	if (*rv <= ' ')
+	if (*(unsigned char*)rv <= ' ')
 		*v = t;
 	else
 		rv = badval_ASL(oi,kw,value,rv);
@@ -159,7 +159,7 @@ Lval_ASL(Option_Info *oi, keyword *kw, char *value, Long *v)
 		return value+1;
 		}
 	t = (Long)strtol(value, &rv, 10);
-	if (*rv <= ' ')
+	if (*(unsigned char*)rv <= ' ')
 		*v = t;
 	else
 		rv = badval_ASL(oi,kw,value,rv);
@@ -202,7 +202,7 @@ Ival_ASL(Option_Info *oi, keyword *kw, char *value, int *v)
 		return value+1;
 		}
 	t = (int)strtol(value, &rv, 10);
-	if (*rv <= ' ')
+	if (*(unsigned char*)rv <= ' ')
 		*v = t;
 	else
 		rv = badval_ASL(oi,kw,value,rv);
@@ -313,3 +313,5 @@ FI_val(Option_Info *oi, keyword *kw, char *value)
 	*(fint*)kw->info = L;
 	return rv;
 	}
+
+/* Affected by ASL update of 20020503 */
