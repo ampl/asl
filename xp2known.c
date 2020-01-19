@@ -149,11 +149,12 @@ xp2known_ASL(ASL* asl, real *X, fint *nerror)
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
 		if (*nerror = ij)
-			return;
+			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	xp_check_ASL((ASL_pfgh*)asl, X);
 	asl->i.x_known = 1;
+ done:
 	err_jmp = 0;
 	}
 

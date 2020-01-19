@@ -105,7 +105,8 @@ mean(register arglist *al)	/* mean of arbitrarily many arguments */
 	real x, z;
 	real *d, *de, *ra;
 	int *at, i, j, n;
-	char *se, *sym;
+	char *se;
+	Const char *sym;
 	AmplExports *ae = al->AE; /* for fprintf and strtod */
 
 	if ((n = al->n) <= 0)
@@ -143,7 +144,7 @@ mean(register arglist *al)	/* mean of arbitrarily many arguments */
 /* Sample function kth optionally prints its arguments using
  * a variant of stdio.h supplied by funcadd.h. */
 
- static char *
+ static Const char *
 kth(register arglist *al)	/* kth(k,a1,a2,...,an) return ak */
 {
 	int j, k, n;

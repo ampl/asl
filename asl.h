@@ -228,6 +228,7 @@ Edagpars {
 	void (*Hvcomp) ANSI((ASL*, real *hv,real *p,int no,real *ow,real *y));
 	void (*Hvinit) ANSI((ASL*, int, int, real*, real*));
 	void (*Hesset) ANSI((ASL*, int flags,int no,int nno,int nc,int nnc));
+	int  (*Lconval)ANSI((ASL*, int ncon, real *X, fint *nerror));
 	void (*Xknown) ANSI((ASL*, real*, fint*));
 	void (*Duthes) ANSI((ASL*, real *H, int nobj, real *ow, real *y));
 	void (*Fulhes) ANSI((ASL*, real *H,fint LH, int no, real *ow, real *y));
@@ -248,6 +249,7 @@ Edagpars {
 #define hesset(f,o,n,c,nc)	(*((ASL*)asl)->p.Hesset)((ASL*)asl,f,o,n,c,nc)
 #define duthes(h,n,ow,y)	(*((ASL*)asl)->p.Duthes)((ASL*)asl,h,n,ow,y)
 #define fullhes(h,lh,n,ow,y)	(*((ASL*)asl)->p.Fulhes)((ASL*)asl,h,lh,n,ow,y)
+#define lconval(i,x,ne)		(*((ASL*)asl)->p.Lconval)((ASL*)asl,i,x,ne)
 #define sphes(h,no,ow,y)	(*((ASL*)asl)->p.Sphes)( (ASL*)asl,0,h,no,ow,y)
 #define sphsetup(no,ow,y,b)	(*((ASL*)asl)->p.Sphset)((ASL*)asl,0,no,ow,y,b)
 #define xknown(x)		(*((ASL*)asl)->p.Xknown)((ASL*)asl,x,0)
@@ -384,6 +386,7 @@ Edaginfo {
 	int	n_obj_;		/* total no. of objectives */
 	int	n_prob;		/* 1 (for use with SufDesc): SufDesc.u has */
 	/* (&asl->i.n_var_)[SufDesc.kind & ASL_Sufkind_mask] entries */
+	int	n_lcon_;	/* no. of logical constraints */
 	int	flags;		/* 1 = want output suffixes */
 	int	n_conjac_[2];	/* Conval and Jacval operate on constraint i */
 				/* for n_conjac_[0] <= i < n_conjac_[1]. */
@@ -392,6 +395,7 @@ Edaginfo {
 
 			/* internal stuff */
 
+	int	nclcon_;	/* n_con + n_lcon */
 	int	ncom0_;
 	int	ncom1_;
 	int	nderps_;
@@ -499,7 +503,9 @@ Edaginfo {
 
 	/* for con_name(), obj_name(), var_name() */
 
-	char **conames;
+	char **connames;
+	char **lconnames;
+	char **objnames;
 	char **varnames;
 	int vcochecked;
 
@@ -607,6 +613,7 @@ NewVCO {
 #define n_obj		asl->i.n_obj_
 #define n_var		asl->i.n_var_
 #define nbv		asl->i.nbv_
+#define nclcon		asl->i.nclcon_
 #define ncom0		asl->i.ncom0_
 #define ncom1		asl->i.ncom1_
 #define nderps		asl->i.nderps_
@@ -618,6 +625,7 @@ NewVCO {
 #define nlcc		asl->i.nlcc_
 #define nlnc		asl->i.nlnc_
 #define nlo		asl->i.nlo_
+#define n_lcon		asl->i.n_lcon_
 #define nlogv		asl->i.nbv_	/* nbv used to be called nlogv */
 #define nlvb		asl->i.nlvb_
 #define nlvbi		asl->i.nlvbi_
@@ -730,10 +738,12 @@ enum ASL_reader_flag_bits {	/* bits in flags arg */
 	ASL_keep_derivs = 512,
 	ASL_allow_missing_funcs = 1024,
 	ASL_forbid_missing_funcs = 2048,
+	ASL_allow_CLP = 4096,	/* permit CLP extensions */
 	ASL_find_default_no_groups = 8192	/* Assume ASL_findgroups */
 						/* when this bit is off. */
 	/* When ASL_find_default_no_groups is on, pfg_read and pfgh_read */
 	/* only honor explicit specification of the ASL_findgroups bits. */
+
 	};
 
 enum ASL_reader_error_codes {
@@ -744,21 +754,17 @@ enum ASL_reader_error_codes {
 	ASL_readerr_argerr = 3, /* user-defined function with bad args */
 	ASL_readerr_unavail= 4, /* user-defined function not available */
 	ASL_readerr_corrupt= 5, /* corrupt .nl file */
-	ASL_readerr_bug	   = 6	/* bug in .nl reader */
+	ASL_readerr_bug	   = 6,	/* bug in .nl reader */
+	ASL_readerr_CLP    = 7  /* solver cannot handle CLP extensions */
 	};
 
 enum ASL_suf_sos_flags { /* bits in flags parameter of suf_sos() */
 	ASL_suf_sos_explict_free = 1,	/* caller will explicitly free */
 					/* returned arrays */
 	ASL_suf_sos_ignore_sosno = 2,	/* ignore .sosno */
-	ASL_suf_sos_ignore_amplsos = 4,	/* ignore SOS information from */
+	ASL_suf_sos_ignore_amplsos = 4	/* ignore SOS information from */
 					/* transformations of piecewise- */
 					/* linear terms (etc.) by AMPL */
-	ASL_suf_sos_just_SOS1 = 8	/* assume solver only knows about */
-					/* SOS1 sets:  retain variables */
-					/* and constraints that imply SOS2 */
-					/* sets in transformations of */
-					/* piecewise-linear terms. */
 	};
 
 enum ASL_write_flags {
@@ -834,6 +840,7 @@ enum ASL_writer_error_codes {
  extern int htcl_ASL ANSI((unsigned int));
  extern void hvcomp_ ANSI((real *hv, real *p, fint *nobj, real *ow, real *y));
  extern void hvinit_ ANSI((fint *nobj, real *ow, real *y));
+ extern void intcatch_ASL ANSI((ASL*, void (*)(int,void*), void*));
  extern FILE *jac0dim_ASL ANSI((ASL*, char *stub, ftnlen stub_len));
  extern int  jac1dim_ASL ANSI((ASL*,char *stub, fint *M, fint *N, fint *NO,
 			fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len));
@@ -851,6 +858,7 @@ enum ASL_writer_error_codes {
  extern void jacval_ ANSI((fint *M, fint *N, fint *NZ, real *X,
 			real *JAC, fint *nerror));
  extern void lagscale_ASL ANSI((ASL*, real, fint*));
+ extern char *lcon_name_ASL ANSI((ASL*,int));
  extern void mainexit_ASL ANSI((int));
  extern Char *mem_ASL ANSI((ASL*, unsigned int));
  extern int mip_pri_ASL ANSI((ASL*,int**startp,int**nump,int**prip,fint pmax));
@@ -859,7 +867,6 @@ enum ASL_writer_error_codes {
  extern Char *mymalloc ANSI((size_t));
  extern real mypow ANSI((real,real));
  extern Char *myralloc ANSI((void *, size_t));
- extern void name_map_ASL ANSI((int, int, int*, char**)); /* internal use */
  extern Char *new_mblk_ASL ANSI((ASL*, int k));
  extern int nl_obj_ASL ANSI((ASL*,int));
  extern fint nqpcheck_ASL ANSI((ASL*, int co, fint **rowqp, fint **colqp, real **delsqp));
@@ -882,6 +889,8 @@ enum ASL_writer_error_codes {
  extern void scream ANSI((EdRead*, int rc, const char *fmt, ...));
  extern void show_funcs_ASL ANSI((ASL*));
  extern void sigcatch_ASL(VOID);
+ extern void* sos_add_ASL ANSI((ASL*, FILE*, int));
+ extern int sos_finish_ASL ANSI((ASL*,void**,int,int*,int**,int*,int**,int**,real**));
  extern void student_check_ASL ANSI((ASL*));
  extern void suf_declare_ASL ANSI((ASL*, SufDecl*, int));
  extern SufDesc *suf_get_ASL ANSI((ASL*, const char*, int));
@@ -924,6 +933,7 @@ enum ASL_writer_error_codes {
 #define gen_rownos() gen_rownos_ASL((ASL*)asl)
 #undef getenv
 #define getenv getenv_ASL
+#define int_catch(f,v) intcatch_ASL((ASL*)asl,f,v)
 #define jac0dim(stub,len) jac0dim_ASL((ASL*)asl,stub,len)
 #define jac1dim(s,m,n,no,nz,mxr,mxc,L) jac1dim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
 #define jac2dim(s,m,n,no,nz,mxr,mxc,L) jac2dim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
@@ -931,6 +941,7 @@ enum ASL_writer_error_codes {
 #define jacdim0(stub,len) jac0dim_ASL((ASL*)asl,stub,len)
 #define jacpdim(s,m,n,no,nz,mxr,mxc,L) jacpdim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
 #define lagscale(s,ie) lagscale_ASL((ASL*)asl,s,ie)
+#define lcon_name(n) lcon_name_ASL((ASL*)asl,n)
 #define mip_pri(a,b,c,d) mip_pri_ASL((ASL*)asl,a,b,c,d)
 #define mqpcheck(a,b,c,d) mqpcheck_ASL((ASL*)asl,a,b,c,d)
 #define nl_obj(n) nl_obj_ASL((ASL*)asl,n)
@@ -944,7 +955,9 @@ enum ASL_writer_error_codes {
 #define qpcheck(a,b,c) qpcheck_ASL((ASL*)asl,a,b,c)
 #define read_soln(x,y) read_sol_ASL((ASL*)asl,x,y)
 #define show_funcs() show_funcs_ASL((ASL*)asl)
-#define suf_declare(x,n) suf_declare_ASL((ASL*)asl,x,n)
+#define sos_add(a,b) sos_add_ASL((ASL*)asl,a,b)
+#define sos_finish(a,b,c,d,e,f,g,h) sos_finish_ASL((ASL*)asl,a,b,c,d,e,f,g,h)
+#define suf_declare(x,n) suf_declare_ASL((ASL*)asl,x,(int)(n))
 #define suf_get(s,i) suf_get_ASL((ASL*)asl,s,i)
 #define suf_iput(n,i,x) suf_iput_ASL((ASL*)asl,n,i,x)
 #define suf_rput(n,i,x) suf_rput_ASL((ASL*)asl,n,i,x)

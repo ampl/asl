@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -166,6 +166,21 @@ con0ival(ASL *a, int i, real *X, fint *nerror)
 	return 0.;
 	}
 
+ static int
+#ifdef KR_headers
+lcon0val(a, i, X, nerror) ASL *a; int i; real *X; fint *nerror;
+#else
+lcon0val(ASL *a, int i, real *X, fint *nerror)
+#endif
+{
+	Not_Used(a);
+	Not_Used(i);
+	Not_Used(X);
+	Not_Used(nerror);
+	notread("conival", anyedag);
+	return 0;
+	}
+
  static void
 #ifdef KR_headers
 con0grd(a, i, X, G, nerror) ASL *a; int i; real *X, *G; fint *nerror;
@@ -326,6 +341,7 @@ Edagpars edagpars_ASL = {
 	hv0comp,
 	hv0init,
 	hes0set,
+	lcon0val,
 	x0known,
 	dut0hes,
 	ful0hes,
@@ -851,11 +867,15 @@ Suf_read_ASL(EdRead *R, int readall)
 
 	if (xscanf(R, "%d %d %127s", &k, &n, sufname) != 3)
 		badline(R);
-	if (k < 0 || k > 7 || n <= 0
-	 || n > (nx = (&asl->i.n_var_)[k & ASL_Sufkind_mask]))
+	if (k < 0 || k > 7 || n <= 0)
 		badline(R);
 	isreal = k & ASL_Sufkind_real;
 	k &= ASL_Sufkind_mask;
+	nx = (&asl->i.n_var_)[k];
+	if (k == 1)
+		nx += n_lcon;
+	if (n > nx)
+		badline(R);
 	if (readall & 1) {
  new_D:
 		D = (SufDesc*)M1zapalloc(sizeof(SufDesc) + strlen(sufname) + 1);

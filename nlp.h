@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1998 Lucent Technologies
+Copyright (C) 1997-1998, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -53,6 +53,7 @@ typedef real efunc ANSI((expr * A_ASL));
 #define jac1val   jac1val_ASL
 #define con1ival  con1ival_ASL
 #define con1grd   con1grd_ASL
+#define lcon1val  lcon1val_ASL
 #define x1known   x1known_ASL
 
  union
@@ -182,6 +183,7 @@ expr_h {
  typedef struct
 Edag1info {
 	cde	*con_de_;	/* constraint deriv. and expr. info */
+	cde	*lcon_de_;	/* logical constraints */
 	cde	*obj_de_;	/* objective  deriv. and expr. info */
 	expr_v	*var_e_;	/* variable values (and related items) */
 
@@ -229,6 +231,7 @@ ASL_fg {
  extern void jac1val ANSI((ASL*, real *X, real *JAC, fint *nerror));
  extern real con1ival ANSI((ASL*,int nc, real *X, fint *ne));
  extern void con1grd  ANSI((ASL*, int nc, real *X, real *G, fint *nerror));
+ extern int  lcon1val ANSI((ASL*,int nc, real *X, fint *ne));
  extern int x0_check_ASL ANSI((ASL_fg*, real *));
  extern void x1known ANSI((ASL*, real*, fint*));
 #ifdef __cplusplus
@@ -245,6 +248,7 @@ ASL_fg {
 #define f_b	asl->I.f_b_
 #define f_c	asl->I.f_c_
 #define f_o	asl->I.f_o_
+#define lcon_de	asl->I.lcon_de_
 #define obj_de	asl->I.obj_de_
 #define var_e	asl->I.var_e_
 #define var_ex	asl->I.var_ex_

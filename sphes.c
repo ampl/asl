@@ -948,6 +948,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	if (ogsave)
 		restog(asl, ogsave, no, noe, y, kog);
 	spi->ulinc0 = spi->ulinc = spi->ulcopy = 0;
+	del_mblk(kz, zc);
  done:
 	spi->hrownos = spi->hrn[0];
 	spi->hcolstarts = hcolstarts = spi->hcs[0];

@@ -75,7 +75,7 @@ company,
 
 See the pointers in
 
-	http://www.ampl.com/ampl/BOOK/
+	http://www.ampl.com/BOOK/
 
 
 For solvers written in Fortran, we assume the f2c calling
@@ -159,12 +159,12 @@ to netlib@netlib.bell-labs.com .
 For information about arranging to use other solvers with AMPL,
 see "Hooking Your Solver to AMPL", Postscript for which is
 
-	ftp://www.ampl.com/ampl/REFS/hooking.ps.gz
-	http://www.ampl.com/ampl/REFS/hooking.ps.gz
+	ftp://www.ampl.com/REFS/hooking.ps.gz
+	http://www.ampl.com/REFS/hooking.ps.gz
 
 and a corresponding html version is
 
-	http://www.ampl.com/ampl/REFS/HOOKING/
+	http://www.ampl.com/REFS/HOOKING/
 
 Be sure to request the changes file periodically to see about bug fixes
 and other updates, or send the 2-word E-mail message
@@ -191,11 +191,25 @@ some of the PC makefiles have comments explaining changes for MS-DOS.
 If you are using Microsoft Visual C++, see the comments in makefile.vc
 about linking solvers.
 
-If your math library sometimes returns NaNs without setting errno
-when, say, trig functions are called with arguments large in absolute
-value, add -DNANCHECK to the CFLAGS assignment of the relevant makefile
-variant.  Similarly, if your math library does not set errno, add
--DNO_ERRNO to the relevant CFLAGS assignment.
+The PC makefiles require you to make details.c by hand (since deriving
+it automatically seems hard to do reliably).  It should reflect the
+compiler you are using.  For example, for Microsoft Visual C++ 6.0,
+having details.c consist of the single line
+	char sysdetails_ASL[] = "MS VC++ 6.0";
+would be appropriate.  For systems other than Intel IA32 systems
+(e.g., for IA64 or DEC Alpha systems), the system should also be
+indicated in sysdetails_ASL.  This string is used by some solvers
+as part of the output produced for the "version" keyword and the -v
+command-line option.
+
+Formerly it was necessary to check by hand whether your math library
+sometimes returns NaNs without setting errno when math functions are
+called with invalid arguments, and if so to add -DNANCHECK to the
+CFLAGS assignment of the relevant makefile variant.  Now this detail
+should be handled by a #define in arith.h, which should be computed
+automatically as described above.  If you know that your math library
+never sets errno, adding -DNO_ERRNO to the relevant CFLAGS assignment
+will save a little time and perhaps avoid compiler complaints.
 
 When linking nonlinear solvers on some systems, it's necessary to
 add system-dependent keywords to the linking command, e.g., to make

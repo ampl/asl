@@ -246,6 +246,19 @@ S_init(Static *S, ASLTYPE *asl)
 
  static void
 #ifdef KR_headers
+sorry_CLP(R, what) EdRead *R; char *what;
+#else
+sorry_CLP(EdRead *R, char *what)
+#endif
+{
+	fprintf(Stderr,
+		"Sorry, %s cannot handle %s.\n",
+		progname ? progname : "", what);
+	exit_ASL(R,ASL_readerr_CLP);
+	}
+
+ static void
+#ifdef KR_headers
 ed_reset(asl) ASLTYPE *asl;
 #else
 ed_reset(ASLTYPE *asl)
@@ -821,10 +834,11 @@ eread(EdRead *R)
 			rvif->F = L = eread(R);
 			return (expr *)rvif;
 
+		case 11: /* OPCOUNT */
 		case 6: /* sumlist */
 			i = 0;
 			xscanf(R, "%d", &i);
-			if (i <= 2)
+			if (i <= 2 && (optype[k] == 6 || i < 1))
 				badline(R);
 			if (slmax < i)
 				slmax = i;
@@ -1769,6 +1783,12 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 			}
 		ogret:
 			return new_ograd(S, 0, k, 1.);
+
+		case 11: /* OPCOUNT */
+			args = e->L.ep;
+			for(argse = e->R.ep; args < argse; args++)
+				afree(S, awalk(S, *args), args);
+			break;
 
 		default:
 			scream(S->R, ASL_readerr_bug,
@@ -3265,6 +3285,7 @@ ewalk(Static *S, expr *e, int deriv)
 		case 8: /* OPHOL (Hollerith) */
 		case 9: /* OPNUM */
 			break;
+
 		case 10:/* OPVARVAL */
 			k = (expr_v *)e - S->var_e;
 			if (k < 0 || k >= max_var) {
@@ -3274,6 +3295,14 @@ ewalk(Static *S, expr *e, int deriv)
 			if (k >= 0 && deriv && !zc[k]++)
 				zci[nzc++] = k;
 			return;
+
+		case 11: /* OPCOUNT */
+			args = e->L.ep;
+			argse = e->R.ep;
+			while(args < argse)
+				ewalk(S, *args++, 0);
+			break;
+
 		default:
 			scream(S->R, ASL_readerr_bug,
 				"unexpected optype[%d] = %d\n", k, optype[k]);
@@ -3834,8 +3863,7 @@ cexp_walk(Static *S, int k)
 	if (ce->zlen = lasta - la0)
 		ce->z.i = la0;
 	else {
-		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k])->a0;
-		/* was varp[k-Ncom] til 20001228 */
+		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k-Ncom])->a0;
 		ce->zlen = 1;
 		}
 	j = ap ? *ap : ka;
@@ -4593,7 +4621,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	char fname[128];
 	expr_v *e;
 	func_info *fi;
-	int allG, i, i1, j, k, *ka, maxfwd1, nc, nco, nlin, no;
+	int allG, i, i1, j, k, *ka, maxfwd1, nc, nco, nlin, nlogc, no;
 	int nv, nvc, nvo, nz, readall;
 	ograd *og, **ogp;
 	real t;
@@ -4611,6 +4639,11 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->i.err_jmp_ = 0;
 			return i;
 			}
+		}
+	if ((nlogc = a->i.n_lcon_) && !(flags & ASL_allow_CLP)) {
+		if (a->i.err_jmp_)
+			return ASL_readerr_CLP;
+		sorry_CLP(R, "logical constraints");
 		}
 	if (!(flags & ASL_find_default_no_groups))
 		flags |= ASL_findgroups;
@@ -4642,9 +4675,10 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	no = n_obj;
 	nvc = c_vars;
 	nvo = o_vars;
-	if (no < 0 || (nco = nc + no) <= 0)
+	if (no < 0 || (nco = nc + no + nlogc) <= 0)
 		scream(R, ASL_readerr_corrupt,
-			"pshvread: nc = %d, no = %d\n", nc, no);
+			"pshvread: nc = %d, no = %d, nlogc = %d\n",
+			nc, no, nlogc);
 	if (pi0) {
 		memset(pi0, 0, nc*sizeof(real));
 		if (havepi0)
@@ -4676,7 +4710,8 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		memset(havex0, 0, nv0);
 	e = var_e = (expr_v *)M1zapalloc(x);
 	con_de = (cde *)(e + nv);
-	obj_de = con_de + nc;
+	lcon_de = con_de + nc;
+	obj_de = lcon_de + nlogc;
 	Ograd = (ograd **)(obj_de + no);
 	if (A_vals) {
 		if (!A_rownos)
@@ -4752,6 +4787,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Objgrd = objpgrd_ASL;
 			a->p.Conval = conpval_ASL;
 			a->p.Jacval = jacpval_ASL;
+			a->p.Lconval = lconpval_ASL;
 			a->p.Hvcomp = hvpcomp_ASL;
 			a->p.Hvinit = hvpinit_ASL;
 			a->p.Hesset = hes_setup;
@@ -4801,6 +4837,13 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 						"function %s not available\n",
 						fname);
 				funcs[i] = fi;
+				break;
+			case 'L':
+				xscanf(R, "%d", &k);
+				if (k < 0 || k >= nlogc)
+					badline(R);
+				co_read(R, lcon_de, k);
+				ewalk(S, lcon_de[k].e, 0);
 				break;
 			case 'V':
 				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
@@ -4882,7 +4925,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 				break;
 			case 'r':
 				br_read(R, asl->i.n_con0, nc, &LUrhs,
-					Urhsx, cvar, asl->i.n_var0);
+					Urhsx, cvar, nv0);
 				break;
 			case 'b':
 				br_read(R, asl->i.n_var0, nv0, &LUv,

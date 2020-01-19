@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2000-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -30,6 +30,7 @@ THIS SOFTWARE.
 #define conpgrd  conpgrd_ASL
 #define conpval  conpval_ASL
 #define jacpval  jacpval_ASL
+#define lconpval  lconpval_ASL
 #define objpgrd  objpgrd_ASL
 #define objpval  objpval_ASL
 #define hvpcomp  hvpcomp_ASL
@@ -42,6 +43,7 @@ extern "C" {
  extern void conpgrd ANSI((ASL*, int nc, real *X, real *G, fint *nerror));
  extern void conpval ANSI((ASL*, real *X, real *F, fint *nerror));
  extern void jacpval ANSI((ASL*, real *X, real *JAC, fint *nerror));
+ extern int  lconpval ANSI((ASL*, int nc, real *X, fint *ne));
  extern void objpgrd ANSI((ASL*, int nobj, real *X, real *G, fint *nerror));
  extern real objpval ANSI((ASL*, int nobj, real *X, fint *nerror));
  extern void hvpcomp ANSI((ASL*,real *hv,real *p,int nobj,real *ow,real *y));

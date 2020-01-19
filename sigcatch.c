@@ -22,6 +22,7 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
+#include "asl.h"
 #include "signal.h"
 
 #ifdef KR_headers
@@ -65,6 +66,42 @@ sigcatch_ASL ANSI((void))
 		signal(sig[i], hupcatch);
 #endif
 	}
+
+#ifndef _WIN32
+
+ extern void (*breakfunc_ASL) ANSI((int,void*)), *breakarg_ASL;
+
+ static Sig_ret_type
+#ifdef KR_headers
+intcatch(n) int n;
+#else
+intcatch(int n)
+#endif
+{
+	(*breakfunc_ASL)(n, breakarg_ASL);
+	}
+
+ void
+#ifdef KR_headers
+intcatch_ASL(a, f, v) ASL *a; void (*f)(); void *v;
+#else
+intcatch_ASL(ASL *a, void (*f)(int,void*), void *v)
+#endif
+{
+	AmplExports *ae;
+	if (f) {
+		breakfunc_ASL = f;
+		breakarg_ASL = v;
+		signal(SIGINT, intcatch);
+		}
+	else
+		signal(SIGINT, SIG_IGN);
+	if (ae = a->i.ae) {
+		ae->Breakfunc = f;
+		ae->Breakarg = v;
+		}
+	}
+#endif /*_WIN32*/
 
 #ifdef __cplusplus
 }

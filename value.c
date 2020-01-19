@@ -308,7 +308,7 @@ FI_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
 FI_val(Option_Info *oi, keyword *kw, char *value)
 #endif
 {
-	Long L;
+	Long L = *(fint*)kw->info;
 	char *rv = Lval_ASL(oi, kw, value, &L);
 	*(fint*)kw->info = L;
 	return rv;

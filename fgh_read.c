@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -92,6 +92,19 @@ fscream(EdRead *R, const char *name, int nargs, char *kind)
 	scream(R, ASL_readerr_argerr,
 		"line %ld: attempt to call %s with %d %sargs\n",
 		R->Line, name, nargs, kind);
+	}
+
+ static void
+#ifdef KR_headers
+sorry_CLP(R, what) EdRead *R; char *what;
+#else
+sorry_CLP(EdRead *R, char *what)
+#endif
+{
+	fprintf(Stderr,
+		"Sorry, %s cannot handle %s.\n",
+		progname ? progname : "", what);
+	exit_ASL(R,ASL_readerr_CLP);
 	}
 
 #ifdef Double_Align
@@ -619,10 +632,13 @@ eread(EdRead *R, int deriv)
 				}
 			return (expr *)rvif;
 
+		case 11: /* OPCOUNT */
+			deriv = 0;
+			/* no break */
 		case 6: /* sumlist */
 			i = 0;
 			xscanf(R, "%d", &i);
-			if (i <= 2)
+			if (i <= 2 && (op_type[k] == 6 || i < 1))
 				badline(R);
 			rv = (expr *)mem(sizeof(expr) - sizeof(real)
 					+ (deriv ? i+i+1 : i)*sizeof(expr *));
@@ -895,9 +911,9 @@ comsubs(int alen, cde *d)
 
  static void
 #ifdef KR_headers
-co_read(R, d) EdRead *R; cde *d;
+co_read(R, d, wd) EdRead *R; cde *d; int wd;
 #else
-co_read(EdRead *R, cde *d)
+co_read(EdRead *R, cde *d, int wd)
 #endif
 {
 	int alen;
@@ -923,7 +939,7 @@ co_read(EdRead *R, cde *d)
 		}
 	lastj = 0;
 	last_e = 0;
-	d->e = eread(R, 1);
+	d->e = eread(R, wd);
 	d->ee = last_e;
 	alen = lasta - lasta0;
 	if (imap_len < lasta)
@@ -1496,7 +1512,7 @@ fgh_read_ASL(a, nl, flags) ASL *a; FILE *nl; int flags;
 fgh_read_ASL(ASL *a, FILE *nl, int flags)
 #endif
 {
-	int i, j, k, maxfwd1, nc, nco, ncom, nlin, no, nv, nvc, nvo, nz;
+	int i, j, k, maxfwd1, nc, nco, ncom, nlcon, nlin, no, nv, nvc, nvo, nz;
 	int *ka, readall;
 	unsigned x;
 	expr_v *e;
@@ -1522,6 +1538,14 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			return i;
 			}
 		}
+
+	nlcon = a->i.n_lcon_;
+	if (nlcon && !(flags & ASL_allow_CLP)) {
+		if (a->i.err_jmp_)
+			return ASL_readerr_CLP;
+		sorry_CLP(R, "logical constraints");
+		}
+
 	if ((readall = flags & ASL_keep_all_suffixes)
 	 && a->i.nsuffixes)
 		readall |= 1;
@@ -1540,9 +1564,10 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 	no = n_obj;
 	nvc = c_vars;
 	nvo = o_vars;
-	if (no < 0 || (nco = nc + no) <= 0)
+	if (no < 0 || (nco = nc + no + nlcon) <= 0)
 		scream(R, ASL_readerr_corrupt,
-			"ed2read: nc = %d, no = %d\n", nc, no);
+			"ed2read: nc = %d, no = %d, nlcon = %d\n",
+			nc, no, nlcon);
 	nv1 = nv0 = nvc > nvo ? nvc : nvo;
 	max_var = nv = nv0 + ncom;
 	combc = comb + comc;
@@ -1579,11 +1604,12 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 	var_ex = e + nv0;
 	var_ex1 = var_ex + ncom0;
 	con_de = (cde *)(e + nv);
+	lcon_de = con_de + nc;
 	for(k = 0; k < nv; e++) {
 		e->op = f_OPVARVAL;
 		e->a = k++;
 		}
-	obj_de = con_de + nc;
+	obj_de = lcon_de + nlcon;
 	Cgrad = (cgrad **)(obj_de + no);
 	Ograd = (ograd **)(Cgrad + nc);
 	cexps = (cexp *)(Ograd + no);
@@ -1625,6 +1651,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Hvcomp = hv2comp_ASL;
 			a->p.Conival = con2ival_ASL;
 			a->p.Congrd = con2grd_ASL;
+			a->p.Lconval = lcon2val_ASL;
 			a->p.Xknown = x2known_ASL;
 			a->i.err_jmp_ = 0;
 			return 0;
@@ -1636,7 +1663,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 				xscanf(R, "%d", &k);
 				if (k < 0 || k >= nc)
 					badline(R);
-				co_read(R, con_de + k);
+				co_read(R, con_de + k, 1);
 				break;
 			case 'F':
 				if (xscanf(R, "%d %d %d %127s",
@@ -1719,12 +1746,18 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 					}
 				*cgp = 0;
 				break;
+			case 'L':
+				xscanf(R, "%d", &k);
+				if (k < 0 || k >= nlcon)
+					badline(R);
+				co_read(R, lcon_de + k, 0);
+				break;
 			case 'O':
 				if (xscanf(R, "%d %d", &k, &j) != 2
 				 || k < 0 || k >= no)
 					badline(R);
 				objtype[k] = j;
-				co_read(R, obj_de + k);
+				co_read(R, obj_de + k, 1);
 				break;
 			case 'V':
 				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
@@ -1742,11 +1775,11 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 				Suf_read_ASL(R, readall);
 				break;
 			case 'r':
-				br_read(R, asl->i.n_con0, n_con, &LUrhs,
-					Urhsx, cvar, asl->i.n_var0);
+				br_read(R, asl->i.n_con0, nc, &LUrhs,
+					Urhsx, cvar, nv0);
 				break;
 			case 'b':
-				br_read(R, asl->i.n_var0, n_var, &LUv,
+				br_read(R, asl->i.n_var0, nv0, &LUv,
 					Uvx, 0, 0);
 				break;
 			case 'k':

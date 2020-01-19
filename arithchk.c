@@ -25,6 +25,8 @@ THIS SOFTWARE.
 /* Try to deduce arith.h from arithmetic properties. */
 
 #include <stdio.h>
+#include <math.h>
+#include <errno.h>
 
 #ifdef NO_FPINIT
 #define fpinit_ASL()
@@ -51,6 +53,8 @@ IEEE_MC68k	= { "IEEE_MC68k", 2 },
 IBM		= { "IBM", 3 },
 VAX		= { "VAX", 4 },
 CRAY		= { "CRAY", 5};
+
+ static double t_nan;
 
  static Akind *
 Lcheck()
@@ -148,11 +152,25 @@ fzcheck()
 	return b == 0.;
 	}
 
+ static int
+need_nancheck()
+{
+	double t;
+
+	errno = 0;
+	t = log(t_nan);
+	if (errno == 0)
+		return 1;
+	errno = 0;
+	t = sqrt(t_nan);
+	return errno == 0;
+	}
+
 main()
 {
+	FILE *f;
 	Akind *a = 0;
 	int Ldef = 0;
-	FILE *f;
 
 	fpinit_ASL();
 #ifdef WRITE_ARITH_H	/* for Symantec's buggy "make" */
@@ -186,8 +204,13 @@ main()
 		if (sizeof(long long) < 8)
 #endif
 			fprintf(f, "#define NO_LONG_LONG\n");
-		if (a->kind <= 2 && fzcheck())
-			fprintf(f, "#define Sudden_Underflow\n");
+		if (a->kind <= 2) {
+			if (fzcheck())
+				fprintf(f, "#define Sudden_Underflow\n");
+			t_nan = -a->kind;
+			if (need_nancheck())
+				fprintf(f, "#define NANCHECK\n");
+			}
 		return 0;
 		}
 	fprintf(f, "/* Unknown arithmetic */\n");

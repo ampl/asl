@@ -544,38 +544,33 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 
  static void
 #ifdef KR_headers
-INchk(asl, who, i) ASL *asl; char *who; int i;
+INchk(asl, who, i, ix) ASL *asl; char *who; int i, ix;
 #else
-INchk(ASL *asl, char *who, int i)
+INchk(ASL *asl, char *who, int i, int ix)
 #endif
 {
 	ASL_CHECK(asl, ASL_read_pfgh, who);
-	if (i < 0 || i >= n_con) {
+	if (i < 0 || i >= ix) {
 		fprintf(Stderr, "%s: got I = %d; expected 0 <= I < %d\n",
-			who, i, n_con);
+			who, i, ix);
 		exit(1);
 		}
 	}
 
- real
+ static real
 #ifdef KR_headers
-conpival_ASL(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
+cpval(asl, i, X, nerror) ASL_pfgh *asl; int i; fint *nerror; real *X;
 #else
-conpival_ASL(ASL *a, int i, real *X, fint *nerror)
+cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
 #endif
 {
-	real f;
-	int L;
-	cgrad *gr;
-	ps_func *p;
-	expr_n *en;
-	expr_v *V;
 	Jmp_buf err_jmp0;
-	ASL_pfgh *asl;
-	real scale;
+	expr *e;
+	expr_n *en;
+	int L;
+	ps_func *p;
+	real f;
 
-	INchk(a, "conpival", i);
-	asl = (ASL_pfgh*)a;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
@@ -586,10 +581,14 @@ conpival_ASL(ASL *a, int i, real *X, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		xp_check_ASL(asl, X);
-	asl->i.ncxval[i] = asl->i.nxval;
 	co_index = i;
+	if (i >= n_con) {
+		e = con_de[i].e;
+		f = (*e->op)(e C_ASL);
+		goto done;
+		}
+	asl->i.ncxval[i] = asl->i.nxval;
 	p = asl->P.cps + i;
-	scale = asl->i.cscale ? asl->i.cscale[i] : 1.;
 	if (p->nb) {
 		f = copeval(p C_ASL);
 		if (p->ng)
@@ -601,6 +600,27 @@ conpival_ASL(ASL *a, int i, real *X, fint *nerror)
 		en = (expr_n*)con_de[i].e;
 		f = en->v;
 		}
+ done:
+	err_jmp = 0;
+	return f;
+	}
+
+ real
+#ifdef KR_headers
+conpival_ASL(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
+#else
+conpival_ASL(ASL *a, int i, real *X, fint *nerror)
+#endif
+{
+	ASL_pfgh *asl;
+	cgrad *gr;
+	expr_v *V;
+	real f;
+	real scale;
+
+	INchk(a, "conpival", i, a->i.n_con_);
+	f = cpval(asl = (ASL_pfgh*)a, i, X, nerror);
+	scale = asl->i.cscale ? asl->i.cscale[i] : 1.;
 	gr = Cgrad[i];
 	if (asl->i.vscale)
 		for(V = var_e; gr; gr = gr->next)
@@ -608,8 +628,21 @@ conpival_ASL(ASL *a, int i, real *X, fint *nerror)
 	else
 		for(; gr; gr = gr->next)
 			f += X[gr->varno] * gr->coef;
-	err_jmp = 0;
 	return scale * f;
+	}
+
+ int
+#ifdef KR_headers
+lconpval(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
+#else
+lconpval(ASL *a, int i, real *X, fint *nerror)
+#endif
+{
+	real f;
+
+	INchk(a, "lconpival", i, a->i.n_lcon_);
+	f = cpval((ASL_pfgh*)a, i + a->i.n_con0, X, nerror);
+	return f != 0.;
 	}
 
  void
@@ -635,7 +668,7 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	real scale;
 	static char who[] = "conpgrd";
 
-	INchk(a, who, i);
+	INchk(a, who, i, a->i.n_con_);
 	asl = (ASL_pfgh*)a;
 	if (!want_derivs)
 		No_derivs_ASL(who);
@@ -770,7 +803,7 @@ xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
 	asl->i.x_known = 1;
 	if (y)
 		xpsgchk(asl, asl->P.cps, asl->i.ncxval, nlc,
-			nx, conpival_ASL, conpgrd_ASL, y);
+			nx, conpival_ASL, objpgrd_ASL, y);
 	f = asl->P.ops;
 	xv = asl->i.noxval;
 	if (nobj >= 0 && nobj < n_obj) {

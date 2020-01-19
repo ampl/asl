@@ -66,7 +66,6 @@ THIS SOFTWARE.
 #undef PF_BUF
 #define MESS
 #include "mux0.h"
-#define LAST_LEN(x) (f->lastlen = x)
 #define stdout_or_err(f) (f == stdout)
 #else
 #define stdout_or_err(f) (f == Stderr || f == stdout)
@@ -80,20 +79,6 @@ extern "C" {
  extern void freedtoa ANSI((char*));
 
 
-
-
-
-#ifdef PF_BUF
-#undef LAST_LEN
-#define LAST_LEN(x) (f->lastlen = x)
-#endif /*PF_BUF*/
-
-#ifdef LAST_LEN
-#define LASTLENDCL int lastlen;
-#else
-#define LAST_LEN(x) (x)
-#define LASTLENDCL /*nothing*/
-#endif
 
 #ifdef USE_ULDIV
 /* This is for avoiding 64-bit divisions on the DEC Alpha, since */
@@ -163,9 +148,9 @@ uldiv_ASL(ULONG a, ULONG b)
 
  typedef struct
 Finfo {
-	FILE *cf;
+	union { FILE *cf; char *sf; } u;
 	char *ob0, *obe1;
-	LASTLENDCL
+	size_t lastlen;
 	} Finfo;
 
  typedef char *(*Putfunc) ANSI((Finfo*, int*));
@@ -244,7 +229,7 @@ Fput
 
 	*rvp += f->obe1 - ob0;
 	*f->obe1 = 0;
-	fputs(ob0, f->cf);
+	fputs(ob0, f->u.cf);
 	return ob0;
 	}
 
@@ -569,15 +554,22 @@ x_sprintf
  f_fmt:
 				if (sgn && (x||sign))
 					sign = '-';
-				if ((width -= prec) > 0) {
+				if (prec > 0)
+					width -= prec;
+				if (width > 0) {
 					if (sign)
 						--width;
-					if (decpt <= 0)
-						width -= 2;
+					if (decpt <= 0) {
+						--width;
+						if (prec > 0)
+							--width;
+						}
 					else {
+						if (s == se)
+							decpt = 1;
 						width -= decpt;
 						if (prec > 0 || alt)
-							width--;
+							--width;
 						}
 					}
 				if (width > 0 && !left) {
@@ -670,7 +662,7 @@ x_sprintf
 				if (decpt == 9999)
 					goto fmt9999;
  e_fmt:
-				if (sgn && x)
+				if (sgn && (x||sign))
 					sign = '-';
 				if ((width -= prec + 5) > 0) {
 					if (sign)
@@ -736,7 +728,7 @@ x_sprintf
 		}
  done:
 	*outbuf = 0;
-	return LAST_LEN(outbuf - ob0) + rv;
+	return (f->lastlen = outbuf - ob0) + rv;
 	}
 
 #define Bsize 256
@@ -767,7 +759,7 @@ Printf
 
 	va_start(ap, fmt);
 #endif
-	f.cf = stdout;
+	f.u.cf = stdout;
 	f.ob0 = buf;
 	f.obe1 = buf + Bsize - 1;
 #ifdef _windows_
@@ -863,7 +855,7 @@ Fprintf
 
 	va_start(ap, fmt);
 #endif
-	f.cf = F;
+	f.u.cf = F;
 	f.ob0 = buf;
 	f.obe1 = buf + Bsize - 1;
 #ifdef MESS
@@ -930,7 +922,7 @@ Vfprintf
 	int rv;
 	Finfo f;
 
-	f.cf = F;
+	f.u.cf = F;
 	f.ob0 = buf;
 	f.obe1 = buf + Bsize - 1;
 #ifdef MESS
@@ -984,6 +976,90 @@ Perror
 	if (s && *s)
 		Fprintf(Stderr, "%s: ", s);
 	Fprintf(Stderr, "%s\n", strerror(errno));
+	}
+
+ static char *
+Snput
+#ifdef KR_headers
+	(f, rvp) Finfo *f; int *rvp;
+#else
+	(Finfo *f, int *rvp)
+#endif
+{
+	char *s, *s0;
+	size_t L;
+
+	*rvp += Bsize;
+	s0 = f->ob0;
+	s = f->u.sf;
+	if ((L = f->obe1 - s) > Bsize) {
+		L = Bsize;
+		goto copy;
+		}
+	if (L > 0) {
+ copy:
+		memcpy(s, s0, L);
+		f->u.sf = s + L;
+		}
+	return s0;
+	}
+
+ int
+Vsnprintf
+#ifdef KR_headers
+	(s, n, fmt, ap) char *s; size_t n; char *fmt; va_list ap;
+#else
+	(char *s, size_t n, const char *fmt, va_list ap)
+#endif
+{
+	Finfo f;
+	char buf[Bsize];
+	int L, rv;
+
+	if (n <= 0 || !s) {
+		n = 1;
+		s = buf;
+		}
+	f.u.sf = s;
+	f.ob0 = buf;
+	f.obe1 = s + n - 1;
+	rv = x_sprintf(buf + Bsize, Snput, &f, fmt, ap);
+	if (f.lastlen > (L = f.obe1 - f.u.sf))
+		f.lastlen = L;
+	if (f.lastlen > 0) {
+		memcpy(f.u.sf, buf, f.lastlen);
+		f.u.sf += f.lastlen;
+		}
+	*f.u.sf = 0;
+	return rv;
+	}
+ int
+Snprintf
+#ifdef KR_headers
+	(va_alist)
+ va_dcl
+{
+	char *s, *fmt;
+	int rv;
+	size_t n;
+	va_list ap;
+
+	va_start(ap);
+	s = va_arg(ap, char*);
+	n = va_arg(ap, size_t);
+	fmt = va_arg(ap, char*);
+	/*}*/
+#else
+	(char *s, size_t n, const char *fmt, ...)
+{
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+#endif
+	rv = Vsnprintf(s, n, fmt, ap);
+	va_end(ap);
+	return rv;
 	}
 
 

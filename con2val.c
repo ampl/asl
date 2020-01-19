@@ -46,7 +46,7 @@ con2val_ASL(ASL *a, real *X, real *F, fint *nerror)
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
 		if (*nerror = i)
-			return;
+			goto done;
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -79,6 +79,7 @@ con2val_ASL(ASL *a, real *X, real *F, fint *nerror)
 		if (F)
 			*F++ = cscale ? *cscale++ * f : f;
 		}
+ done:
 	err_jmp = 0;
 	}
 
@@ -108,7 +109,7 @@ jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
 		err_jmp = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
 		if (*nerror = L)
-			return;
+			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known && x2_check_ASL(asl,X)
@@ -118,7 +119,7 @@ jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
 		con2val_ASL(a, X, 0, nerror);
 		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
-			return;
+			goto done;
 		}
 	Adjoints = adjoints;
 	d = con_de;
@@ -151,6 +152,7 @@ jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
 			for(; gr; gr = gr->next)
 				G[gr->goff] = Adjoints[gr->varno];
 		}
+ done:
 	err_jmp = 0;
 	}
 

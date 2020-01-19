@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -60,6 +60,7 @@ Static {
 	int _last_cex, _lasta, _lasta0, _lasta00, _lastc1, _lastj;
 	int _max_var, _ncom_togo, _nderp, _nocopy;
 	int _nv01, _nv011, _nv0b, _nv0c, _nv1, _nvref, _nzc, _nzclim;
+	int nvar0, nvinc;
 #endif /* Just_Linear */
 	} Static;
 
@@ -122,6 +123,19 @@ sorry_nonlin(EdRead *R)
 
 #include "r_opn.hd"
 #endif /* Just_Linear */
+
+ static void
+#ifdef KR_headers
+sorry_CLP(R, what) EdRead *R; char *what;
+#else
+sorry_CLP(EdRead *R, char *what)
+#endif
+{
+	fprintf(Stderr,
+		"Sorry, %s cannot handle %s.\n",
+		progname ? progname : "", what);
+	exit_ASL(R,ASL_readerr_CLP);
+	}
 
  static Static *
 #ifdef KR_headers
@@ -374,7 +388,7 @@ eread(EdRead *R, int deriv)
 			al->dig = dig;
 			al->funcinfo = fi->funcinfo;
 			al->AE = asl->i.ae;
-			sa = al->sa = (char **)(al + 1);
+			al->sa = (Const char**)(sa = (char **)(al + 1));
 			ap = rvf->ap = (argpair *)(sa + symargs);
 			sap = rvf->sap = ap + k;
 			at = al->at = (int *)(sap + ks);
@@ -444,7 +458,11 @@ eread(EdRead *R, int deriv)
 			break;
 
 		case 'v':
-			if (xscanf(R,"%d",&k) != 1 || k < 0 || k > max_var)
+			if (xscanf(R,"%d",&k) != 1 || k < 0)
+				badline(R);
+			if (k >= S->nvar0)
+				k += S->nvinc;
+			if (k > max_var)
 				badline(R);
 			if (k < nv01 && deriv && !zc[k]++)
 				zci[nzc++] = k;
@@ -588,7 +606,7 @@ eread(EdRead *R, int deriv)
 				rvif->dF = dsave;
 				rvif->Fv.i = nv1;
 				}
-			else
+			else 
 				rvif->dF = new_relo(S, L, dsave, &rvif->Fv.i);
 			if (lasta < a1)
 				lasta = a1;
@@ -604,10 +622,13 @@ eread(EdRead *R, int deriv)
 				}
 			return (expr *)rvif;
 
+		case 11: /* OPCOUNT */
+			deriv = 0;
+			/* no break */
 		case 6: /* sumlist */
 			i = j = 0;
 			xscanf(R, "%d", &i);
-			if (i <= 2)
+			if (i <= 2 && (optype[k] == 6 || i < 1))
 				badline(R);
 			rv = (expr *)mem(sizeof(expr) - sizeof(real)
 					+ i*sizeof(expr *));
@@ -901,18 +922,17 @@ comsubs(Static *S, int alen, cde *d, int **z)
 
  static void
 #ifdef KR_headers
-co_read(R, d, cexp1_end, k, z) EdRead *R; cde *d; int *cexp1_end, k, **z;
+co_read(R, d, cexp1_end, k, z, wd) EdRead *R; cde *d; int *cexp1_end, k, wd, **z;
 #else
-co_read(EdRead *R, cde *d, int *cexp1_end, int k, int **z)
+co_read(EdRead *R, cde *d, int *cexp1_end, int k, int **z, int wd)
 #endif
 {
-	Static *S = (Static *)R->S;
-	ASL_fg *asl = S->asl;
-	d += k;
 #ifdef Just_Linear
 	Not_Used(cexp1_end);
 	Not_Used(z);
 #else
+	Static *S = (Static *)R->S;
+	ASL_fg *asl = S->asl;
 	lastc1 = last_cex - nv011;
 	if (cexp1_end)
 		cexp1_end[k+1] = lastc1;
@@ -932,7 +952,8 @@ co_read(EdRead *R, cde *d, int *cexp1_end, int k, int **z)
 		}
 	lastj = 0;
 #endif /* Just_Linear */
-	d->e = eread(R, want_derivs);
+	d += k;
+	d->e = eread(R, wd);
 #ifndef Just_Linear
 	{	int alen;
 		alen = lasta - lasta0;
@@ -1272,7 +1293,7 @@ goff_comp(ASL_fg *asl)
 	cgrad *cg;
 
 	cgx = Cgrad;
-	cgxe = cgx + n_con;
+	cgxe = cgx + asl->i.n_con0;
 	while(cgx < cgxe)
 		for(cg = *cgx++; cg; cg = cg->next)
 			cg->goff = ka[cg->varno]++;
@@ -1289,7 +1310,7 @@ colstart_inc(Static *S)
 	ASL_fg *asl = S->asl;
 
 	ka = A_colstarts;
-	kae = ka + nv0;
+	kae = ka + asl->i.n_var0;
 	while(ka <= kae)
 		++*ka++;
 	}
@@ -1388,17 +1409,21 @@ adjust(Static *S)
 
  static void
 #ifdef KR_headers
-br_read(R, nc, Lp, U, Cvar, nv) EdRead *R; real **Lp, *U; int *Cvar, nv;
+br_read(R, nc, nc1, Lp, U, Cvar, nv)
+	EdRead *R; real **Lp, *U; int nc, nc1, *Cvar, nv;
 #else
-br_read(EdRead *R, int nc, real **Lp, real *U, int *Cvar, int nv)
+br_read(EdRead *R, int nc, int nc1, real **Lp, real *U, int *Cvar, int nv)
 #endif
 {
 	int i, inc, j, k;
 	real *L;
 	ASL *asl = R->asl;
 
-	if (!(L = *Lp))
-		L = *Lp = (real *)M1alloc(2*sizeof(real)*nc);
+	if (!(L = *Lp)) {
+		if (nc1 < nc)
+			nc1 = nc;
+		L = *Lp = (real *)M1alloc(2*sizeof(real)*nc1);
+		}
 	if (U)
 		inc = 1;
 	else {
@@ -1564,13 +1589,13 @@ fg_read_ASL(a, nl, flags) ASL *a; FILE *nl; int flags;
 fg_read_ASL(ASL *a, FILE *nl, int flags)
 #endif
 {
-	int i, i1, j, k, nc, nco, no, nv, nvc, nvo, nz, readall;
-	unsigned x;
-	expr_v *e;
 	cgrad *cg, **cgp;
+	expr_v *e;
+	int *ka;
+	int i, i1, j, k, nc, nco, nlcon, no, nv, nvc, nvo, nz, readall;
 	ograd *og, **ogp;
 	real t;
-	int *ka;
+	unsigned x;
 #ifdef Just_Linear
 #define ASL_readtype ASL_read_f
 #else /* Just_Linear */
@@ -1593,6 +1618,12 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->i.err_jmp_ = 0;
 			return i;
 			}
+		}
+	nlcon = a->i.n_lcon_;
+	if (nlcon && !(flags & ASL_allow_CLP)) {
+		if (a->i.err_jmp_)
+			return ASL_readerr_CLP;
+		sorry_CLP(R, "logical constraints");
 		}
 	if ((readall = flags & ASL_keep_all_suffixes)
 	 && a->i.nsuffixes)
@@ -1631,9 +1662,10 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 	no = n_obj;
 	nvc = c_vars;
 	nvo = o_vars;
-	if (no < 0 || (nco = nc + no) <= 0)
+	if (no < 0 || (nco = nc + no + nlcon) <= 0)
 		scream(R, ASL_readerr_corrupt,
-			"edagread: nc = %d, no = %d\n", nc, no);
+			"edagread: nc = %d, no = %d, nlcon = %d\n",
+			nc, no, nlcon);
 	if (pi0) {
 		memset(pi0, 0, nc*sizeof(real));
 		if (havepi0)
@@ -1663,6 +1695,9 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 		+ nfunc*sizeof(func_info *)
 		+ nvref*sizeof(int)
 		+ no;
+	SS.nvar0 = a->i.n_var0;
+	if (!(SS.nvinc = a->i.n_var_ - SS.nvar0))
+		SS.nvar0 += ncom0 + ncom1;
 #endif /* Just_Linear */
 	if (X0)
 		memset(X0, 0, nv0*sizeof(real));
@@ -1670,7 +1705,8 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 		memset(havex0, 0, nv0);
 	e = var_e = (expr_v *)M1zapalloc(x);
 	con_de = (cde *)(e + nv);
-	obj_de = con_de + nc;
+	lcon_de = con_de + nc;
+	obj_de = lcon_de + nlcon;
 	Ograd = (ograd **)(obj_de + no);
 	if (A_vals) {
 		if (!A_rownos)
@@ -1698,7 +1734,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 	cexps = (cexp *)(Ograd + no);
 	cexps1 = (cexp1 *)(cexps + ncom0);
 	funcs = (func_info **)(cexps1 + ncom1);
-	zc = (int *)(funcs + nfunc);
+	zc = (int*)(funcs + nfunc);
 	zci = zc + nv;
 	vrefx = zci + nv;
 	objtype = (char *)(vrefx + nvref);
@@ -1745,6 +1781,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Jacval = jac1val_ASL;
 			a->p.Conival = con1ival_ASL;
 			a->p.Congrd = con1grd_ASL;
+			a->p.Lconval = lcon1val_ASL;
 			a->p.Xknown = x1known_ASL;
 #endif /* Just_Linear */
 			a->i.err_jmp_ = 0;
@@ -1757,7 +1794,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 				xscanf(R, "%d", &k);
 				if (k < 0 || k >= nc)
 					badline(R);
-				co_read(R, con_de, c_cexp1st, k, zac);
+				co_read(R,con_de,c_cexp1st,k,zac,want_derivs);
 				break;
 #ifdef Just_Linear
 			case 'F':
@@ -1795,9 +1832,18 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 					}
 				funcs[i] = fi;
 				break;
+			case 'L':
+				xscanf(R, "%d", &k);
+				if (k < 0 || k >= nlcon)
+					badline(R);
+				co_read(R, lcon_de, 0, k, 0, 0);
+				break;
 			case 'V':
-				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3
-				 || k < nv0 || k >= nv)
+				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
+					badline(R);
+				if (k >= SS.nvar0)
+					k += SS.nvinc;
+				if (k < nv0 || k >= nv)
 					badline(R);
 				if (j)
 					cexp1_read(R, j, k, nlin);
@@ -1864,25 +1910,30 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 				 || k < 0 || k >= no)
 					badline(R);
 				objtype[k] = j;
-				co_read(R, obj_de, o_cexp1st, k, zao);
+				co_read(R,obj_de,o_cexp1st,k,zao,want_derivs);
 				break;
 			case 'S':
 				Suf_read_ASL(R, readall);
 				break;
 			case 'r':
-				br_read(R, nc, &LUrhs, Urhsx, cvar, nv0);
+				br_read(R, asl->i.n_con0, nc, &LUrhs,
+					Urhsx, cvar, nv0);
 				break;
 			case 'b':
-				br_read(R, nv0, &LUv, Uvx, 0, 0);
+				br_read(R, asl->i.n_var0, nv0, &LUv,
+					Uvx, 0, 0);
 				break;
 			case 'k':
 				k_seen++;
-				k = nv0;
+				k = asl->i.n_var0;
 				if (!xscanf(R,"%d",&j) || j != k - 1)
 					badline(R);
-				if (!(ka = A_colstarts))
+				if (!(ka = A_colstarts)) {
+					if ((i = k) < n_var)
+						i = n_var;
 					ka = A_colstarts = (int *)
-						M1alloc((k+1)*Sizeof(int));
+						M1alloc((i+1)*Sizeof(int));
+					}
 				*ka++ = 0;
 				*ka++ = 0;	/* sic */
 				while(--k > 0)

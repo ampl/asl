@@ -1218,7 +1218,7 @@ constraints (that are eliminated unless one inappropriately specifies
   pfg_read.c, pfghread.c:  fix a bug in pfgh_read() whereby partially
 separable constant terms other than numerical constants were treated as
 zero.  Such terms can arise when one (inappropriately) specifies
-"option presolve 0" in examples with defined variables and fixed
+"option presolve 0" in examples with defined variables and fixed
 variables, such as
 
 	var x{i in 0..2} := i;
@@ -1289,3 +1289,56 @@ forthcoming AMPL extension for "var in union_of_intervals".
 Mon Jun 17 14:07:07 EDT 2002
   getstub.c:  if $solver_msg is an odd positive integer (such as 1),
 suppress the initial "($solver): " and the echoing of solver options.
+
+Sat Jul 13 12:27:02 EDT 2002
+  printf.c: "invisible" internal tweak (reflected in asldate = 20020627).
+  funcadd1.c: add "#ifdef __APPLE__" stuff for Macintosh OS X.
+
+Mon Aug 19 12:17:51 EDT 2002
+ funcadd.h: add const qualifier to char **sa; asldate.c not changed.
+
+Wed Aug 28 23:13:50 EDT 2002
+  fg_read.c, fgh_read.c, pfg_read.c, pfghread.c: tweak in response to
+const qualifier added to funcadd.h on 20020819.
+  Obscure bug fix to printf.c, affecting printf, fprintf, sprintf:
+on systems with IEEE arithmetic, get an explicitly requested sign of
+zero right under format %+e, e.g., in printf("%+e\n", -0).
+
+Thu Sep  5 16:12:38 EDT 2002
+  Fix a glitch in rarely used routines (xknown and xknowne used with
+fgh_read()):  in x2check.c, supply a missing reset of asl->i.err_jmp_.
+  Fix bugs with calling evaluation routines with nerror nonnull and
+nonnegative, receiving an evaluation error, then calling another
+evaluation routine with nerror null or negative and receiving another
+error.  (Such sequences seem unlikely and do not occur in the sample
+solver drivers in subdirectories of ampl/solvers.)
+
+Mon Sep 16 12:57:14 EDT 2002
+  Trivial change to a format in getstub.c (having no effect with
+ordinary use of the solver interface library, which uses fprintf =
+Fprintf supplied by the library); asldate.c not changed.
+
+Mon Sep 23 16:30:33 EDT 2002
+  conpval.c: fix bug in objgrd(np,x,g,nerror) when np > 1 and
+pfgh_read() is the .nl reader.  The linear terms from the first
+objective, rather than objective np, were used.
+
+Wed Nov 13 16:45:28 EST 2002
+  Fix a bug with use of at_exit() or at_reset() in imported functions:
+the library was freed before the functions registered with at_exit
+or at_reset were called, sometimes leading to a fault.
+
+Tue Feb  4 23:05:51 EST 2003
+  makefile.u: add comments for cygwin and MinCW.
+  makefile.vc: add comments for lcc.
+  fpinit.c and fpinitmt.c: minor portability tweaks.
+  sos_add.c: omit an unused static function.
+  Sundry files:  updated for CLP extensions (to be documented
+elsewhere).  Recompile everything that depends on header files
+in the solvers directory.
+
+Thu Mar 20 22:50:38 EST 2003
+  value.c:  fix a glitch in FI_val's handling of "?" values (which
+are supposed to request printing of the current value of the option in
+question):  bogus values were reported.  FI_val is for Fortran integer
+values; only a few solvers (such as filter and minlp) use it.

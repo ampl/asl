@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -195,10 +195,11 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 				}
 			s = read_line(R);
 			n_eqn = -1;
-			k = Sscanf(s, " %d %d %d %d %d", &n_var, &n_con,
-				&n_obj, &nranges, &n_eqn);
+			k = Sscanf(s, " %d %d %d %d %d %d", &n_var, &n_con,
+				&n_obj, &nranges, &n_eqn, &n_lcon);
 			if (k < 3)
 				badints(R,k,3);
+			nclcon = n_con + n_lcon;
 
 			/* formerly read2(R, &nlc, &nlo); */
 			s = read_line(R);

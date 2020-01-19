@@ -33,12 +33,15 @@ int isatty_ASL; /* for use with "sw" under NT */
 #include <math.h>
 #include <signal.h>
 #include <windows.h>
+#include <process.h>
 #include "asl.h"
 
 #undef Need_set_errno
 #ifdef errno
 #ifndef No_set_errno_ASL
 #define Need_set_errno
+#undef errno
+int errno;
 static int set_errno(int);
 #endif /*No_set_errno_ASL*/
 #else
@@ -47,14 +50,23 @@ static int set_errno(int);
 
 #ifdef WATCOM
 #define matherr_rettype double
-#define _DOMAIN DOMAIN
-#define _SING SING
-#define _TLOSS TLOSS
-#define _OVERFLOW OVERFLOW
 #else
 #ifndef matherr_rettype
 #define matherr_rettype int
 #endif
+#endif
+
+#ifndef _DOMAIN
+#define _DOMAIN DOMAIN
+#endif
+#ifndef _SING
+#define _SING SING
+#endif
+#ifndef _TLOSS
+#define _TLOSS TLOSS
+#endif
+#ifndef _OVERFLOW
+#define _OVERFLOW OVERFLOW
 #endif
 
 #ifdef __cplusplus
@@ -161,6 +173,15 @@ fpinit_ASL(void)
 	static int first = 1;
 
 #ifndef No_Control87 /* for DEC Alpha */
+#ifndef MCW_EM
+#define MCW_EM _MCW_EM
+#endif
+#ifndef PC_53
+#define PC_53 _PC_53
+#endif
+#ifndef MCW_PC
+#define MCW_PC _MCW_PC
+#endif
 	_control87(MCW_EM | PC_53, MCW_EM | MCW_PC);
 #endif
 	if (first) {
@@ -170,7 +191,7 @@ fpinit_ASL(void)
 	}
 
  matherr_rettype
-_matherr( struct _exception *e )
+matherr( struct _exception *e )
 {
 	switch(e->type) {
 	  case _DOMAIN:
@@ -185,9 +206,6 @@ _matherr( struct _exception *e )
 	}
 
 #ifdef Need_set_errno
-
-#undef errno
-int errno;
 
  static int
 set_errno(int n)

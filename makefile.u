@@ -67,9 +67,17 @@ SHELL=/bin/sh
 # to CFLAGS.  For compilation by PGI's pgcc compiler, try using
 # CFLAGS = -fast -Kieee -DNON_STDIO -DNO_fpu_control -pc 64
 
-
 # For Solaris on the i386 architecture, add fpsetprec.s to the "a ="
 # assignment below.
+
+# For cygwin, change a.out to a.exe in the rule below for arith.h, and use
+# CC = gcc
+# CFLAGS = -O2 -DNON_STDIO
+
+# For MinGW, change a.out to a.exe in the rule below for arith.h,
+# change fpinit.c to fpinitmt.c in the "a =" list below, and use
+# CC = gcc
+# CFLAGS = -O2 -DNON_STDIO -DNO_RUSAGE
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
@@ -229,7 +237,7 @@ arith.h: arithchk.c fpinit.c
 # as appropriate.
 
 details.c: details.c0
-	sed "s/System_details/`uname -sr`/" details.c0 >details.c
+	sed "s!System_details!`uname -sr`!" details.c0 >details.c
 
 float.h: float.h0
 	ln float.h0 float.h
@@ -259,7 +267,7 @@ systemprintf:
 
 # make xsum.out to check for transmission errors.
 # This assumes you have the xsum program, whose source
-# you can get by asking research!netlib to
+# you can get by asking netlib@netlib.bell-labs.com to
 #	send xsum.c from f2c/src
 
 xs0 = \

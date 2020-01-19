@@ -123,3 +123,11 @@ Mon Jan 22 11:33:05 EST 2001
   makefile.u: "make test1" leave unexpected results in directory "bad1"
 and "make test2" leave them in directory "bad".
   Various *.out files:  update to current output (under IRIX 6.5).
+
+Sat Mar 16 00:07:05 EST 2002
+  ve08.c: add ASL_find_default_no_groups to the flags in the pfg_read
+call when compiled with PSEDREAD #defined by v8.c.  This was made
+necessary by a change to the .nl readers on 20010607:  ve08.c is not
+prepared to deal with group partially separable structure.
+  makefile.u: change the FC assignment to f77 (to cope with some shells
+for which "fc" has special magic meaning).

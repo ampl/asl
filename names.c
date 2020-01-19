@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -23,6 +23,23 @@ THIS SOFTWARE.
 ****************************************************************/
 
 #include "asl.h"
+
+ void
+#ifdef KR_headers
+name_map_ASL(n, z, nam) int n; int *z; char **nam;
+#else
+name_map_ASL(int n, int *z, char **nam)
+#endif
+{
+	int i, j, k;
+
+	for(i = k = 0; i < n; i++) {
+		if ((j = z[i]) >= 0)
+			nam[k = j] = nam[i];
+		}
+	while(++k < n)
+		nam[k] = 0;
+	}
 
  static char **
 #ifdef KR_headers
@@ -66,6 +83,19 @@ get_names(ASL *asl, char *suf, int no, int n0, int n, int *z)
 	return rv;
 	}
 
+ static void
+#ifdef KR_headers
+get_row_names(asl) ASL *asl;
+#else
+get_row_names(ASL *asl)
+#endif
+{
+	asl->i.connames = get_names(asl, ".row", n_obj + n_lcon,
+					asl->i.n_con0, n_con, asl->i.z[1]);
+	asl->i.lconnames = asl->i.connames + n_con;
+	asl->i.objnames = asl->i.lconnames + n_lcon;
+	}
+
  char *
 #ifdef KR_headers
 con_name_ASL(asl, n) ASL *asl; int n;
@@ -76,12 +106,32 @@ con_name_ASL(ASL *asl, int n)
 	char buf[32], **np, *rv;
 	if (n < 0 || n >= n_con)
 		return "**con_name(bad n)**";
-	if (!asl->i.conames)
-		asl->i.conames = get_names(asl, ".row", n_obj,
-					asl->i.n_con0, n_con, asl->i.z[1]);
-	np = asl->i.conames + n;
+	if (!asl->i.connames)
+		get_row_names(asl);
+	np = asl->i.connames + n;
 	if (!(rv = *np)) {
 		*np = rv = (char*)mem(Sprintf(buf,"_scon[%d]",n+1)+1);
+		strcpy(rv, buf);
+		}
+	return rv;
+	}
+
+ char *
+#ifdef KR_headers
+lcon_name_ASL(asl, n) ASL *asl; int n;
+#else
+lcon_name_ASL(ASL *asl, int n)
+#endif
+{
+	char buf[32], **np, *rv;
+
+	if (n < 0 || n >= n_lcon)
+		return "**lcon_name(bad n)**";
+	if (!asl->i.lconnames)
+		get_row_names(asl);
+	np = asl->i.lconnames + n;
+	if (!(rv = *np)) {
+		*np = rv = (char*)mem(Sprintf(buf,"_slcon[%d]",n+1)+1);
 		strcpy(rv, buf);
 		}
 	return rv;
@@ -97,10 +147,9 @@ obj_name_ASL(ASL *asl, int n)
 	char buf[32], **np, *rv;
 	if (n < 0 || n >= n_obj)
 		return "**obj_name(bad n)**";
-	if (!asl->i.conames)
-		asl->i.conames = get_names(asl, ".row", n_obj,
-					asl->i.n_con0, n_con, asl->i.z[1]);
-	np = asl->i.conames + (n + n_con);
+	if (!asl->i.objnames)
+		get_row_names(asl);
+	np = asl->i.objnames + n;
 	if (!(rv = *np)) {
 		*np = rv = (char*)mem(Sprintf(buf,"_sobj[%d]",n+1)+1);
 		strcpy(rv, buf);

@@ -52,6 +52,9 @@ funcadd(AmplExports *ae)
 #include "funcadd.h"
 #include "string.h"
 
+#ifdef __APPLE__	/* Mac OS X */
+#define FUNCADD "_funcadd_ASL"
+#endif
 #ifndef FUNCADD
 #define FUNCADD "funcadd_ASL"
 #endif
@@ -151,6 +154,36 @@ reg_file(char *name)
 #define dlclose(x) shl_unload((shl_t)x)
 #define NO_DLERROR
 #else
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+typedef struct {
+	NSObjectFileImage ofi;
+	NSModule m;
+	char *name;
+	} NS_pair;
+typedef NS_pair *shl_t;
+
+ static void*
+find_sym_addr(NS_pair *p, const char *name)
+{
+	NSSymbol nss;
+
+	if (nss = NSLookupSymbolInModule(p->m, name))
+		return NSAddressOfSymbol(nss);
+	return 0;
+	}
+
+#define find_dlsym(a,b,c) (a = find_sym_addr(b,c))
+
+ static void
+dlclose(NS_pair *p)
+{
+	if (NSUnLinkModule(p->m, NSUNLINKMODULE_OPTION_NONE))
+		NSDestroyObjectFileImage(p->ofi);
+	free(p);
+	}
+#define NO_DLERROR
+#else
 #include "dlfcn.h"
 typedef void *shl_t;
 #define find_dlsym(a,b,c) (a = (Funcadd*)dlsym(b,c))
@@ -159,6 +192,7 @@ typedef void *shl_t;
 #define RTLD_NOW RTLD_LAZY
 #endif
 #endif /* sun */
+#endif /* __APPLE__ */
 #endif /* __hpux */
 #endif /* WIN32 */
 
@@ -173,13 +207,38 @@ dl_open(ae, name, warned) AmplExports *ae; char *name; int *warned;
 dl_open(AmplExports *ae, char *name, int *warned)
 #endif
 {
-	shl_t h = dlopen(name, RTLD_NOW);
+	shl_t h;
 	FILE *f;
 #ifndef KR_headers
 	const
 #endif
 	      char *s;
 
+#ifdef __APPLE__
+	NS_pair p;
+	NSObjectFileImageReturnCode irc;
+	irc = NSCreateObjectFileImageFromFile(name,&p.ofi);
+	h = 0;
+	if (irc == NSObjectFileImageSuccess) {
+		p.m = NSLinkModule(p.ofi, name,
+			  NSLINKMODULE_OPTION_BINDNOW
+			| NSLINKMODULE_OPTION_PRIVATE
+			| NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+		if (!p.m)
+			fprintf(stderr, "NSLinkModule(\"%s\") failed.\n", name);
+		else {
+			h = (NS_pair*)mymalloc(sizeof(NS_pair) + strlen(name) + 1);
+			strcpy(p.name = (char*)(h+1), name);
+			memcpy(h, &p, sizeof(NS_pair));
+			}
+		}
+	else if (irc != NSObjectFileImageAccess)
+		fprintf(stderr,
+			"return %d from NSCreateObjectFileImageFromFile(\"%s\")\n",
+			irc, name);
+#else
+	h = dlopen(name, RTLD_NOW);
+#endif
 	if (!h && warned && (f = fopen(name,"rb"))) {
 		fclose(f);
 		if (reg_file(name)) {

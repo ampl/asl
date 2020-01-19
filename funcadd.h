@@ -59,13 +59,20 @@ typedef struct TMInfo TMInfo;
 
 #ifndef No_arglist_def
 
+#undef Const
+#ifdef KR_headers
+#define Const /* nothing */
+#else
+#define Const const
+#endif
+
  struct
 arglist {			/* Information sent to user-defined functions */
 	int n;			/* number of args */
 	int nr;			/* number of real input args */
 	int *at;		/* argument types -- see DISCUSSION below */
 	real *ra;		/* pure real args (IN, OUT, and INOUT) */
-	char **sa;		/* symbolic IN args */
+	Const char **sa;	/* symbolic IN args */
 	real *derivs;		/* for partial derivatives (if nonzero) */
 	real *hes;		/* for second partials (if nonzero) */
 	char *dig;		/* if (dig && dig[i]) { partials w.r.t.	*/
@@ -223,6 +230,11 @@ AmplExports {
 	int	(*Ungetc)	ANSI((int, FILE*));
 	AuxInfo *AI;
 	char*	(*Getenv)	ANSI((const char*));
+	void	(*Breakfunc)	ANSI((int,void*));
+	Char	*Breakarg;
+	/* Items available with ASLdate >= 20020501 start here. */
+	int (*SnprintF) ANSI((char*, size_t, const char*, ...));
+	int (*VsnprintF) ANSI((char*, size_t, const char*, VA_LIST));
 	};
 
 extern char *i_option_ASL, *ix_details_ASL[];
@@ -295,17 +307,21 @@ enum {	/* bits in flags field of TableInfo */
 #undef getenv
 #undef printf
 #undef sprintf
+#undef snprintf
 #undef strtod
 #undef vfprintf
 #undef vsprintf
+#undef vsnprintf
 #define Stderr (ae->StdErr)
 #define addfunc(a,b,c,d,e) (*ae->Addfunc)(a,b,c,d,e,ae)
 #define printf	(*ae->PrintF)
 #define fprintf (*ae->FprintF)
+#define snprintf (*ae->SnprintF)
 #define sprintf (*ae->SprintF)
 #define strtod  (*ae->Strtod)
 #define vfprintf (*ae->VfprintF)
 #define vsprintf (*ae->VsprintF)
+#define vsnprintf (*ae->VsnprintF)
 #define TempMem(x,y) (*ae->Tempmem)(x,y)
 #define at_exit(x,y) (*ae->AtExit)(ae,x,y)
 #define at_reset(x,y) (*ae->AtReset)(ae,x,y)

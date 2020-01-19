@@ -109,15 +109,25 @@ enum { NEFB = 5, NEFB0 = 2 };
  static Exitcall *a_e_last = a_e_info + NEFB0;
  static Exitcall *a_e_prev;
 
+ typedef struct
+ExitCallInfo { Exitcall *cur, **curp, *last, **lastp; } ExitCallInfo;
+
  static void
 #ifdef KR_headers
-AtReset(ae, ef, v) AmplExports *ae; Exitfunc *ef; char *v;
+AtReset1(ae, ef, v, eci) AmplExports *ae; Exitfunc *ef; char *v;
+			 ExitCallInfo *eci;
 #else
-AtReset(AmplExports *ae, Exitfunc *ef, void *v)
+AtReset1(AmplExports *ae, Exitfunc *ef, void *v, ExitCallInfo *eci)
 #endif
 {
 	Exitcall *ec;
 	ASL *asl = (ASL*)ae->asl;
+	if (eci) {
+		eci->cur = asl->i.arprev;
+		eci->curp = &asl->i.arprev;
+		eci->last = asl->i.arlast;
+		eci->lastp = &asl->i.arlast;
+		}
 	if (asl->i.arnext >= asl->i.arlast) {
 		asl->i.arnext = (Exitcall*)M1alloc(NEFB*sizeof(Exitcall));
 		asl->i.arlast = asl->i.arnext + NEFB;
@@ -127,6 +137,15 @@ AtReset(AmplExports *ae, Exitfunc *ef, void *v)
 	ec->ef = ef;
 	ec->v = v;
 	}
+
+ static void
+#ifdef KR_headers
+AtReset(ae, ef, v) AmplExports *ae; Exitfunc *ef; char *v;
+#else
+AtReset(AmplExports *ae, Exitfunc *ef, void *v)
+#endif
+{ AtReset1(ae, ef, v, 0); }
+
 
  void
 #ifdef KR_headers
@@ -161,9 +180,10 @@ at_exit_ASL(VOID)
 
  static void
 #ifdef KR_headers
-AtExit(ae, ef, v) AmplExports *ae; Exitfunc *ef; char *v;
+AtExit1(ae, ef, v, eci) AmplExports *ae; Exitfunc *ef; char *v;
+			ExitCallInfo *eci;
 #else
-AtExit(AmplExports *ae, Exitfunc *ef, void *v)
+AtExit1(AmplExports *ae, Exitfunc *ef, void *v, ExitCallInfo *eci)
 #endif
 {
 	Exitcall *ec;
@@ -172,6 +192,12 @@ AtExit(AmplExports *ae, Exitfunc *ef, void *v)
 	if (!a_e_prev)
 		atexit(at_exit_ASL); /* in case mainexit() is bypassed */
 #endif
+	if (eci) {
+		eci->cur = a_e_prev;
+		eci->curp = &a_e_prev;
+		eci->last = a_e_last;
+		eci->lastp = &a_e_last;
+		}
 	if (a_e_next >= a_e_last) {
 		a_e_next = (Exitcall*)mymalloc(NEFB*sizeof(Exitcall));
 		a_e_last = a_e_next + NEFB;
@@ -181,6 +207,14 @@ AtExit(AmplExports *ae, Exitfunc *ef, void *v)
 	ec->ef = ef;
 	ec->v = v;
 	}
+
+ static void
+#ifdef KR_headers
+AtExit(ae, ef, v) AmplExports *ae; Exitfunc *ef; char *v;
+#else
+AtExit(AmplExports *ae, Exitfunc *ef, void *v)
+#endif
+{ AtExit1(ae, ef, v, 0); }
 
  struct
 TMInfo {
@@ -250,7 +284,7 @@ typedef char *(*Tempnamtype)(const char*, const char*);
 /* the AMPL/solver interface library will not do so either. */
 
  static char *
-tempnam(const char *dir, const char *pfix)
+tempnam(const char *dir, const char *pfx)
 { return 0; }
 #endif /* NO_tempnam */
 
@@ -336,6 +370,77 @@ myfileno(FILE *f)
 #define Tempnam_cast /*nothing*/
 #endif
 
+#ifdef __linux__
+#define USE_MKSTEMP
+#endif
+#ifdef USE_MKSTEMP
+ /* Shut up warnings about tempnam and tmpnam. */
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+ static int
+isdir(const char *s)
+{
+	struct stat sbuf;
+	if (stat(s, &sbuf))
+		return 0;
+	return S_ISDIR(sbuf.st_mode);
+	}
+
+ static char *
+my_tempnam(const char *dir, const char *pfx, char *s)
+{
+	const char *c;
+	int i;
+	size_t Ld, Lp;
+
+	if ((c = getenv("TMPDIR")) && isdir(c))
+		dir = c;
+	else if (!dir || !isdir(dir))
+		dir = "/tmp";
+	if (!pfx)
+		pfx = "";
+	Ld = strlen(dir);
+	Lp = strlen(pfx);
+	if (!s)
+		s = Malloc(Ld + Lp + 8);
+	strcpy(s, dir);
+	if (s[Ld-1] != '/')
+		s[Ld++] = '/';
+	strcpy(s+Ld, pfx);
+	strcpy(s + Ld + Lp, "XXXXXX");
+	if (i = mkstemp(s))
+		close(i);
+	else {
+		free(s);
+		s = 0;
+		}
+	return s;
+	}
+
+ static char *
+Tempnam(const char *dir, const char *pfx)
+{ return my_tempnam(dir,pfx,0); }
+
+ static char *
+Tmpnam(char *s)
+{
+	static char *s0;
+	if (s)
+		return my_tempnam(0,"Temp_",s);
+	if (s0)
+		free(s0);
+	return s0 = my_tempnam(0,"Temp_",0);
+	}
+#undef tempnam
+#define tempnam Tempnam
+#undef tmpnam
+#define tmpnam Tmpnam
+#endif /* USE_MKSTEMP */
+
+ void (*breakfunc_ASL) ANSI((int,void*)), *breakarg_ASL;
+
  void
 #ifdef KR_headers
 func_add(asl) ASL *asl;
@@ -358,8 +463,10 @@ func_add(ASL *asl)
 			AE.PrintF = printf;
 			AE.FprintF = fprintf;
 			AE.SprintF = sprintf;
+			AE.SnprintF = snprintf;
 			AE.VfprintF = vfprintf;
 			AE.VsprintF = vsprintf;
+			AE.VsnprintF = vsnprintf;
 			AE.Strtod = strtod;
 			AE.AtExit = AtExit;
 			AE.AtReset = AtReset;
@@ -399,6 +506,8 @@ func_add(ASL *asl)
 			AE.Tmpnam = tmpnam;
 			AE.Ungetc = ungetc;
 			AE.Getenv = getenv_ASL;
+			AE.Breakfunc = breakfunc_ASL;
+			AE.Breakarg = breakarg_ASL;
 			}
 		if (AE.asl)
 			memcpy(ae = (AmplExports*)M1alloc(sizeof(AmplExports)),
@@ -452,21 +561,36 @@ show_funcs_ASL(ASL *asl)
 
  int
 #ifdef KR_headers
-aflibname_ASL(ae, fullname, name, nlen, fa, save_fa)
+aflibname_ASL(ae, fullname, name, nlen, fa, save_fa, dl_close, h)
 	AmplExports *ae; char *fullname; char *name; int nlen; Funcadd *fa;
-	int save_fa;
+	int save_fa; void (*dl_close)(), *h;
 #else
 aflibname_ASL(AmplExports *ae, char *fullname, char *name, int nlen,
-	Funcadd *fa, int save_fa)
+	Funcadd *fa, int save_fa, void (*dl_close)(void*), void *h)
 #endif
 {
+	Exitcall *ec;
+	ExitCallInfo eci;
 	Not_Used(fullname);
 	Not_Used(name);
 	Not_Used(nlen);
 	n_added = 0;
+	if (save_fa)
+		AtExit1( ae, dl_close, h, &eci);
+	else
+		AtReset1(ae, dl_close, h, &eci);
 	(*fa)(ae);
+	if (!n_added) {
+		for(ec = *eci.curp; ec != eci.cur; ec = ec->prev)
+			(*ec->ef)(ec->v);
+		*eci.curp = ec;
+		*eci.lastp = eci.last;
+		/* A small storage leak is possible if a new block of */
+		/* Exitcalls was allocated, but since the present !n_added */
+		/* case is unlikely, this leak should be of little concern. */
+		}
 #ifndef CLOSE_AT_RESET
-	if (n_added && save_fa) {
+	else if (save_fa) {
 		if (++nFa >= nFamax) {
 			Funcadd **Fa1;
 			nFamax <<= 1;

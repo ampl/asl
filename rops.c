@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999, 2001 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -1014,6 +1014,77 @@ f_OPNOT(expr *e A_ASL)
 
  static real
 #ifdef KR_headers
+f_ANDLIST(e K_ASL) expr *e; D_ASL
+#else
+f_ANDLIST(expr *e A_ASL)
+#endif
+{
+	expr **ep, **epe;
+
+	ep = e->L.ep;
+	epe = e->R.ep;
+	do {
+		e = *ep++;
+		if ((*e->op)(e K_ASL) == 0.)
+			return 0.;
+		}
+		while(ep < epe);
+	return 1.;
+	}
+
+ static real
+#ifdef KR_headers
+f_ORLIST(e K_ASL) expr *e; D_ASL
+#else
+f_ORLIST(expr *e A_ASL)
+#endif
+{
+	expr **ep, **epe;
+
+	ep = e->L.ep;
+	epe = e->R.ep;
+	do {
+		e = *ep++;
+		if ((*e->op)(e K_ASL) != 0.)
+			return 1.;
+		}
+		while(ep < epe);
+	return 0.;
+	}
+
+ static real
+#ifdef KR_headers
+f_OPIMPELSE(e K_ASL) expr *e; D_ASL
+#else
+f_OPIMPELSE(expr *e A_ASL)
+#endif
+{
+	expr_if *eif = (expr_if *)e;
+
+	e = eif->e;
+	e = ((*e->op)(e K_ASL) != 0.) ? eif->T : eif->F;
+	return (*e->op)(e K_ASL);
+	}
+
+ static real
+#ifdef KR_headers
+f_OP_IFF(e K_ASL) expr *e; D_ASL
+#else
+f_OP_IFF(expr *e A_ASL)
+#endif
+{
+	expr *e1;
+	int a, b;
+
+	e1 = e->L.e;
+	a = (*e1->op)(e1 K_ASL) != 0.;
+	e1 = e->R.e;
+	b = (*e1->op)(e1 K_ASL) != 0.;
+	return a == b ? 1. : 0.;
+	}
+
+ static real
+#ifdef KR_headers
 f_OPSUMLIST(e K_ASL) expr *e; D_ASL
 #else
 f_OPSUMLIST(expr *e A_ASL)
@@ -1315,6 +1386,117 @@ f_OPFUNCALL(expr *e A_ASL)
 		}
 	return rv;
 	}
+
+ static real
+#ifdef KR_headers
+f_OPCOUNT(e K_ASL) expr *e; D_ASL
+#else
+f_OPCOUNT(expr *e A_ASL)
+#endif
+{
+	expr **ep, **epe;
+	real x;
+	ep = e->L.ep;
+	epe = e->R.ep;
+	e = *ep++;
+	if (x = (*e->op)(e K_ASL))
+		x = 1.;
+	do {
+		e = *ep++;
+		if ((*e->op)(e K_ASL))
+			x++;
+		}
+		while(ep < epe);
+	return x;
+	}
+
+ typedef struct
+jb_st {
+	jmp_buf jb;
+	} jb_st;
+
+ static int 
+#ifdef KR_headers
+rcompj(a, b, v) char *a, *b, *v;
+#else
+rcompj(const void *a, const void *b, void *v)
+#endif
+{
+	jb_st *J;
+	real t = *(real *)a - *(real *)b;
+
+	if (!t) {
+		J = (jb_st*)v;
+		longjmp(J->jb, 1);
+		}
+	return t < 0 ? -1 : 1;
+	}
+
+ static real
+#ifdef KR_headers
+f_OPALLDIFF(e K_ASL) expr *e; D_ASL
+#else
+f_OPALLDIFF(expr *e A_ASL)
+#endif
+{
+	int n;
+	expr **ep, **epe;
+	jb_st J;
+	real *r, *r1, rbuf[128], t;
+
+	ep = e->L.ep;
+	epe = e->R.ep;
+	n = epe - ep;
+	r = rbuf;
+	if (n > sizeof(rbuf)/sizeof(real))
+		r = (real*)Malloc(n*sizeof(real));
+	r1 = r;
+	while(ep < epe) {
+		e = *ep++;
+		*r1++ = (*e->op)(e K_ASL);
+		}
+	t = 1.;
+	if (setjmp(J.jb)) {
+		t = 0.;
+		goto done;
+		}
+	qsortv(r, n, sizeof(real), rcompj, &J);
+ done:
+	if (r != rbuf)
+		free(r);
+	return t;
+	}
+
+ static real
+#ifdef KR_headers
+f_OPNUMBEROF(e K_ASL) expr *e; D_ASL
+#else
+f_OPNUMBEROF(expr *e A_ASL)
+#endif
+{
+	expr **ep, **epe;
+	real n, t;
+
+	ep = e->L.ep;
+	epe = e->R.ep;
+	n = 0.;
+	e = *ep++;
+	t = (*e->op)(e K_ASL);
+	while(ep < epe) {
+		e = *ep++;
+		if (t == (*e->op)(e K_ASL))
+			n++;
+		}
+	return n;
+	}
+
+#define f_OPATLEAST f_LE
+#define f_OPATMOST  f_GE
+#define f_OPEXACTLY f_EQ
+#define f_OPNOTATLEAST f_GT
+#define f_OPNOTATMOST  f_LT
+#define f_OPNOTEXACTLY f_NE
+#define f_OPNUMBEROFs f_OPNUMBEROF /*TEMPORARY*/
 
  efunc *
 r_ops[] = {

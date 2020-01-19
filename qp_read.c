@@ -88,6 +88,7 @@ ed1opwalk(expr *e, efunc **f, efunc *varval)
 	  case 8:
 	  case 9:
 	  case 10:
+	  case 11:
 		break;
 
 	  case 5: /* if */

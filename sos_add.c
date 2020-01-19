@@ -592,22 +592,6 @@ Bound2(Coninfo *CI, int j, int k0, int k, real *LU)
 
  static void
 #ifdef KR_headers
-beg_reset(nsos, sosbeg) int nsos; int *sosbeg;
-#else
-beg_reset(int nsos, int *sosbeg)
-#endif
-{
-	int i, j, k;
-
-	for(j = 0, i = 1; i <= nsos; i++) {
-		k = sosbeg[i] + j;
-		sosbeg[i] = j;
-		j = k;
-		}
-	}
-
- static void
-#ifdef KR_headers
 debugchk(what, expected, got, exact) char *what; int expected, got, exact;
 #else
 debugchk(char *what, int expected, int got, int exact)

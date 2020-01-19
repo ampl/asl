@@ -175,7 +175,7 @@ usage_ASL(Option_Info *oi, int rc)
 						kw->name, L2, L1, kw->desc,s1);
 					}
 				else
-					fprintf(f, "\t-%*-s{%s}\n", L,
+					fprintf(f, "\t-%-*s{%s}\n", L,
 						kw->name, s1);
 			else
 				fprintf(f, "\t-%s\n", kw->name);

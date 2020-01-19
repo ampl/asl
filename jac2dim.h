@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2000-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -36,6 +36,7 @@ extern "C" {
  extern void con2grd_ASL  ANSI((ASL*, int i, real *X, real *G, fint *nerror));
  extern void con2val_ASL  ANSI((ASL*, real *X, real *F, fint *nerror));
  extern void jac2val_ASL  ANSI((ASL*, real *X, real *J, fint *nerror));
+ extern int  lcon2val_ASL ANSI((ASL*, int i, real *X, fint *ne));
  extern real obj2val_ASL  ANSI((ASL*, int nobj, real *X, fint *nerror));
  extern void obj2grd_ASL  ANSI((ASL*, int nobj, real *X, real *G, fint *ne));
  extern int  x2_check_ASL ANSI((ASL_fgh*, real*));

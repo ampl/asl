@@ -46,7 +46,7 @@ con1val_ASL(ASL *a, register real *X, real *F, fint *nerror)
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
 		if (*nerror = i)
-			return;
+			goto done;
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -81,6 +81,7 @@ con1val_ASL(ASL *a, register real *X, real *F, fint *nerror)
 		if (F)
 			*F++ = cscale ? *cscale++ * f : f;
 		}
+ done:
 	err_jmp = 0;
 	}
 
@@ -110,7 +111,7 @@ jac1val_ASL(ASL *a, real *X, real *G, fint *nerror)
 		err_jmp = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
 		if (*nerror = L)
-			return;
+			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known && x0_check_ASL(asl,X)
@@ -120,7 +121,7 @@ jac1val_ASL(ASL *a, real *X, real *G, fint *nerror)
 		con1val_ASL(a, X, 0, nerror);
 		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
-			return;
+			goto done;
 		}
 	if (asl->i.zap_J)
 		memset(G, 0, asl->i.zap_J);
@@ -155,5 +156,6 @@ jac1val_ASL(ASL *a, real *X, real *G, fint *nerror)
 			for(; gr; gr = gr->next)
 				G[gr->goff] = Adjoints[gr->varno];
 		}
+ done:
 	err_jmp = 0;
 	}

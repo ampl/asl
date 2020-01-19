@@ -17,7 +17,7 @@ lin2.c	fe2df350	2322
 lin3.c	13e37cae	2726
 linrc.c	ffb5438	4508
 makefile.sy	6eee0d4	5769
-makefile.u	105c7247	7693
+makefile.u	fe48d99	7694
 makefile.vc	112783f6	5427
 makefile.wat	eef2b13c	5362
 mng.c	a9366c3	3574
@@ -34,7 +34,7 @@ spamfun4.c	44eeda3	6043
 spamfunc.c	4bcac61	7079
 tnmain.c	fd38f276	5444
 v8.c	e75a64bb	35
-ve08.c	d3bef81	16409
+ve08.c	edb04b54	16436
 diet.amp	ea1cb539	1156
 diet.nl	ea386c63	887
 diet.row	f4e30db2	53

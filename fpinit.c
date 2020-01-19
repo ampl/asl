@@ -105,8 +105,15 @@ fpinit_ASL(Void)
 #include "float.h"
 #ifdef SYMANTEC
 extern int _8087;
+#endif
+#ifndef MCW_EM
 #define MCW_EM _MCW_EM
+#endif
+#ifndef PC_53
 #define PC_53 _PC_53
+#endif
+#ifndef MCW_PC
+#define MCW_PC _MCW_PC
 #endif
 
 #define FP_INIT_DONE

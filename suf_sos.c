@@ -172,9 +172,9 @@ reorder(int *ind, real *ref, int j0, int k, int *p)
 
  static void
 #ifdef KR_headers
-name_map(n, no, z, nam) int n; int no; int *z; char **nam;
+name_map(n, z, nam) int n; int *z; char **nam;
 #else
-name_map(int n, int no, int *z, char **nam)
+name_map(int n, int *z, char **nam)
 #endif
 {
 	int i, j, k;
@@ -183,9 +183,6 @@ name_map(int n, int no, int *z, char **nam)
 		if ((j = z[i]) >= 0)
 			nam[k = j] = nam[i];
 		}
-	n += no;
-	while(no--)
-		nam[++k] = nam[i++];
 	while(++k < n)
 		nam[k] = 0;
 	}
@@ -448,12 +445,12 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 		nzo = j;
 		}
 	if (zv && asl->i.varnames)
-		name_map(asl->i.n_var0, 0, zv, asl->i.varnames);
+		name_map(asl->i.n_var0, zv, asl->i.varnames);
 	i = m;
 	if (z) {
 		lumap(ms1, m, z, LUrhs, Urhsx);
-		if (asl->i.conames)
-			name_map(asl->i.n_con0, n_obj, z, asl->i.conames);
+		if (asl->i.connames)
+			name_map(asl->i.n_con0, z, asl->i.connames);
 		for(i = 0; i < m && z[i] >= 0; i++);
 		}
 	if (!A_vals) {

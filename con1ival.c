@@ -26,37 +26,31 @@ THIS SOFTWARE.
 
  static void
 #ifdef KR_headers
-INchk(asl, who, i) ASL *asl; char *who; int i;
+INchk(asl, who, i, ix) ASL *asl; char *who; int i, ix;
 #else
-INchk(ASL *asl, char *who, int i)
+INchk(ASL *asl, char *who, int i, int ix)
 #endif
 {
 	ASL_CHECK(asl, ASL_read_fg, who);
-	if (i < 0 || i >= n_con) {
+	if (i < 0 || i >= ix) {
 		fprintf(Stderr, "%s: got I = %d; expected 0 <= I < %d\n",
-			who, i, n_con);
+			who, i, ix);
 		exit(1);
 		}
 	}
 
- real
+ static real
 #ifdef KR_headers
-con1ival(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
+cival(asl, i, X, nerror) ASL_fg *asl; int i; fint *nerror; real *X;
 #else
-con1ival(ASL *a, int i, real *X, fint *nerror)
+cival(ASL_fg *asl, int i, real *X, fint *nerror)
 #endif
 {
-	cde *d;
-	expr *e1;
-	real f;
-	int ij;
-	cgrad *gr, **gr0;
 	Jmp_buf err_jmp0;
-	ASL_fg *asl;
-	expr_v *V;
+	expr *e;
+	int ij;
+	real f;
 
-	INchk(a, "con1ival", i);
-	asl = (ASL_fg*)a;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
@@ -68,7 +62,7 @@ con1ival(ASL *a, int i, real *X, fint *nerror)
 	if (!asl->i.x_known)
 		x0_check_ASL(asl,X);
 	if (!asl->i.ncxval)
-		asl->i.ncxval = (int*)M1zapalloc(n_con*sizeof(int));
+		asl->i.ncxval = (int*)M1zapalloc(nclcon*sizeof(int));
 	if (!(x0kind & ASL_have_concom)) {
 		if (comb < combc)
 			comeval_ASL(asl, comb, combc);
@@ -78,10 +72,27 @@ con1ival(ASL *a, int i, real *X, fint *nerror)
 		}
 	asl->i.ncxval[i] = asl->i.nxval;
 	co_index = i;
-	d = con_de + i;
+	e = con_de[i].e;
+	f = (*e->op)(e C_ASL);
+	err_jmp = 0;
+	return f;
+	}
+
+ real
+#ifdef KR_headers
+con1ival(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
+#else
+con1ival(ASL *a, int i, real *X, fint *nerror)
+#endif
+{
+	ASL_fg *asl;
+	cgrad *gr, **gr0;
+	expr_v *V;
+	real f;
+
+	INchk(a, "con1ival", i, a->i.n_con_);
+	f = cival(asl = (ASL_fg*)a, i, X, nerror);
 	gr0 = Cgrad + i;
-	e1 = d->e;
-	f = (*e1->op)(e1 C_ASL);
 	gr = *gr0;
 	if (asl->i.vscale)
 		for(V = var_e; gr; gr = gr->next)
@@ -89,10 +100,23 @@ con1ival(ASL *a, int i, real *X, fint *nerror)
 	else
 		for(; gr; gr = gr->next)
 			f += gr->coef * X[gr->varno];
-	err_jmp = 0;
 	if (asl->i.cscale)
 		f *= asl->i.cscale[i];
 	return f;
+	}
+
+ int
+#ifdef KR_headers
+lcon1val(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
+#else
+lcon1val(ASL *a, int i, real *X, fint *nerror)
+#endif
+{
+	real f;
+
+	INchk(a, "lcon1ival", i, a->i.n_lcon_);
+	f = cival((ASL_fg*)a, i + a->i.n_con0, X, nerror);
+	return f != 0.;
 	}
 
  void
@@ -112,7 +136,7 @@ con1grd(ASL *a, int i, real *X, real *G, fint *nerror)
 	real scale;
 	static char who[] = "con1grd";
 
-	INchk(a, who, i);
+	INchk(a, who, i, a->i.n_con_);
 	asl = (ASL_fg*)a;
 	if (!want_derivs)
 		No_derivs_ASL(who);
