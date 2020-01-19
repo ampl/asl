@@ -606,7 +606,7 @@ eread(EdRead *R, int deriv)
 				rvif->dF = dsave;
 				rvif->Fv.i = nv1;
 				}
-			else 
+			else
 				rvif->dF = new_relo(S, L, dsave, &rvif->Fv.i);
 			if (lasta < a1)
 				lasta = a1;
@@ -1371,9 +1371,42 @@ zerograd_chk(Static *S)
 
  static void
 #ifdef KR_headers
-adjust(S) Static *S;
+adjust_compl_rhs(asl, opnum) ASL_fg *asl; efunc *opnum;
 #else
-adjust(Static *S)
+adjust_compl_rhs(ASL_fg *asl, efunc *opnum)
+#endif
+{
+	cde *C;
+	expr *e;
+	int *Cvar, i, j, nc, stride;
+	real *L, *U, t;
+
+	L = LUrhs;
+	if (U = Urhsx)
+		stride = 1;
+	else {
+		U = L + 1;
+		stride = 2;
+		}
+	C = con_de;
+	Cvar = cvar;
+	nc = n_con;
+	for(i = nlc; i < nc; i++)
+		if (Cvar[i] && (e = C[i].e) && e->op == opnum
+		&& (t = ((expr_n*)e)->v) != 0.) {
+			((expr_n*)e)->v = 0.;
+			if (L[j = stride*i] > negInfinity)
+				L[j] -= t;
+			if (U[j] < Infinity)
+				U[j] -= t;
+			}
+	}
+
+ static void
+#ifdef KR_headers
+adjust(S, flags) Static *S; int flags;
+#else
+adjust(Static *S, int flags)
 #endif
 {
 	ASL_fg *asl = S->asl;
@@ -1405,6 +1438,9 @@ adjust(Static *S)
 		else if (Fortran)
 			colstart_inc(S);
 		}
+	if (n_cc > nlcc && nlc < n_con
+	 && !(flags & ASL_no_linear_cc_rhs_adjust))
+		adjust_compl_rhs(asl, f_OPNUM);
 	}
 
  static void
@@ -1769,7 +1805,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 			adjoints_nv1 = &adjoints[nv1];
 			nderps += nderp;
 #endif /* Just_Linear */
-			adjust(S);
+			adjust(S, flags);
 			nzjac = nz;
 			if (!Lastx)
 				Lastx = (real *)M1alloc(nv0*sizeof(real));

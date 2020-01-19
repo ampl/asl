@@ -40,7 +40,7 @@ pr_unknown_ASL(FILE *f, char *s)
 	char *s1;
 
 	for(s1 = s; *s1 > ' ' && *s1 != '='; s1++);
-	fprintf(f, "Unknown keyword \"%.*s\"\n", s1-s, s);
+	fprintf(f, "Unknown keyword \"%.*s\"\n", (int)(s1-s), s);
 	while(*s1 <= ' ' && *s1)
 		s1++;
 	if (*s1 == '=') {

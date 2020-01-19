@@ -1337,7 +1337,40 @@ zerograd_chk(VOID)
 	}
 
  static void
-adjust(VOID)
+adjust_compl_rhs(VOID)
+{
+	cde *C;
+	expr *e;
+	int *Cvar, i, j, nc, stride;
+	real *L, *U, t;
+
+	L = LUrhs;
+	if (U = Urhsx)
+		stride = 1;
+	else {
+		U = L + 1;
+		stride = 2;
+		}
+	C = con_de;
+	Cvar = cvar;
+	nc = n_con;
+	for(i = nlc; i < nc; i++)
+		if (Cvar[i] && (e = C[i].e) && e->op == f_OPNUM
+		&& (t = ((expr_n*)e)->v) != 0.) {
+			((expr_n*)e)->v = 0.;
+			if (L[j = stride*i] > negInfinity)
+				L[j] -= t;
+			if (U[j] < Infinity)
+				U[j] -= t;
+			}
+	}
+
+ static void
+#ifdef KR_headers
+adjust(flags) int flags;
+#else
+adjust(int flags)
+#endif
 {
 	derp *d, **dp;
 	real *a = adjoints;
@@ -1366,6 +1399,9 @@ adjust(VOID)
 			goff_comp();
 		else if (Fortran)
 			colstart_inc();
+	if (n_cc > nlcc && nlc < n_con
+	 && !(flags & ASL_no_linear_cc_rhs_adjust))
+		adjust_compl_rhs();
 	}
 
  static void
@@ -1638,7 +1674,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			free(imap);
 			adjoints = (real *)M1zapalloc(amax*Sizeof(real));
 			adjoints_nv1 = &adjoints[nv1];
-			adjust();
+			adjust(flags);
 			nzjac = nz;
 			if (!Lastx)
 				Lastx = (real *)M1alloc(nv0*sizeof(real));

@@ -215,7 +215,7 @@ get_opt_ASL(Option_Info *oi, char *s)
 		s1 = (*kw->kf)(oi, kw, s);
 		if (oi->option_echo & ASL_OI_badvalue) {
 			fprintf(Stderr, "Bad value in \"%.*s\"\n",
-				s1-s0, s0);
+				(int)(s1-s0), s0);
 			oi->n_badopts++;
 			while(*++s1 > ' ');
 			}

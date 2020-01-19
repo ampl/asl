@@ -87,7 +87,8 @@ mean(register arglist *al)	/* mean of arbitrarily many arguments */
 	real x, z;
 	real *d, *de, *ra;
 	int *at, i, j, n;
-	char *se, *sym;
+	char *se;
+	const char *sym;
 	AmplExports *ae = al->AE; /* for fprintf and strtod */
 
 	if ((n = al->n) <= 0)

@@ -149,6 +149,7 @@ Static {
 	int _wantOgroups;
 	int _zc_lim;
 	int nvar0, nvinc;
+	int size_exprn;
 	la_ref *_laref_free;
 	linarg **_lthash;		/* hash table */
 	linarg *_ltfree;		/* free list */
@@ -607,7 +608,7 @@ new_expr_n(Static *S, real t)
 	if (en = expr_n_free)
 		expr_n_free = *(expr_n **)&en->v;
 	else
-		en = (expr_n *)mem_ASL(S->a, sizeof(expr_n));
+		en = (expr_n *)mem_ASL(S->a, S->size_exprn);
 #ifdef DEBUG
 	if (en == enzork)
 		printf("");
@@ -4189,9 +4190,42 @@ cg_zzap(ASLTYPE *asl)
 
  static void
 #ifdef KR_headers
-adjust(S) Static *S;
+adjust_compl_rhs(asl) ASL_fg *asl;
 #else
-adjust(Static *S)
+adjust_compl_rhs(ASLTYPE *asl)
+#endif
+{
+	cde *C;
+	expr *e;
+	int *Cvar, i, j, nc, stride;
+	real *L, *U, t;
+
+	L = LUrhs;
+	if (U = Urhsx)
+		stride = 1;
+	else {
+		U = L + 1;
+		stride = 2;
+		}
+	C = con_de;
+	Cvar = cvar;
+	nc = n_con;
+	for(i = nlc; i < nc; i++)
+		if (Cvar[i] && (e = C[i].e) && Intcast e->op == f_OPNUM
+		&& (t = ((expr_n*)e)->v) != 0.) {
+			((expr_n*)e)->v = 0.;
+			if (L[j = stride*i] > negInfinity)
+				L[j] -= t;
+			if (U[j] < Infinity)
+				U[j] -= t;
+			}
+	}
+
+ static void
+#ifdef KR_headers
+adjust(S, flags) Static *S; int flags;
+#else
+adjust(Static *S, int flags)
 #endif
 {
 	derp *d, **dp;
@@ -4224,6 +4258,9 @@ adjust(Static *S)
 		else if (Fortran)
 			colstart_inc(S);
 		}
+	if (n_cc > nlcc && nlc < n_con
+	 && !(flags & ASL_no_linear_cc_rhs_adjust))
+		adjust_compl_rhs(asl);
 	}
 
  static void
@@ -4659,6 +4696,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	OPNUM = r_ops[f_OPNUM];
 	if (!size_expr_n)
 		size_expr_n = sizeof(expr_n);
+	S->size_exprn = size_expr_n;
 	asl->P.rlist.next = asl->P.rlist.prev = (range*)&asl->P.rlist;
 	func_add(a);
 	if (binary_nl) {
@@ -4774,7 +4812,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			adjoints = (real *)M1zapalloc(amax*Sizeof(real));
 			adjoints_nv1 = &adjoints[nv1];
 			nderps += nderp;
-			adjust(S);
+			adjust(S, flags);
 			nzjac = nz;
 			if (!Lastx)
 				Lastx = (real *)M1alloc(nv0*sizeof(real));

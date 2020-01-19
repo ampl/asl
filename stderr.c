@@ -28,14 +28,7 @@ THIS SOFTWARE.
 #define STDERR stderr
 #endif
 
-/* With at least one idiotic version of Linux, it is necessary to */
-/* compile this with -DNON_STDIO . */
-
-FILE *Stderr
-#ifndef NON_STDIO
-	= STDERR
-#endif
-;
+FILE *Stderr;
 
 #ifdef __cplusplus
 extern "C" void Stderr_init_ASL(void);

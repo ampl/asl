@@ -226,9 +226,9 @@ TMInfo {
 
  static Char *
 #ifdef KR_headers
-Tempmem(T, L) TMInfo *T; unsigned long L;
+Tempmem(T, L) TMInfo *T; size_t L;
 #else
-Tempmem(TMInfo *T, unsigned long L)
+Tempmem(TMInfo *T, size_t L)
 #endif
 {
 	TMInfo *T1 = (TMInfo *)mymalloc(L + sizeof(TMInfo));
@@ -245,7 +245,7 @@ No_table_handler(Dbread, Dbwrite, hname, flags, vinfo)
 {}
 
  static cryptblock*
-No_crypto(key, scrbytes) char *key; Uint scrbytes;
+No_crypto(key, scrbytes) char *key; size_t scrbytes;
 #else
  static void
 No_table_handler(
@@ -257,7 +257,7 @@ No_table_handler(
 {}
 
  static cryptblock*
-No_crypto(char *key, Uint scrbytes)
+No_crypto(char *key, size_t scrbytes)
 #endif
 { return 0; }
 

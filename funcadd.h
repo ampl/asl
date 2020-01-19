@@ -26,11 +26,6 @@ THIS SOFTWARE.
 #define FUNCADD_H_INCLUDED
 #include "stdio1.h"	/* for ANSI and any printing */
 
-#ifndef Uint_defined__
-#define Uint_defined__
- typedef unsigned int Uint;
-#endif
-
 #ifndef VA_LIST
 #define VA_LIST va_list
 #endif
@@ -178,11 +173,11 @@ AmplExports {
 	int (*VfprintF) ANSI((FILE*, const char*, VA_LIST));
 	int (*VsprintF) ANSI((char*, const char*, VA_LIST));
 	double (*Strtod) ANSI((const char*, char**));
-	cryptblock *(*Crypto) ANSI((char *key, Uint scrbytes));
+	cryptblock *(*Crypto) ANSI((char *key, size_t scrbytes));
 	Char *asl;
 	void (*AtExit)  ANSI((AmplExports *ae, Exitfunc*, void*));
 	void (*AtReset) ANSI((AmplExports *ae, Exitfunc*, void*));
-	Char *(*Tempmem) ANSI((TMInfo*, unsigned long));
+	Char *(*Tempmem) ANSI((TMInfo*, size_t));
 	void (*Add_table_handler) ANSI((
 		int (*DbRead) (AmplExports *ae, TableInfo *TI),
 		int (*DbWrite)(AmplExports *ae, TableInfo *TI),
