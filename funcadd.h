@@ -158,6 +158,7 @@ typedef void AddRand ANSI((
 		const char *name,
 		rfunc f,	/* assumed to be a random function */
 		rfunc icdf,	/* inverse CDF */
+		int type,	/* FUNCADD_STRING_ARGS or 0 */
 		int nargs,	/* >=  0 ==> exactly that many args
 				 * <= -1 ==> at least -(nargs+1) args
 				 */

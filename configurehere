@@ -33,6 +33,7 @@ case `uname -m` in
 
 case `uname -s` in
 	AIX) CFLAGS="$CFLAGS -qnomaf";;
+	Darwin) CFLAGS="$CFLAGS -D_NONSTD_SOURCE";;
 	SunOS) case `uname -i` in
 		i386)  SC="$SC;s/^a = \\\\$/a = fpsetprec.s \\\\/";;
 		i86pc) SC="$SC;s/^a = \\\\$/a = fpsetprec64.s \\\\/";;
@@ -40,6 +41,6 @@ case `uname -s` in
 	CYGWIN_*) SC="$SC;s/a\.out/a.exe/";;
 	esac
 
-case $CFLAGS in -O);; *) SC="$SC;s/^CFLAGS = -O/CFLAGS = $CFLAGS/";; esac
+case $CFLAGS in -O);; *) SC="$SC;s@^CFLAGS = -O@CFLAGS = $CFLAGS@";; esac
 
 sed "$SC" makefile.u >makefile

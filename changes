@@ -1638,3 +1638,37 @@ change unlikely to affect solvers, but asldate.c nonetheless updated.
 
 20080413
   makefile.u:  add comment about -D_NONSTD_SOURCE for MacOSX.
+
+20080414
+  misc.c:  adjust "bad line" error message to show the whole offending
+line for 'g'-mode (ASCII) .nl files.
+
+20080612
+  fpinit.c:  tweak __linux__ case to work when _FPU_IEEE is not
+#defined; asldate.c not changed.
+
+20080629
+  configurehere: addition for MacOSX.
+  sphes.c: fix bug in sphsetup (computing the sparsity pattern of
+the Lagrangian Hessian).  Under just the "right" conditions, some
+nonzeros were missed.  Example:
+
+	var x{i in 1..2} := i;
+	minimize f: x[1]*x[2]*sin(x[1]-x[2]);
+
+But with the sin term changed to sin(x[1]-p*x[2]) for any p different
+from 1, the correct sparsity was detected.
+
+20080630
+  pshvprod.c:  fix a bug in Hessian computations:  in if-then-else
+expressions with one constant "then" or "else" value (and the other
+involving variables), a bogus nonzero value (such as 7.90505e-323) was
+mistakenly used instead of zero when the constant value was selected.
+An example where the bug bit (at the default x == y == 0):
+
+	var x; var y;
+	minimize f2: x*(if y > 3 then x*y else 2);
+
+20080701
+  funcadd.h: adjust calling sequence of function type AddRand
+(which is not yet used, but is planned for use.)

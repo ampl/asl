@@ -64,7 +64,7 @@ typedef Long fint;
 typedef Long ftnlen;
 #endif
 #ifndef Intcast
-#define Intcast (int)
+#define Intcast (size_t)
 #endif
 
 #ifndef Not_Used
