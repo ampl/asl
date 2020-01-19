@@ -9,11 +9,12 @@ htest.out	2cbb8a8	181
 htest.x	16462409	131
 libmain.c	e849f61f	103
 makefile.alpha	e17321ca	408
-makefile.cygwin	fd532d6	382
+makefile.cygwin	f1ddd440	404
 makefile.freebsd	ed791fcd	388
 makefile.hp	eb62f712	414
 makefile.i386solaris	f32a56c7	382
 makefile.krsolaris	e19ccd87	473
+makefile.lcc	1baab851	252
 makefile.linux	1af166d7	391
 makefile.macosx	3c329df	419
 makefile.rs6k	40dfe8d	872
@@ -22,6 +23,7 @@ makefile.solaris	941e9c7	388
 makefile.sunos	6238e91	686
 makefile.vc	e84194f0	674
 makefile.wat	ec66f6b2	607
+makefile.xsum	fcb0a6d9	546
 outargex.c	f32c25a5	4132
 outargex.run	1e4bc9c3	1131
 silly.2	e8f0d301	31

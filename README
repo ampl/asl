@@ -55,40 +55,30 @@ To get all the source files for amplsolver.a by E-mail, send netlib
 
 	send all from ampl/solvers
 
-You can also use anonymous ftp:
+You can also get a tar file of ampl/solvers and all its subdirectories
+with a web browser, by clicking on "tar" in the line "lib: models (tar)" in
 
-	ftp netlib.bell-labs.com
-	login: anonymous
-	password: <your E-mail address>
-	binary
-	cd /netlib/ampl
-	get solvers.tar
+	http://netlib.sandia.gov/ampl/
 
-to get a tar file of the solvers directory and all of its
-subdirectories.  To just get all of the files in the solvers
-directory (but none of the subdirectories), change the last
-two lines above to
+The file you download will be called netlibfiles.tar; executing
 
-	cd /netlib/ampl/solvers
-	prompt
-	mget *.gz
+	tar xf netlibfiles.tar
 
-You can also get the whole solvers.tar file with a web browser,
-either by clicking on "tar" in the line "lib: models (tar)" in
+will give you directory ampl/solvers containing gzipped files and
+subdirectories; the next step will be
 
-	http://netlib.bell-labs.com/netlib/ampl/
+	cd ampl/solvers
+	gzip -dN *.gz
 
-or by explicitly specifying URL
+to uncompress the .gz files.  (Do this also in any subdirectories
+of interest.)
 
-	ftp://netlib.bell-labs.com/netlib/ampl/solvers.tar
+Beware that some older versions of Netscape and Internet Explorer
+mishandle "http:" URLs that end in ".gz".
 
-Beware that some versions of Netscape and Internet Explorer
-mishandle "http:" URLs that end in ".gz".  A possible cure is
-to substitute "ftp:" for "http:".
-
-See the comments about tar and .gz files in
-
-	http://netlib.bell-labs.com/netlib/bib/compression.html
+See the comments about tar and .gz files in /netlib/bib/compression.html
+(e.g., http://netlib.sandia.gov/bib/compression.html or
+http://www.netlib.org/bib/compression.html).
 
 For more about AMPL itself, see the AMPL book (second edition):
 
