@@ -35,7 +35,7 @@ THIS SOFTWARE.
 extern "C" double xectim_(Void);
 #endif
 
-#ifndef NO_RUSAGE
+#ifndef NO_RUSAGE /*{{*/
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -48,38 +48,42 @@ xectim_(Void)
 		+ 1e-6*(R.ru_utime.tv_usec + R.ru_stime.tv_usec);
 	}
 
-#else /* NO_RUSAGE */
+#else /* }NO_RUSAGE{ */
 
-#if defined(__STDC__) && !defined(Clocks_to_seconds)
+#if defined(__STDC__) && !defined(Clocks_to_seconds) /*{{*/
 #include "time.h"
 
  double
 xectim_(Void)
 { return (double)clock() / CLOCKS_PER_SEC; }
 
-#else
+#else /*}defined(__STDC__) && !defined(Clocks_to_seconds){*/
 #include "sys/types.h"
 #include "sys/times.h"
-#ifndef Clocks_to_seconds
-#ifdef CRAY
+#ifndef Clocks_to_seconds /*{*/
+#ifdef CRAY /*{{*/
 #define Clocks_to_seconds * 9.5e-9
-#else
+#else /*}CRAY{*/
 
-#ifndef HZ
+#ifndef HZ /*{*/
 #include "limits.h"
-#ifdef CLK_TCK
+#ifdef CLOCKS_PER_SEC /*{{*/
+#define HZ (double)(CLOCKS_PER_SEC)
+#else /*}CLOCKS_PER_SEC{*/
+#ifdef CLK_TCK /*{{*/
 #define HZ (double)(CLK_TCK)
-#else
-#ifdef mips
+#else /*}CLK_TCK{*/
+#ifdef mips /*{{*/
 #define HZ 100.0
-#else
+#else /*}mips{*/
 #define HZ 60.0
-#endif
-#endif
+#endif /*}}mips*/
+#endif /*}}CLK_TCK*/
+#endif /*}}CLOCKS_PER_SEC*/
+#endif /*}HZ*/
 #define Clocks_to_seconds / HZ
-#endif
-#endif
-#endif
+#endif /*}}CRAY*/
+#endif /*}Clocks_to_seconds*/
 
 double xectim_(Void)
 {
@@ -88,5 +92,5 @@ double xectim_(Void)
 	times(&t);
 	return((t.tms_utime + t.tms_stime) Clocks_to_seconds);
 	}
-#endif
-#endif /* NO_RUSAGE */
+#endif /*}}defined(__STDC__) && !defined(Clocks_to_seconds)*/
+#endif /*}}NO_RUSAGE*/

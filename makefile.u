@@ -61,23 +61,20 @@ SHELL=/bin/sh
 # and for AIX versions less than 4.3, remove funcadd1.c from the "a ="
 # assignment below.
 
-# On systems where compilation of stderr.c gives an error, such as at
-# least some versions of Linux, add
-#	-DNON_STDIO
-# to CFLAGS.  For compilation by PGI's pgcc compiler, try using
-# CFLAGS = -fast -Kieee -DNON_STDIO -DNO_fpu_control -pc 64
+# For compilation by PGI's pgcc compiler, try using
+# CFLAGS = -fast -Kieee -DNO_fpu_control -pc 64
 
 # For Solaris on the i386 architecture, add fpsetprec.s to the "a ="
 # assignment below.
 
 # For cygwin, change a.out to a.exe in the rule below for arith.h, and use
 # CC = gcc
-# CFLAGS = -O2 -DNON_STDIO
+# CFLAGS = -O2
 
 # For MinGW, change a.out to a.exe in the rule below for arith.h,
 # change fpinit.c to fpinitmt.c in the "a =" list below, and use
 # CC = gcc
-# CFLAGS = -O2 -DNON_STDIO -DNO_RUSAGE
+# CFLAGS = -O2 -DNO_RUSAGE
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
