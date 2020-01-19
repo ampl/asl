@@ -33,45 +33,47 @@ SufHead {
 	fint tablen;
 	} SufHead;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef char *(*Name) ANSI((ASL*,int));
-
-#ifdef __cplusplus
-}
-#endif
+typedef char *(*Name)(ASL*,int,int*);
 
  static void
-#ifdef KR_headers
-getsufhead(asl, d, sh, np, zp) ASL *asl; SufDesc *d; SufHead *sh; int *np, **zp;
-#else
 getsufhead(ASL *asl, SufDesc *d, SufHead *sh, int *np, int **zp)
-#endif
 {
-	int i, *ip, *ipe, n, nz;
+	int i, *ip, *ipe, *map, n, nz;
 	real *rp, *rpe;
 
 	memcpy(sh->sufid, "\nSuffix\n", 8);
 	sh->kind = d->kind &
 		(ASL_Sufkind_mask | ASL_Sufkind_real | ASL_Sufkind_iodcl);
 	*np = n = (&asl->i.n_var_)[i = d->kind & ASL_Sufkind_mask];
-	*zp = i < 2 ? asl->i.z[i] : 0;
+	*zp = map = i < 2 ? (&asl->i.vmap)[i] : 0;
 	nz = 0;
 	if (d->kind & ASL_Sufkind_real) {
 		rp = d->u.r;
-		rpe = rp + n;
-		while(rp < rpe)
-			if (*rp++)
-				nz++;
+		if (map) {
+			for(i = 0; i < n; ++i)
+				if (rp[i] && map[i] >= 0)
+					++nz;
+			}
+		else {
+			rpe = rp + n;
+			while(rp < rpe)
+				if (*rp++)
+					++nz;
+			}
 		}
 	else {
 		ip = d->u.i;
-		ipe = ip + n;
-		while(ip < ipe)
-			if (*ip++)
-				nz++;
+		if (map) {
+			for(i = 0; i < n; ++i)
+				if (ip[i] && map[i] >= 0)
+					++nz;
+			}
+		else {
+			ipe = ip + n;
+			while(ip < ipe)
+				if (*ip++)
+					++nz;
+			}
 		}
 	sh->n = nz;
 	sh->namelen = strlen(d->sufname) + 1;
@@ -81,11 +83,7 @@ getsufhead(ASL *asl, SufDesc *d, SufHead *sh, int *np, int **zp)
 	}
 
  static long
-#ifdef KR_headers
-tablines(s) char *s;
-#else
-tablines(char *s)
-#endif
+tablines(const char *s)
 {
 	long n;
 	if (!s)
@@ -98,35 +96,24 @@ tablines(char *s)
 	}
 
  static void
-#ifdef KR_headers
-showsol(asl, x, n, n0, z, name, what, pfix)
-	ASL *asl; real *x; int n, n0, *z; Name name; char *what, *pfix;
-#else
-showsol(ASL *asl, real *x, int n, int n0, int *z, Name name, char *what, char *pfix)
-#endif
+showsol(ASL *asl, real *x, int n, int n0, Name name, const char *what, const char *pfix)
 {
 	int i, j, k, k0;
 
 	if (!x || n <= 0)
 		return;
 	k0 = k = strlen(what);
-	for(i = 0; i < n0; i++)
-		if ((j = z ? z[i] : i) >= 0
-		 && (j = strlen((*name)(asl,j))) > k)
+	for(i = 0; i < n0; ++i)
+		if ((j = strlen((*name)(asl,i,0))) > k)
 			k = j;
 	k += 2;
 	printf("\n%s%*s%svalue\n", what, k-k0, "", pfix);
-	for(i = 0; i < n0; i++)
-		if ((j = z ? z[i] : i) >= 0)
-			printf("%-*s%.g\n", k, (*name)(asl,j), x[i]);
+	for(i = 0; i < n0; ++i)
+		printf("%-*s%.g\n", k, (*name)(asl,i,0), x[i]);
 	}
 
  static real *
-#ifdef KR_headers
-scale(x, s, yp, n) real *x, *s, **yp; int n;
-#else
 scale(real *x, real *s, real **yp, int n)
-#endif
 {
 	real *xe, *y, *y0;
 
@@ -139,28 +126,24 @@ scale(real *x, real *s, real **yp, int n)
 	}
 
  static real*
-#ifdef KR_headers
-copy(n, x, yp, z) int n, *z; real *x, **yp;
-#else
-copy(int n, real *x, real **yp, int *z)
-#endif
+copy(int n, int n1, real *x, real **yp, int *z, int *zap)
 {
-	int j;
-	real *y, *y0;
+	int i, j;
+	real *y;
 
-	y = y0 = *yp;
-	while(--n >= 0)
-		*y++ = (j = *z++) >= 0 ? x[j] : 0.;
-	*yp = y;
-	return y0;
+	y = *yp;
+	*yp = y + n;
+	for(i = 0; i < n1; ++i)
+		if ((j = z[i]) >= 0 && j < n)
+			y[j] = x[i];
+	if (zap)
+		for(n = zap[0], i = 1; i <= n; ++i)
+			y[zap[i]] = 0.;
+	return y;
 	}
 
  static void
-#ifdef KR_headers
-equ_adjust1(ip, LU, U, n) int *ip; real *LU; real *U; int n;
-#else
 equ_adjust1(int *ip, real *LU, real *U, int n)
-#endif
 {
 	int i = 0;
 	if (U) {
@@ -175,11 +158,7 @@ equ_adjust1(int *ip, real *LU, real *U, int n)
 	}
 
  void
-#ifdef KR_headers
-equ_adjust_ASL(asl, cstat, rstat) ASL *asl; int *cstat; int *rstat;
-#else
 equ_adjust_ASL(ASL *asl, int *cstat, int *rstat)
-#endif
 {
 	if (cstat)
 		equ_adjust1(cstat, LUv, Uvx, n_var);
@@ -188,11 +167,7 @@ equ_adjust_ASL(ASL *asl, int *cstat, int *rstat)
 	}
 
  static long
-#ifdef KR_headers
-AMPL_version_ASL(asl) ASL *asl;
-#else
 AMPL_version_ASL(ASL *asl)
-#endif
 {
 	char *s;
 	if (ampl_options[0] >= 5)
@@ -210,30 +185,26 @@ AMPL_version_ASL(ASL *asl)
 	return strtol(s+7,0,10);
 	}
 
-typedef size_t (*Fwrite) ANSI((const void*, size_t, size_t, FILE*));
-
- void
-#ifdef KR_headers
-write_solx_ASL(asl, msg, x, y, oi, fw_d, fw_i, fw_s)
-	ASL *asl; char *msg; double *x, *y; Option_Info *oi; Fwrite fw_d, fw_i, fw_s;
-#else
-write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrite fw_d, Fwrite fw_i, Fwrite fw_s)
-#endif
+ int
+write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi,
+		Fwrite fw_d, Fwrite fw_i, Fwrite fw_s, const char *solfname)
 {
 	FILE *f;
-	int N, binary, i, i1, *ip, j, k, n, nlneed, tail, wantsol, *zz;
-	char *bsmsg, buf[80], *s, *s1, *s2;
-	static char *wkind[] = {"w", "wb"};
-	ftnlen L[6];
-	fint J[2], m, z[4];
-	size_t nn;
-	real *rp, *y1, *xycopy;
 	SufDesc *d;
 	SufHead sh;
+	char *bsmsg, buf[80];
+	const char *s, *s1, *s2;
+	fint J[2], m, z[4];
+	ftnlen L[6];
+	int N, binary, i, i1, *ip, j, k, n, nlneed, rv, tail, wantsol, *zz;
+	real *rp, *x0, *y0, *y1, *xycopy;
+	size_t nn;
+	static const char *wkind[] = {"w", "wb"};
 
 	if (!asl || asl->i.ASLtype < 1 || asl->i.ASLtype > 5)
 		badasl_ASL(asl,0,"write_sol");
 
+	rv = 0;
 	bsmsg = 0;
 	if ((nlneed = need_nl) > 0) {
 		if (oi && oi->bsname && (i = nlneed-2) > 0
@@ -241,7 +212,7 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 		 && !strncmp(msg,oi->bsname,i)
 		 && !strncmp(msg+i,": ",2)
 		 && AMPL_version_ASL(asl) >= 20020401L) {
-			bsmsg = Malloc(nlneed + strlen(msg) + 1);
+			bsmsg = (char*)Malloc(nlneed + strlen(msg) + 1);
 			memset(bsmsg, '\b', nlneed);
 			strcpy(bsmsg+nlneed, msg);
 			msg = bsmsg;
@@ -251,35 +222,58 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 	xycopy = 0;
 	if ((wantsol = oi ? oi->wantsol : 1) || amplflag) {
 		k = 0;
-		if (x) {
-			if (asl->i.vscale)
+		y1 = 0;
+		if ((x0 = x)) {
+			if (asl->i.vmap) {
+				k = asl->i.n_var0;
+				if (asl->i.vscale)
+					k += n_var;
+				}
+			else if (asl->i.n_var0 > n_var)
+				k = asl->i.n_var0;
+			else if (asl->i.vscale)
 				k = n_var;
-			if (asl->i.z[0])
-				k += asl->i.n_var0;
 			}
 		if (y) {
-			if (asl->i.cscale)
-				k += n_con;
-			if (asl->i.z[1])
+			if (asl->i.cmap) {
 				k += asl->i.n_con0;
+				if (asl->i.lscale)
+					k += n_con;
+				}
+			else if (asl->i.n_con0 > n_con)
+				k += asl->i.n_con0;
+			else if (asl->i.lscale)
+				k += n_con;
 			}
 		if (k)
 			y1 = xycopy = (real*)Malloc(k*sizeof(real));
 		if (x) {
 			if (asl->i.vscale)
 				x = scale(x, asl->i.vscale, &y1, n_var);
-			if (asl->i.z[0])
-				x = copy(asl->i.n_var0, x, &y1, asl->i.z[0]);
+			if ((ip = asl->i.vmap))
+				x = copy(asl->i.n_var0, n_var, x, &y1, ip, asl->i.vzap);
+			else if (x == x0 && asl->i.n_var0 > n_var) {
+				memcpy(y1, x, n_var*sizeof(real));
+				x = y1;
+				y1 += asl->i.n_var0;
+				}
 			}
 		z[0] = m = asl->i.n_con0;
 		if (!y)
 			m = 0;
 		else {
-			if (asl->i.cscale)
-				y = scale(y, asl->i.cscale, &y1, n_con);
-			if (asl->i.z[1])
-				y = copy(asl->i.n_con0, y, &y1, asl->i.z[1]);
+			y0 = y;
+			if (asl->i.lscale)
+				y = scale(y, asl->i.lscale, &y1, n_con);
+			if ((ip = asl->i.cmap))
+				y = copy(asl->i.n_con0, n_con, y, &y1, ip, asl->i.czap);
+			else if (y0 == y && asl->i.n_con0 > n_con) {
+				memcpy(y1, y, n_con*sizeof(real));
+				y = y1;
+				}
 			}
+		if (asl->i.Or && x)
+			obj_adj_xy_ASL(asl, x, x0, y);
 		}
 	if (!amplflag && !(wantsol & 1))
 		goto write_done;
@@ -298,11 +292,15 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 		}
  break2:
 	binary = binary_nl & 1;
-	strcpy(stub_end, ".sol");
-	f = fopen(filename, wkind[binary]);
+	if (!solfname) {
+		strcpy(stub_end, ".sol");
+		solfname = filename;
+		}
+	f = fopen(solfname, wkind[binary]);
 	if (!f) {
-		fprintf(Stderr, "can't open %s\n", filename);
-		exit(2);
+		fprintf(Stderr, "can't open %s\n", solfname);
+		rv = 1;
+		goto ret;
 		}
 	z[1] = m;
 	z[2] = n = asl->i.n_var0;
@@ -380,9 +378,8 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 				    for(rp = d->u.r; i < N; i++) {
 					if (rp[i]) {
 						if (zz) {
-							while(zz[j] < i)
-								j++;
-							J[0] = j;
+							if ((J[0] = zz[i]) < 0)
+								continue;
 							}
 						else
 							J[0] = i;
@@ -392,11 +389,10 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 					}
 				else
 				    for(ip = d->u.i; i < N; i++) {
-					if (J[1] = ip[i]) {
+					if ((J[1] = ip[i])) {
 						if (zz) {
-							while(zz[j] < i)
-								j++;
-							J[0] = j;
+							if ((J[0] = zz[i]) < 0)
+								continue;
 							}
 						else
 							J[0] = i;
@@ -417,7 +413,7 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 				}
 			}
 		fprintf(f, "\n");
-		if (k = (int)ampl_options[0]) {
+		if ((k = (int)ampl_options[0])) {
 			if (ampl_options[2] == 3)
 				ampl_options[0] += 2;
 			fprintf(f, "Options\n");
@@ -464,9 +460,10 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 				if (d->kind & ASL_Sufkind_real)
 				    for(rp = d->u.r; i < N; i++) {
 					if (rp[i]) {
-						if (zz)
-							while(zz[j] < i)
-								j++;
+						if (zz) {
+							if ((j = zz[i]) < 0)
+								continue;
+							}
 						else
 							j = i;
 						fprintf(f, "%d %.g\n",
@@ -476,9 +473,10 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 				else
 				    for(ip = d->u.i; i < N; i++) {
 					if (ip[i]) {
-						if (zz)
-							while(zz[j] < i)
-								j++;
+						if (zz) {
+							if ((j = zz[i]) < 0)
+								continue;
+							}
 						else
 							j = i;
 						fprintf(f, "%d %d\n",
@@ -490,7 +488,7 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 		}
 	fclose(f);
  write_done:
-	if (i = nlneed)
+	if ((i = nlneed)) {
 		if (i > sizeof(buf)-1 || i < 0)
 			printf("\n");
 		else {
@@ -499,31 +497,36 @@ write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrit
 				while(i > 0);
 			printf(buf);
 			}
+		}
 	if (!amplflag) {
 		if (!(wantsol & 8))
 			printf("%s\n", msg);
 		if (wantsol & 2)
-			showsol(asl, x, n_var, asl->i.n_var0, asl->i.z[0],
-				var_name_ASL, "variable", "");
+			showsol(asl, x, n_var, asl->i.n_var0,
+				var_name_nomap_ASL, "variable", "");
 		if (wantsol & 4)
-			showsol(asl, y, n_con, asl->i.n_con0, asl->i.z[1],
-				con_name_ASL, "constraint", "dual ");
+			showsol(asl, y, n_con, asl->i.n_con0,
+				con_name_nomap_ASL, "constraint", "dual ");
 		}
+ ret:
 	if (xycopy)
 		free(xycopy);
 	if (bsmsg)
 		free(bsmsg);
+	return rv;
 	}
 
  void
-#ifdef KR_headers
-write_sol_ASL(asl, msg, x, y, oi)
-	ASL *asl; char *msg; double *x, *y; Option_Info *oi;
-#else
-write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
-#endif
+write_sol_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi)
 {
-	write_solx_ASL(asl, msg, x, y, oi, fwrite, fwrite, fwrite);
+	if (write_solfx_ASL(asl, msg, x, y, oi, fwrite, fwrite, fwrite, 0))
+		exit(2);
+	}
+
+ int
+write_solf_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi, const char *fname)
+{
+	return write_solfx_ASL(asl, msg, x, y, oi, fwrite, fwrite, fwrite, fname);
 	}
 
 /* Affected by ASL update of 20020503 */

@@ -146,6 +146,7 @@ extern void  usage_ASL ANSI((Option_Info*, int exit_code));
 #define Ver_val Ver_val_ASL	/* report version */
 #define WS_val WS_val_ASL	/* set wantsol in Option_Info */
 
+extern char *Lic_info_add_ASL;	/* for show_version_ASL() */
 extern char WS_desc_ASL[];	/* desc for WS_val, constrained problems */
 extern char WSu_desc_ASL[];	/* desc for WS_val, unconstrained problems */
 

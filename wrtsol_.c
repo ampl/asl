@@ -42,10 +42,10 @@ slen(register char *s, ftnlen len)
 
  void
 #ifdef KR_headers
-wrtsol_(msg, nmsg, x, y, msg_len) char *msg; fint *nmsg;
+wrsolw_(msg, nmsg, x, y, ws, msg_len) char *msg; fint *nmsg, *ws;
 				  real *x, *y; ftnlen msg_len;
 #else
-wrtsol_(char *msg, fint *nmsg, real *x, real *y, ftnlen msg_len)
+wrsolw_(char *msg, fint *nmsg, real *x, real *y, fint *ws, ftnlen msg_len)
 #endif
 {
 	char *b, *buf, *me;
@@ -63,19 +63,30 @@ wrtsol_(char *msg, fint *nmsg, real *x, real *y, ftnlen msg_len)
 	b = buf = (char *)Malloc(len);
 	if (nm)
 		for(;;) {
-		if (i = slen(msg, msg_len)) {
-			strncpy(b, msg, i);
-			b += i;
+			if (i = slen(msg, msg_len)) {
+				strncpy(b, msg, i);
+				b += i;
+				}
+			msg += msg_len;
+			if (msg >= me)
+				break;
+			*b++ = '\n';
 			}
-		msg += msg_len;
-		if (msg >= me)
-			break;
-		*b++ = '\n';
-		}
 	*b = 0;
-	oi.wantsol = 3;
+	if (!(oi.wantsol = *ws & 7))
+		oi.wantsol = 1;
 	write_sol_ASL(asl, buf, x, y, &oi);
 	free(buf);
 	}
 
-/* Affected by ASL update of 20020503 */
+ void
+#ifdef KR_headers
+wrtsol_(msg, nmsg, x, y, msg_len) char *msg; fint *nmsg;
+				  real *x, *y; ftnlen msg_len;
+#else
+wrtsol_(char *msg, fint *nmsg, real *x, real *y, ftnlen msg_len)
+#endif
+{
+	static fint ws = 7;
+	wrsolw_(msg, nmsg, x, y, &ws, msg_len);
+	}

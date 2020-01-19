@@ -35,6 +35,17 @@ THIS SOFTWARE.
 extern "C" double xectim_(Void);
 #endif
 
+#ifdef __STDC__
+#define ASSUME_STDC
+#endif
+#ifdef _WIN32
+#undef  NO_RUSAGE
+#define NO_RUSAGE
+#undef  ASSUME_STDC
+#define ASSUME_STDC
+#include <windows.h>
+#endif
+
 #ifndef NO_RUSAGE /*{{*/
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -50,12 +61,32 @@ xectim_(Void)
 
 #else /* }NO_RUSAGE{ */
 
-#if defined(__STDC__) && !defined(Clocks_to_seconds) /*{{*/
+#if defined(ASSUME_STDC) && !defined(Clocks_to_seconds) /*{{*/
 #include "time.h"
 
  double
 xectim_(Void)
-{ return (double)clock() / CLOCKS_PER_SEC; }
+{
+#ifdef _WIN32
+	FILETIME PrCT, PrET, PrKT, PrUT;
+	double st, ut;
+	static HANDLE mypid;
+	static int first = 1;
+
+	if (first) {
+		first = 0;
+		mypid = GetCurrentProcess();
+		}
+	if (GetProcessTimes(mypid, &PrCT, &PrET, &PrKT, &PrUT)) {
+		ut = (PrUT.dwLowDateTime
+				+ 4294967296.*PrUT.dwHighDateTime)*1e-7;
+		st = (PrKT.dwLowDateTime
+				+ 4294967296.*PrKT.dwHighDateTime)*1e-7;
+		return st + ut;
+		}
+#endif
+	return (double)clock() / CLOCKS_PER_SEC;
+	}
 
 #else /*}defined(__STDC__) && !defined(Clocks_to_seconds){*/
 #include "sys/types.h"

@@ -690,6 +690,7 @@ NewVCO {
 #define myralloc	myralloc_ASL
 #define obj_prec	obj_prec_ASL
 #define optype		op_type_ASL
+#define optypeb		op_typeb_ASL
 #define pr_unknown	pr_unknown_ASL
 #define read_line	read_line_ASL
 #define report_where	report_where_ASL
@@ -844,6 +845,7 @@ enum ASL_writer_error_codes {
  extern int g_fmtop ANSI((char*, double));
  extern int g_fmtp ANSI((char*, double, int));
  extern void gen_rownos_ASL ANSI((ASL*));
+ extern ASL *get_cur_ASL(VOID);
  extern char *getenv_ASL ANSI((const char*));
  extern int htcl_ASL ANSI((unsigned int));
  extern void hvcomp_ ANSI((real *hv, real *p, fint *nobj, real *ow, real *y));
@@ -885,7 +887,7 @@ enum ASL_writer_error_codes {
  extern real objconst_ASL ANSI((ASL*,int));
  extern void objgrd_ ANSI((fint *N, real *X, fint *NOBJ, real *G, fint *nerror));
  extern real objval_ ANSI((fint *N, real *X, fint *NOBJ, fint *nerror));
- extern char optype[];
+ extern char optype[], optypeb[];
  extern int pfg_read_ASL ANSI((ASL*, FILE*, int flags));
  extern int pfgh_read_ASL ANSI((ASL*, FILE*, int flags));
  extern char *pr_unknown ANSI((FILE*, char*));
@@ -897,6 +899,7 @@ enum ASL_writer_error_codes {
  extern char *read_sol_ASL ANSI((ASL*, real**xp, real **yp));
  extern void report_where ANSI((ASL*));
  extern void scream ANSI((EdRead*, int rc, const char *fmt, ...));
+ extern ASL *set_cur_ASL ANSI((ASL*));	/* returns previous value */
  extern void show_funcs_ASL ANSI((ASL*));
  extern void sigcatch_ASL(VOID);
  extern void* sos_add_ASL ANSI((ASL*, FILE*, int));

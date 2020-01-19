@@ -62,3 +62,13 @@ DEC OSF1 (Unix for Alpha chip):
 
 Linux (with g77):
 	CFLAGS = -O -Dxargv=f__xargv
+
+Linux (with gfortran):
+	CFLAGS = -O
+	For solvers defining MAIN__, supply fmain.o as for HP above.
+	For solvers (e.g., snopt) that reference etime_(), append
+
+		extern double xectim_();
+		float etime_(float *tarray) { return (float) xectim_(); }
+
+	to fmain.c (source for fmain.o; see HP above).

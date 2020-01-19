@@ -283,6 +283,7 @@ eread(EdRead *R, int deriv)
 	argpair *ap, *da, *sap;
 	char *dig;
 	short sh;
+	unsigned int Ls;
 	long L1;
 	static real dvalue[] = {
 #include "dvalue.hd"
@@ -332,12 +333,15 @@ eread(EdRead *R, int deriv)
 				kd = kd2 = 0;
 				rvf->a = nv1;
 				}
-			ra = (real *)mem(sizeof(arglist)
+			Ls = sizeof(arglist)
 					+ (k + kd + ks)*sizeof(argpair)
 					+ kd*kd*sizeof(real *)
 					+ (numargs+kd+kd2)*sizeof(real)
 					+ symargs*sizeof(char *)
-					+ j*sizeof(int));
+					+ j*sizeof(int);
+			if (kd)
+				Ls += numargs*sizeof(real);
+			ra = (real *)mem(Ls);
 			dig = 0;
 			if (kd < numargs && kd)
 				dig = (char*)mem(numargs);

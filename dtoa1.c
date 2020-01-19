@@ -37,6 +37,10 @@ extern "C" {
 #undef  __MATH_H__
 #define __MATH_H__
 
+#include "stdlib.h"	/* A recent (2008) version of cygwin gratuitously
+			   #includes stdlib.h.  To prevent confusion, any
+			   such #include must come before the next line. */
+#define strtod strtod_ASL
 #ifdef __cplusplus
 extern "C" char *dtoa(double, int, int, int*, int*, char **);
 extern "C" double strtod(const char*, char**);
@@ -50,7 +54,6 @@ extern double strtod();
 #endif
 #endif /*__cplusplus*/
 #define No_leftright
-#define strtod strtod_ASL
 #ifndef MALLOC
 #define MALLOC dtoamalloc
 #include "dtoa.c" /* >= 19991215 */
@@ -67,7 +70,6 @@ extern FILE *Stderr;
 dtoamalloc(x) unsigned x;
 #else
 #define Void void
-#include "stdlib.h"
 
  void *
 dtoamalloc(size_t x)
@@ -82,7 +84,6 @@ dtoamalloc(size_t x)
 	}
 #else /*MALLOC*/
 #include "dtoa.c"
-/*Last dtoa.c change = 20010207.*/
 #endif /*MALLOC*/
 #else
 #ifdef KR_headers
@@ -131,3 +132,4 @@ dtoa(double d, int mode, int ndigits, int *decpt, int *sign, char **rve)
 }
 #endif
 /* 20070913:  dtoa.c INFNAN_CHECK := default */
+/* 20101105:  sync with /netlib/fp */

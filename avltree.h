@@ -30,7 +30,7 @@ performance of this software.
  extern size_t AVL_Tree_size(AVL_Tree*);
  extern const Element *AVL_find(const Element *, AVL_Tree*);
  extern const Element *AVL_insert(const Element *, AVL_Tree*);
- extern void AVL_visit(void*, AVL_Tree*, AVL_Visitor);
+ extern int AVL_visit(void*, AVL_Tree*, AVL_Visitor);
  extern const Element *AVL_delete(const Element *, AVL_Tree*);
  extern void *AVL_setv(AVL_Tree *, void*);
 
@@ -43,3 +43,15 @@ performance of this software.
  /* stored its arguments.  The current void* value (possibly a "this"    */
  /* pointer) is passed to the comparision function.   AVL_setv replaces  */
  /* the current such void* value and returns the old value. */
+
+ /* AVL_Tree_size(Tree) returns the number of elements in Tree.		 */
+
+ /* AVL_Visit(Tree,V) calls V once for each element in Tree, from first  */
+ /* to last, in the order defined by the AVL_Elcomp associated with Tree,*/
+ /* so long as V returns 0.  The return from AVL_visit is the value	 */
+ /* returned by the last call on V (or 0 if Tree is empty).		 */
+
+ /* If E is not already in Tree, AVL_insert(E, Tree) adds E to Tree and  */
+ /* returns 0.  If Tree contains an Element* E1 that AVL_Elcomp reports  */
+ /* to be "equal" to E (i.e., AVL_Elcomp(v,E,E1) == 0), then AVL_insert()*/
+ /* returns E1. */

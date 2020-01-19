@@ -24,7 +24,7 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
- Const char *Version_Qualifier_ASL = "";	/* for show_version in gestub.c */
+ Const char *Version_Qualifier_ASL = "";	/* for show_version in getstub.c */
 
  void
 #ifdef KR_headers

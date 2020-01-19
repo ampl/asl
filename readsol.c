@@ -35,13 +35,10 @@ msginfo {
 	} msginfo;
 
  static void
-#ifdef KR_headers
-msgput(m, b, n) msginfo *m; char *b; int n;
-#else
-msgput(msginfo *m, char *b, int n)
-#endif
+msgput(msginfo *m, const char *b, int n)
 {
-	char *be, *msg, *msg0, *msgend;
+	char *msg, *msg0, *msgend;
+	const char *be;
 	ftnlen msglen0;
 
 	msg = m->msg;
@@ -61,11 +58,7 @@ msgput(msginfo *m, char *b, int n)
 	}
 
  static void
-#ifdef KR_headers
-badnumber(asl, a, b, what) ASL *asl; fint a, b; char *what;
-#else
-badnumber(ASL *asl, fint a, fint b, char *what)
-#endif
+badnumber(ASL *asl, fint a, fint b, const char *what)
 {
 	fprintf(Stderr, "%s indicates %ld rather than %ld %s\n",
 		filename, (long)a, (long)b, what);
@@ -73,25 +66,17 @@ badnumber(ASL *asl, fint a, fint b, char *what)
 	}
 
  static int
-#ifdef KR_headers
-decstring(buf, val) char *buf; real *val;
-#else
 decstring(char *buf, real *val)
-#endif
 {
 	char *be;
-	register int c;
+	int c;
 
 	*val = strtod(buf, &be);
-	return be <= buf || ((c = be[-1]) < '0' || c > '9') && c != '.';
+	return be <= buf || (((c = be[-1]) < '0' || c > '9') && c != '.');
 	}
 
  char *
-#ifdef KR_headers
-read_sol_ASL(asl, xp, yp) ASL *asl; real **xp, **yp;
-#else
 read_sol_ASL(ASL *asl, real **xp, real **yp)
-#endif
 {
 	int binary, flag1, i, j, je, n, need_vbtol;
 	FILE *f;
@@ -128,6 +113,9 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 		rewind(f);
 		}
 
+	L1 = 0;
+	z = 0;
+
 	/* Read termination msg */
 	nOpts = i = need_vbtol = 0;
 	mi.msg = mi.msg0 = (char *)Malloc(mi.msglen = MSGGULP);
@@ -136,7 +124,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 		for(;; i++) {
 			if (!fread(&L,sizeof(ftnlen),1,f))
 				goto early_eof;
-			if (L1 = L) {
+			if ((L1 = L)) {
 				do {
 					n = L < sizeof(buf) ? (int)L : (int)sizeof(buf);
 					L -= n;
@@ -208,7 +196,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 				fclose(f);
 				return 0;
 				}
-			if (*buf == '\n' || *buf == '\r' && buf[1] == '\n')
+			if (*buf == '\n' || (*buf == '\r' && buf[1] == '\n'))
 				break;
 			msgput(&mi, buf, strlen(buf));
 			}
@@ -250,7 +238,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 	if (i)
 		fflush(stdout);
 
-	if (ampl_options[0] = nOpts) {
+	if ((ampl_options[0] = nOpts)) {
 		z = ampl_options + nOpts + 1;
 		j = (int)z[3];
 		if (j > n_var || j < 0) {

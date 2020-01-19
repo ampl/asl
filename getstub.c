@@ -28,7 +28,7 @@ THIS SOFTWARE.
 extern int _8087;
 #endif
 
-char *Lic_info_ASL = "";
+char *Lic_info_ASL = "", *Lic_info_add_ASL;
 
  static int
 #ifdef KR_headers
@@ -300,6 +300,8 @@ show_version_ASL(Option_Info *oi)
 	if (oi->driver_date > 0)
 		printf(", driver(%ld)", oi->driver_date);
 	printf(", ASL(%ld)\n", ASLdate_ASL);
+	if (Lic_info_add_ASL)
+		printf("%s\n", Lic_info_add_ASL);
 	if (Lic_info_ASL && *Lic_info_ASL)
 		printf("%s\n", Lic_info_ASL);
 	}
@@ -441,6 +443,18 @@ getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
 					ix_usage();
 				i_option_ASL = s1 + 1;
 				continue;
+				}
+			if (*s1 == '-') {
+				if (!strcmp(++s1, "help")) {
+					if (oi)
+						usage_ASL(oi,0);
+					}
+				else if (!strcmp(s1, "version")) {
+					if (oi) {
+						Ver_val_ASL(oi,0,0);
+						continue;
+						}
+					}
 				}
 			fprintf(Stderr, "%s: bad option %s\n", progname, s);
 			usage_ASL(oi,1);

@@ -118,7 +118,9 @@ fpinit_ASL(Void)
 fpinit_ASL(Void)
 {
 #ifdef Can_use__setfpucw /* Has __setfpucw gone missing from S.u.S.E. 6.3? */
+#ifdef _FPU_EXTENDED /* not defined on Itanium systems running ALTIX */
 	__setfpucw(_FPU_IEEE - _FPU_EXTENDED + _FPU_DOUBLE);
+#endif
 #else
 #ifdef ASL_FPINIT_KEEP_TRAPBITS
 	_FPU_GETCW(__fpu_control);

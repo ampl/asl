@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1999 Lucent Technologies
+Copyright (C) 1997 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -24,18 +24,16 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
- Const char *Version_Qualifier_ASL = "Student ";	/* for show_version in gestub.c */
-
  void
-student_check_ASL(ASL *asl)
+#ifdef KR_headers
+derprop(d) register derp *d;
+#else
+derprop(register derp *d)
+#endif
 {
-	if (n_con > 300 || n_var > 300) {
-		fflush(stdout);
-		fprintf(Stderr,
- "\nSorry, the student edition is limited to 300 variables and\n\
-300 constraints.  You have %d variables and %d constraints.\n",
-			n_var, n_con);
-		fflush(Stderr);
-		exit(1);
+	if (d) {
+		*d->b.rp = 1.;
+		do *d->a.rp += *d->b.rp * *d->c.rp;
+			while(d = d->next);
 		}
 	}

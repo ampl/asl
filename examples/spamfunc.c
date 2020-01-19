@@ -115,19 +115,17 @@ usage(void)
  void
 mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-	FILE *nl;
-	char *buf1, buf[512], *what, **whatp;
-	static fint n, nc, nz;
-	fint i, nerror;
-	real *J1, *W, *c, *f, *g, *v, *t, *x;
-	cgrad *cg, **cgp;
-	Jmp_buf err_jmp0;
 	ASL_pfgh *asl = (ASL_pfgh*)cur_ASL;
-	static fint nhnz;
+	FILE *nl;
+	Jmp_buf err_jmp0;
+	cgrad *cg, **cgp;
+	char *buf1, buf[512], *what, **whatp;
+	fint *hcs, *hr, i, nerror;
+	int *cs;
+	mwIndex *Ir, *Jc;
+	real *H, *He, *J1, *W, *c, *f, *g, *v, *t, *x;
+	static fint n, nc, nhnz, nz;
 	static real *Hsp;
-	real *H, *He;
-	int *Ir, *Jc;
-	fint *hcs, *hr;
 	static char ignore_complementarity[] =
 		"Warning: ignoring %d complementarity conditions.\n";
 
@@ -195,7 +193,7 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			f = mxGetPr(plhs[0] = mxCreateDoubleMatrix(1, 1, mxREAL));
 			c = mxGetPr(plhs[1] = mxCreateDoubleMatrix(nc, 1, mxREAL));
 			what = "f";
-			*f = objval(0, x, &nerror);
+			*f = n_obj > 0 ? objval(0, x, &nerror) : 0;
 			what = "c";
 			conval(x, c, &nerror);
 			return;
@@ -203,12 +201,17 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		g = mxGetPr(plhs[0] = mxCreateDoubleMatrix(n, 1, mxREAL));
 		J1 = mxGetPr(plhs[1] = mxCreateSparse(nc, n, nz, mxREAL));
 		what = "g";
-		objgrd(0, x, g, &nerror);
+		if (n_obj > 0)
+			objgrd(0, x, g, &nerror);
+		else
+			memset(g, 0, n*sizeof(real));
 		if (nc) {
 			what = "J";
 			jacval(x, J1, &nerror);
 			Ir = mxGetIr(plhs[1]);
-			memcpy(mxGetJc(plhs[1]), A_colstarts, (n+1)*sizeof(int));
+			/*memcpy(mxGetJc(plhs[1]), A_colstarts, (n+1)*sizeof(int));*/
+			for(Jc = mxGetJc(plhs[1]), cs = A_colstarts, i = 0; i <= n; ++i)
+				Jc[i] = cs[i];
 			cgp = Cgrad;
 			for(i = 0; i < nc; i++)
 				for(cg = *cgp++; cg; cg = cg->next)

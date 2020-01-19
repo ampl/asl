@@ -64,7 +64,7 @@ hv_fwd(register expr *e)
 				hv_fwd(e1);
 				e->dO.r = ((expr_va *)e)->vale->dO.r;
 				}
-			else if (e1 = ((expr_va *)e)->val)
+			else if ((e1 = ((expr_va *)e)->val) && e1->op != f_OPNUM)
 				e->dO.r = e1->dO.r;
 			else
 				e->dO.r = 0;

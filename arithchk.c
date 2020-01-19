@@ -216,6 +216,9 @@ main(void)
 		if (sizeof(char*) == 8)
 			fprintf(f, "#define X64_bit_pointers\n");
 #ifndef NO_LONG_LONG
+		if (sizeof(long long) > sizeof(long)
+		 && sizeof(long long) == sizeof(void*))
+			fprintf(f, "#define LONG_LONG_POINTERS\n");
 		if (sizeof(long long) < 8)
 #endif
 			fprintf(f, "#define NO_LONG_LONG\n");

@@ -152,7 +152,7 @@ comeval.obj con1ival.obj conval.obj mip_pri.obj objval.obj qpcheck.obj\
  readsol.obj: nlp.h $(Aslh)
 misc.obj nl_obj.obj sos_add.obj suf_sos.obj:\
 	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
-op_type.obj: op_type.hd
+op_type.obj: op_type.hd op_typeb.hd
 fgh_read.obj: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
 rops.obj: nlp.h errchk.h $(Aslh)
 rops2.obj: nlp2.h errchk.h $(Aslh)

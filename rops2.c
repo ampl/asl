@@ -36,71 +36,12 @@ extern "C" {
 #define asl cur_ASL
 #endif
 
- static void
-#ifdef KR_headers
-jmp_check(J) Jmp_buf *J;
-#else
-jmp_check(Jmp_buf *J)
-#endif
-{
-	if (J)
-		longjmp(J->jb, 1);
-	}
-
- static void
-#ifdef KR_headers
-Errprint(msg) char *msg;
-#else
-Errprint(char *msg)
-#endif
-{
-#ifndef NO_PERROR
-	if (errno)
-		fprintf(Stderr, "\n%s: %s.\n", msg, strerror(errno));
-	else
-#endif
-		fprintf(Stderr, "%s.\n", msg);
-	fflush(Stderr);
-	}
-
- static void
-#ifdef KR_headers
-introuble(who, a K_ASL) char *who; real a; D_ASL
-#else
-introuble(char *who, real a A_ASL)
-#endif
-{
-	char buf[64];
-	jmp_check(err_jmp);
-	report_where(asl);
-	sprintf(buf, "can't evaluate %s(%g)", who, a);
-	Errprint(buf);
-	jmp_check(err_jmp1);
-	exit(1);
-	}
-
- static void
-#ifdef KR_headers
-introuble2(who, a, b K_ASL) char *who; real a; real b; D_ASL
-#else
-introuble2(char *who, real a, real b A_ASL)
-#endif
-{
-	char buf[96];
-	jmp_check(err_jmp);
-	report_where(asl);
-	sprintf(buf, "can't evaluate %s(%g,%g)", who, a, b);
-	Errprint(buf);
-	jmp_check(err_jmp1);
-	exit(1);
-	}
+#define introuble(who, a, jv) introuble_ASL(asl, who, a, jv)
+#define introuble2(who, a, b, jv) introuble2_ASL(asl, who, a, b, jv)
+#define zero_div(L,s) zero_div_ASL(asl, L, s)
 
  real
-#ifdef KR_headers
-f_OPPLUS(e K_ASL) expr *e; D_ASL
-#else
 f_OPPLUS(expr *e A_ASL)
-#endif
 {
 	expr *L;
 	/* e->dL = e->dR = 1.; */
@@ -110,11 +51,7 @@ f_OPPLUS(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPMINUS(e K_ASL) expr *e; D_ASL
-#else
 f_OPMINUS(expr *e A_ASL)
-#endif
 {
 	expr *L;
 	/* e->dL = 1.;  */
@@ -125,11 +62,7 @@ f_OPMINUS(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPMULT(e K_ASL) expr *e; D_ASL
-#else
 f_OPMULT(expr *e A_ASL)
-#endif
 {
 	expr *e1, *e2;
 	e1 = e->L.e;
@@ -137,36 +70,20 @@ f_OPMULT(expr *e A_ASL)
 	return (e->dR = (*e1->op)(e1 K_ASL)) * (e->dL = (*e2->op)(e2 K_ASL));
 	}
 
- static void
-#ifdef KR_headers
-zero_div(L, op K_ASL) real L; char *op; D_ASL
-#else
-zero_div(real L, char *op A_ASL)
-#endif
-{
-	errno_set(EDOM);
-	jmp_check(err_jmp);
-	report_where(asl);
-	fprintf(Stderr, "can't compute %g%s0.\n", L, op);
-	fflush(Stderr);
-	jmp_check(err_jmp1);
-	exit(1);
-	}
-
  static real
-#ifdef KR_headers
-f_OPDIV(e K_ASL) expr *e; D_ASL
-#else
 f_OPDIV(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L, R, dL, rv;
 	e1 = e->L.e;
 	L = (*e1->op)(e1 K_ASL);
 	e1 = e->R.e;
-	if (!(R = (*e1->op)(e1 K_ASL)))
-		zero_div(L, "/" K_ASL);
+	if (!(R = (*e1->op)(e1 K_ASL))
+#ifdef WANT_INFNAN
+	 && !L
+#endif
+		)
+		zero_div(L, "/");
 	rv = L / R;
 	if (want_deriv) {
 		e->dR = -rv * (dL = e->dL = 1. / R);
@@ -180,11 +97,7 @@ f_OPDIV(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPREM(e K_ASL) expr *e; D_ASL
-#else
 f_OPREM(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L, R, rv;
@@ -195,7 +108,7 @@ f_OPREM(expr *e A_ASL)
 	R = (*e1->op)(e1 K_ASL);
 	rv = fmod(L,R);
 	if (errchk(rv))
-		introuble2("fmod",L,R K_ASL);
+		introuble2("fmod",L,R,1);
 	else if (want_deriv) {
 		e->dR = (rv - L) / R;
 		e->dR2 = 0;
@@ -204,11 +117,7 @@ f_OPREM(expr *e A_ASL)
 	}
 
  real
-#ifdef KR_headers
-f_OPPOW(e K_ASL) expr *e; D_ASL
-#else
 f_OPPOW(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L, R, rv, xlog, xym1;
@@ -217,10 +126,25 @@ f_OPPOW(expr *e A_ASL)
 	e1 = e->R.e;
 	R = (*e1->op)(e1 K_ASL);
 	rv = mypow(L,R);
-	if (errchk(rv))
-		introuble2("pow",L,R K_ASL);
+	if (errchk(rv)) {
+#ifdef WANT_INFNAN
+		if (!L && R < 0.) {
+			errno_set(0);
+			if (want_deriv) {
+				e->dL = e->dR = negInfinity;
+				e->dL2 = e->dLR = e->dR2 = Infinity;
+				}
+			return Infinity;
+			}
+#endif
+		introuble2("pow",L,R,1);
+		}
 	if (want_deriv) {
-		if (L) {
+		if (L < 0.) {
+ badpow:
+			introuble2("pow'",L,R,2);
+			}
+		else if (L > 0.) {
 			xym1 = rv / L;
 			xlog = log(L);
 			e->dL = R*xym1;
@@ -231,24 +155,40 @@ f_OPPOW(expr *e A_ASL)
 			}
 		else if (R > 1.) {
 			e->dL = 0.;
-			goto dRzero;
+			if (R >= 2.)
+				goto dRzero;
+			e->dR = 0.;
+#ifdef WANT_INFNAN
+			e->dL2 = Infinity;
+			e->dLR = e->dR2 = 0.;
+#else
+			introuble2("pow\"",L,R,3);
+#endif
 			}
 		else if (R == 1.) {
 			e->dL = 1.;
  dRzero:
 			e->dR = e->dL2 = e->dLR = e->dR2 = 0.;
 			}
-		else
-			introuble2("pow'",L,R K_ASL);
+		else if (R == 0.) {
+			e->dL = 0.;
+			goto dRzero;
+			}
+		else {
+			/* 0 < R < 1 */
+#ifdef WANT_INFNAN
+			e->dL = Infinity;
+			e->dR = e->dR2 = 0.;
+			e->dL2 = e->dLR = negInfinity;
+#else
+			goto badpow;
+#endif
+			}
 		}
 	return rv;
 	}
  real
-#ifdef KR_headers
-f_OP1POW(e K_ASL) expr *e; D_ASL
-#else
 f_OP1POW(expr *e A_ASL)
-#endif
 	/* f_OPPOW for R = numeric constant */
 {
 	expr *e1;
@@ -257,26 +197,46 @@ f_OP1POW(expr *e A_ASL)
 	L = (*e1->op)(e1 K_ASL);
 	R = ((expr_n *)e->R.e)->v;
 	rv = mypow(L,R);
-	if (errchk(rv))
-		introuble2("pow",L,R K_ASL);
+	if (errchk(rv)) {
+#ifdef WANT_INFNAN
+		if (!L && R < 0.) {
+			errno_set(0);
+			e->dL = negInfinity;
+			return e->dL2 = Infinity;
+			}
+#endif
+		introuble2("pow",L,R,1);
+		}
 	if (want_deriv) {
 		if (L) {
 			e->dL = R * (rv/L);
 			e->dL2 = (R-1.)*(e->dL/L);
 			}
-		else if (R > 1.)
-			e->dL = e->dL2 = 0.;
-		else
-			introuble2("pow'",L,R K_ASL);
+		else if (R > 1.) {
+			e->dL = 0.;
+			if (R >= 2.)
+				e->dL2 = 0.;
+			else
+#ifdef WANT_INFNAN
+				e->dL2 = negInfinity;
+#else
+				introuble2("pow\"",L,R,3);
+#endif
+			}
+		/* R == 1. does not arise here */
+		else {
+#ifdef WANT_INFNAN
+			e->dL = negInfinity;
+			e->dL2 = Infinity;
+#else
+			introuble2("pow'",L,R,2);
+#endif
+			}
 		}
 	return rv;
 	}
  real
-#ifdef KR_headers
-f_OP2POW(e K_ASL) expr *e; D_ASL
-#else
 f_OP2POW(expr *e A_ASL)
-#endif
 	/* f_OPPOW for R = 2 */
 {
 	expr *e1;
@@ -288,40 +248,48 @@ f_OP2POW(expr *e A_ASL)
 	}
 
  real
-#ifdef KR_headers
-f_OPCPOW(e K_ASL) expr *e; D_ASL
-#else
 f_OPCPOW(expr *e A_ASL)
-#endif
 		/* f_OPPOW for L = numeric constant */
 {
 	expr *e1;
 	real L, R, rv;
 	e1 = e->R.e;
 	rv = mypow(L = e->L.en->v, R = (*e1->op)(e1 K_ASL));
-	if (errchk(rv))
-		introuble2("pow",L,R K_ASL);
+	if (errchk(rv)) {
+#ifdef WANT_INFNAN
+		if (!L && R < 0.) {
+			errno_set(0);
+			e->dR = e->dR2 = 0;
+			return Infinity;
+			}
+#endif
+		introuble2("pow",L,R,1);
+		}
 	if (want_deriv) {
-		if (L > 0) {
+		if (L > 0.) {
 			if (e->dL == 1)
 				e->dL = log(L);	/* cache value */
 			e->dR = e->dL * rv;
 			e->dR2 = e->dR * e->dL;
 			}
-		else if (L == 0 && R >= 1.)
+		else if (L == 0.)
 			e->dR = e->dR2 = 0.;
-		else
-			introuble2("pow'",L,R K_ASL);
+		else {
+#if defined(WANT_INFNAN) && defined(QNaN0)
+			union { unsigned int x[2]; real r; } u;
+			u.x[0] = QNaN0;
+			u.x[1] = QNaN1;
+			e->dR = e->dR2 = u.r;
+#else
+			introuble2("pow'",L,R,2);
+#endif
+			}
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OPLESS(e K_ASL) expr *e; D_ASL
-#else
 f_OPLESS(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L;
@@ -337,11 +305,7 @@ f_OPLESS(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_MINLIST(e0 K_ASL) expr *e0; D_ASL
-#else
 f_MINLIST(expr *e0 A_ASL)
-#endif
 {
 	de *d, *d1;
 	real t, rv;
@@ -352,7 +316,7 @@ f_MINLIST(expr *e0 A_ASL)
 	d = e->L.d;
 	e1 = e2 = d->e;
 	rv = (*e1->op)(e1 K_ASL);
-	for(d1 = d++; e1 = d->e; d++) {
+	for(d1 = d++; (e1 = d->e); d++) {
 		t = (*e1->op)(e1 K_ASL);
 		if (rv > t) {
 			rv = t;
@@ -360,7 +324,7 @@ f_MINLIST(expr *e0 A_ASL)
 			e2 = e1;
 			}
 		}
-	if (D = e->R.D) {
+	if ((D = e->R.D)) {
 		D->a.rp = d1->dv.rp;
 		D->next = d1->d;
 		}
@@ -371,11 +335,7 @@ f_MINLIST(expr *e0 A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_MAXLIST(e0 K_ASL) expr *e0; D_ASL
-#else
 f_MAXLIST(expr *e0 A_ASL)
-#endif
 {
 	de *d, *d1;
 	real t, rv;
@@ -386,14 +346,14 @@ f_MAXLIST(expr *e0 A_ASL)
 	d = e->L.d;
 	e1 = e2 = d->e;
 	rv = (*e1->op)(e1 K_ASL);
-	for(d1 = d++; e1 = d->e; d++) {
+	for(d1 = d++; (e1 = d->e); d++) {
 		t = (*e1->op)(e1 K_ASL);
 		if (rv < t) {
 			rv = t;
 			d1 = d;
 			}
 		}
-	if (D = e->R.D) {
+	if ((D = e->R.D)) {
 		D->a.rp = d1->dv.rp;
 		D->next = d1->d;
 		}
@@ -404,11 +364,7 @@ f_MAXLIST(expr *e0 A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_FLOOR(e K_ASL) expr *e; D_ASL
-#else
 f_FLOOR(expr *e A_ASL)
-#endif
 {
 	/* e->dL = 0.; */
 	e = e->L.e;
@@ -416,11 +372,7 @@ f_FLOOR(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_CEIL(e K_ASL) expr *e; D_ASL
-#else
 f_CEIL(expr *e A_ASL)
-#endif
 {
 	/* e->dL = 0.; */
 	e = e->L.e;
@@ -428,11 +380,7 @@ f_CEIL(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_ABS(e K_ASL) expr *e; D_ASL
-#else
 f_ABS(expr *e A_ASL)
-#endif
 {
 	real rv;
 	expr *e1;
@@ -447,11 +395,7 @@ f_ABS(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPUMINUS(e K_ASL) expr *e; D_ASL
-#else
 f_OPUMINUS(expr *e A_ASL)
-#endif
 {
 	/* e->dL = -1.; */
 	e = e->L.e;
@@ -459,124 +403,109 @@ f_OPUMINUS(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OP_tanh(e K_ASL) expr *e; D_ASL
-#else
 f_OP_tanh(expr *e A_ASL)
-#endif
 {
 	real rv, t, t1;
 	expr *e1;
 	e1 = e->L.e;
 	rv = tanh(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("tanh",t K_ASL);
+		introuble("tanh",t,1);
 	if (want_deriv) {
 		t1 = cosh(t);
 		if (errchk(t1))
-			introuble("tanh'", t K_ASL);
-		t1 = 1. / t1;
-		e->dL = t1*t1;
-		e->dL2 = -t1 * e->dL;
+			introuble("tanh'", t, 2);
+		else {
+			t1 = 1. / t1;
+			e->dL2 = -(rv+rv) * (e->dL = t1*t1);
+			}
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_tan(e K_ASL) expr *e; D_ASL
-#else
 f_OP_tan(expr *e A_ASL)
-#endif
 {
 	real rv, t, t1;
 	expr *e1;
 	e1 = e->L.e;
 	rv = tan(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("tan",t K_ASL);
+		introuble("tan",t,1);
 	if (want_deriv) {
 		t1 = cos(t);
 		if (errchk(t1) || !t1)
-			introuble("tan'",t K_ASL);
-		t1 = 1. / t1;
-		e->dL2 = (rv+rv) * (e->dL = t1*t1);
+			introuble("tan'",t,2);
+		else {
+			t1 = 1. / t1;
+			e->dL2 = (rv+rv) * (e->dL = t1*t1);
+			}
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_sqrt(e K_ASL) expr *e; D_ASL
-#else
 f_OP_sqrt(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
 	e1 = e->L.e;
 	t = (*e1->op)(e1 K_ASL);
-	if (t < 0. || (rv = sqrt(t), errchk(rv)))
-		introuble("sqrt",t K_ASL);
+	if (t < 0. || (rv = sqrt(t), errchk(rv))) {
+		introuble("sqrt",t,1);
+		rv = 0.; /* not reached */
+		}
 	if (want_deriv) {
 		if (rv <= 0.)
-			introuble("sqrt'",t K_ASL);
-		e->dL = 0.5 / rv;
-		e->dL2 = -0.5 * e->dL / t;
+			introuble("sqrt'",t,2);
+		else {
+			e->dL = 0.5 / rv;
+			e->dL2 = -0.5 * e->dL / t;
+			}
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_sinh(e K_ASL) expr *e; D_ASL
-#else
 f_OP_sinh(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
 	e1 = e->L.e;
 	rv = sinh(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("sinh",t K_ASL);
+		introuble("sinh",t,1);
 	if (want_deriv) {
 		e->dL = cosh(t);
 		if (errchk(e->dL))
-			introuble("sinh'",t K_ASL);
-		e->dL2 = rv;
+			introuble("sinh'",t,2);
+		else
+			e->dL2 = rv;
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_sin(e K_ASL) expr *e; D_ASL
-#else
 f_OP_sin(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
 	e1 = e->L.e;
 	rv = sin(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("sin",t K_ASL);
+		introuble("sin",t,1);
 	if (want_deriv) {
 		e->dL = cos(t);
 		if (errchk(e->dL))
-			introuble("sin'",t K_ASL);
-		e->dL2 = -rv;
+			introuble("sin'",t,2);
+		else
+			e->dL2 = -rv;
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_log10(e K_ASL) expr *e; D_ASL
-#else
 f_OP_log10(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
@@ -585,7 +514,7 @@ f_OP_log10(expr *e A_ASL)
 	e1 = e->L.e;
 	rv = log10(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("log10",t K_ASL);
+		introuble("log10",t,1);
 	if (want_deriv) {
 		if (!Le10)
 			Le10 = 1. / log(10.);
@@ -596,18 +525,14 @@ f_OP_log10(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OP_log(e K_ASL) expr *e; D_ASL
-#else
 f_OP_log(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
 	e1 = e->L.e;
 	rv = log(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("log",t K_ASL);
+		introuble("log",t,1);
 	if (want_deriv) {
 		t = e->dL = 1. / t;
 		e->dL2 = -t * t;
@@ -616,76 +541,63 @@ f_OP_log(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OP_exp(e K_ASL) expr *e; D_ASL
-#else
 f_OP_exp(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
 	e1 = e->L.e;
 	rv = e->dL = e->dL2 = exp(t = (*e1->op)(e1 K_ASL));
-	if (errchk(rv))
+	if (errchk(rv)) {
 		if (t >= 0.)
-			introuble("exp",t K_ASL);
+			introuble("exp",t,1);
 		else {
 			errno_set(0);
 			rv = 0.;
 			}
+		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_cosh(e K_ASL) expr *e; D_ASL
-#else
 f_OP_cosh(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
 	e1 = e->L.e;
 	rv = cosh(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("cosh",t K_ASL);
+		introuble("cosh",t,1);
 	if (want_deriv) {
 		e->dL = sinh(t);
 		if (errchk(e->dL))
-			introuble("cosh'",t K_ASL);
-		e->dL2 = rv;
+			introuble("cosh'",t,2);
+		else
+			e->dL2 = rv;
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_cos(e K_ASL) expr *e; D_ASL
-#else
 f_OP_cos(expr *e A_ASL)
-#endif
 {
 	real t, rv;
 	expr *e1;
 	e1 = e->L.e;
 	rv = cos(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("cos",t K_ASL);
+		introuble("cos",t,1);
 	if (want_deriv) {
 		e->dL = -sin(t);
 		if (errchk(e->dL))
-			introuble("cos'",t K_ASL);
-		e->dL2 = -rv;
+			introuble("cos'",t,2);
+		else
+			e->dL2 = -rv;
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_atanh(e K_ASL) expr *e; D_ASL
-#else
 f_OP_atanh(expr *e A_ASL)
-#endif
 {
 	real rv, t, t1;
 	expr *e1;
@@ -696,7 +608,7 @@ f_OP_atanh(expr *e A_ASL)
 		errno_set(EDOM);
  bad_atanh:
 		rv = 0.;
-		introuble("atanh",t K_ASL);
+		introuble("atanh",t,1);
 		}
 	else {
 		rv = 0.5*log((1. + t) / (1. - t));
@@ -711,11 +623,7 @@ f_OP_atanh(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OP_atan2(e K_ASL) expr *e; D_ASL
-#else
 f_OP_atan2(expr *e A_ASL)
-#endif
 {
 	real L, R, rv, t, t1;
 	expr *e1;
@@ -726,7 +634,7 @@ f_OP_atan2(expr *e A_ASL)
 	R = (*e1->op)(e1 K_ASL);
 	rv = atan2(L,R);
 	if (errchk(rv))
-		introuble2("atan2",L,R K_ASL);
+		introuble2("atan2",L,R,1);
 	if (want_deriv) {
 /*
 		t = L / R;
@@ -747,11 +655,7 @@ f_OP_atan2(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OP_atan(e K_ASL) expr *e; D_ASL
-#else
 f_OP_atan(expr *e A_ASL)
-#endif
 {
 	real rv, t, t1;
 	expr *e1;
@@ -759,7 +663,7 @@ f_OP_atan(expr *e A_ASL)
 	e1 = e->L.e;
 	rv = atan(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("atan",t K_ASL);
+		introuble("atan",t,1);
 	if (want_deriv) {
 		e->dL = t1 = 1. / (1. + t*t);
 		e->dL2 = -(t+t)*t1*t1;
@@ -768,36 +672,26 @@ f_OP_atan(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OP_asinh(e K_ASL) expr *e; D_ASL
-#else
 f_OP_asinh(expr *e A_ASL)
-#endif
 {
 	expr *e1;
-	real rv, t, t1, t2;
-	int sign;
+	real rv, s, t, t1, t2;
 
 	e1 = e->L.e;
 	t = (*e1->op)(e1 K_ASL);
-	if (sign = t < 0.)
-		t = -t;
-	rv = log(t + (t1 = sqrt(t2 = t*t + 1.)));
+	s = 1.;
+	if (t < 0.)
+		s = -1.;
+	rv = log(s*t + (t1 = sqrt(t2 = t*t + 1.)));
 	if (errchk(rv))
-		introuble("asinh",t K_ASL);
-	if (sign)
-		rv = -rv;
+		introuble("asinh",t,1);
 	if (want_deriv)
 		e->dL2 = -(t/t2) * (e->dL = 1. / t1);
-	return rv;
+	return s*rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_asin(e K_ASL) expr *e; D_ASL
-#else
 f_OP_asin(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real rv, t, t1;
@@ -805,21 +699,18 @@ f_OP_asin(expr *e A_ASL)
 	e1 = e->L.e;
 	rv = asin(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("asin",t K_ASL);
+		introuble("asin",t,1);
 	if (want_deriv) {
 		if ((t1 = 1. - t*t) <= 0.)
-			introuble("asin'",t K_ASL);
-		e->dL2 = t * (e->dL = 1. / sqrt(t1)) / t1;
+			introuble("asin'",t,2);
+		else
+			e->dL2 = t * (e->dL = 1. / sqrt(t1)) / t1;
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_acosh(e K_ASL) expr *e; D_ASL
-#else
 f_OP_acosh(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real rv, t, t1, t2;
@@ -829,25 +720,25 @@ f_OP_acosh(expr *e A_ASL)
 	if (t < 1.) {
 		errno_set(EDOM);
  bad_acosh:
-		rv = 0.;
-		introuble("acosh",t K_ASL);
+		rv = t1 = t2 = 0.;
+		introuble("acosh",t,1);
 		}
 	else {
 		rv = log(t + (t1 = sqrt(t2 = t*t - 1.)));
 		if (errchk(rv))
 			goto bad_acosh;
 		}
-	if (want_deriv)
-		e->dL2 = -t * (e->dL = 1. / t1) / t2;
+	if (want_deriv) {
+		if (t2 <= 0.)
+			introuble("acosh'",t,2);
+		else
+			e->dL2 = -t * (e->dL = 1. / t1) / t2;
+		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OP_acos(e K_ASL) expr *e; D_ASL
-#else
 f_OP_acos(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real rv, t, t1;
@@ -855,21 +746,18 @@ f_OP_acos(expr *e A_ASL)
 	e1 = e->L.e;
 	rv = acos(t = (*e1->op)(e1 K_ASL));
 	if (errchk(rv))
-		introuble("acos",t K_ASL);
+		introuble("acos",t,1);
 	if (want_deriv) {
 		if ((t1 = 1. - t*t) <= 0.)
-			introuble("acos'",t K_ASL);
-		e->dL2 = t * (e->dL = -1. / sqrt(1. - t*t)) / t1;
+			introuble("acos'",t,2);
+		else
+			e->dL2 = t * (e->dL = -1. / sqrt(1. - t*t)) / t1;
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OPIFnl(e K_ASL) expr *e; D_ASL
-#else
 f_OPIFnl(expr *e A_ASL)
-#endif
 {
 	expr_if *eif = (expr_if *)e;
 	derp *D;
@@ -879,7 +767,7 @@ f_OPIFnl(expr *e A_ASL)
 		eif->val = e = eif->T;
 		eif->vale = eif->Te;
 		eif->valf  = eif->Tf;
-		if (D = eif->D) {
+		if ((D = eif->D)) {
 			D->a.rp = eif->Tv.rp;
 			D->next = eif->dT;
 			}
@@ -888,7 +776,7 @@ f_OPIFnl(expr *e A_ASL)
 		eif->val = e = eif->F;
 		eif->vale = eif->Fe;
 		eif->valf  = eif->Ff;
-		if (D = eif->D) {
+		if ((D = eif->D)) {
 			D->a.rp = eif->Fv.rp;
 			D->next = eif->dF;
 			}
@@ -897,11 +785,7 @@ f_OPIFnl(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPOR(e K_ASL) expr *e; D_ASL
-#else
 f_OPOR(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -910,11 +794,7 @@ f_OPOR(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPAND(e K_ASL) expr *e; D_ASL
-#else
 f_OPAND(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -923,11 +803,7 @@ f_OPAND(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_LT(e K_ASL) expr *e; D_ASL
-#else
 f_LT(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -936,11 +812,7 @@ f_LT(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_LE(e K_ASL) expr *e; D_ASL
-#else
 f_LE(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -949,11 +821,7 @@ f_LE(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_EQ(e K_ASL) expr *e; D_ASL
-#else
 f_EQ(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -962,11 +830,7 @@ f_EQ(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_GE(e K_ASL) expr *e; D_ASL
-#else
 f_GE(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -975,11 +839,7 @@ f_GE(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_GT(e K_ASL) expr *e; D_ASL
-#else
 f_GT(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -988,11 +848,7 @@ f_GT(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_NE(e K_ASL) expr *e; D_ASL
-#else
 f_NE(expr *e A_ASL)
-#endif
 {
 	expr *e2;
 	e2 = e->R.e;
@@ -1001,22 +857,14 @@ f_NE(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPNOT(e K_ASL) expr *e; D_ASL
-#else
 f_OPNOT(expr *e A_ASL)
-#endif
 {
 	e = e->L.e;
 	return (*e->op)(e K_ASL) ? 0. : 1.;
 	}
 
  static real
-#ifdef KR_headers
-f_ANDLIST(e K_ASL) expr *e; D_ASL
-#else
 f_ANDLIST(expr *e A_ASL)
-#endif
 {
 	expr **ep, **epe;
 
@@ -1032,11 +880,7 @@ f_ANDLIST(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_ORLIST(e K_ASL) expr *e; D_ASL
-#else
 f_ORLIST(expr *e A_ASL)
-#endif
 {
 	expr **ep, **epe;
 
@@ -1051,12 +895,9 @@ f_ORLIST(expr *e A_ASL)
 	return 0.;
 	}
 
- static real
-#ifdef KR_headers
-f_OPIMPELSE(e K_ASL) expr *e; D_ASL
-#else
+#define f_OPIMPELSE f_OPIMPELSE_rops2_ASL
+ real
 f_OPIMPELSE(expr *e A_ASL)
-#endif
 {
 	expr_if *eif = (expr_if *)e;
 
@@ -1066,11 +907,7 @@ f_OPIMPELSE(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OP_IFF(e K_ASL) expr *e; D_ASL
-#else
 f_OP_IFF(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	int a, b;
@@ -1083,11 +920,7 @@ f_OP_IFF(expr *e A_ASL)
 	}
 
  real
-#ifdef KR_headers
-f_OPSUMLIST(e K_ASL) expr *e; D_ASL
-#else
 f_OPSUMLIST(expr *e A_ASL)
-#endif
 {
 	expr **ep, **epe;
 	real x;
@@ -1103,11 +936,7 @@ f_OPSUMLIST(expr *e A_ASL)
 	}
 
  real
-#ifdef KR_headers
-f_OPPLTERM(e K_ASL) expr *e; D_ASL
-#else
 f_OPPLTERM(expr *e A_ASL)
-#endif
 {
 	plterm *p = e->L.p;
 	real r, t;
@@ -1143,33 +972,21 @@ f_OPPLTERM(expr *e A_ASL)
 	}
 
  char *
-#ifdef KR_headers
-f_OPHOL(e K_ASL) expr *e; D_ASL
-#else
 f_OPHOL(expr *e A_ASL)
-#endif
 {
 	MTNot_Used(asl);
 	return ((expr_h *)e)->sym;
 	}
 
  real
-#ifdef KR_headers
-f_OPVARVAL(e K_ASL) expr *e; D_ASL
-#else
 f_OPVARVAL(expr *e A_ASL)
-#endif
 {
 	MTNot_Used(asl);
 	return ((expr_v *)e)->v;
 	}
 
  char *
-#ifdef KR_headers
-f_OPIFSYM(e K_ASL) expr *e; D_ASL
-#else
 f_OPIFSYM(expr *e A_ASL)
-#endif
 {
 	expr_if *eif = (expr_if *)e;
 	e = eif->e;
@@ -1177,27 +994,16 @@ f_OPIFSYM(expr *e A_ASL)
 	return (*(sfunc*)e->op)(e K_ASL);
 	}
 
- struct
-TMInfo {
-	union {
-		TMInfo *prev;
-		double align;
-		} u;
-	};
-
  real
-#ifdef KR_headers
-f_OPFUNCALL(e K_ASL) expr *e; D_ASL
-#else
 f_OPFUNCALL(expr *e A_ASL)
-#endif
 {
-	expr_f *f = (expr_f *)e;
-	func_info *fi = f->fi;
-	argpair *ap, *ape;
 	TMInfo T, *T1, *T1prev;
 	arglist *al;
-	char *s;
+	argpair *ap, *ape;
+	const char *s;
+	expr_f *f = (expr_f *)e;
+	func_info *fi = f->fi;
+	int jv;
 	real rv;
 
 	for(ap = f->ap, ape = f->ape; ap < ape; ap++) {
@@ -1214,29 +1020,18 @@ f_OPFUNCALL(expr *e A_ASL)
 	al->Errmsg = 0;
 	rv = (*fi->funcp)(al);
 	errno_set(0);
-	if ((s = al->Errmsg) && !err_jmp) {
-		report_where(asl);
-		fprintf(Stderr, "Error in function %s:\n\t%s\n", fi->name, s);
-		fflush(Stderr);
-		}
+	jv = 0; /* silence bogus "not-initialized" warning */
+	if ((s = al->Errmsg) && !err_jmp)
+		fintrouble_ASL(asl, fi, s, &T);
 	for(T1 = T.u.prev; T1; T1 = T1prev) {
 		T1prev = T1->u.prev;
 		free(T1);
-		}
-	if (s) {
-		jmp_check(err_jmp);
-		jmp_check(err_jmp1);
-		exit(1);
 		}
 	return rv;
 	}
 
  static real
-#ifdef KR_headers
-f_OPintDIV(e K_ASL) expr *e; D_ASL
-#else
 f_OPintDIV(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L, R;
@@ -1245,16 +1040,12 @@ f_OPintDIV(expr *e A_ASL)
 	L = (*e1->op)(e1 K_ASL);
 	e1 = e->R.e;
 	if (!(R = (*e1->op)(e1 K_ASL)))
-		zero_div(L, " div " K_ASL);
+		zero_div(L, " div ");
 	return (L /= R) >= 0 ? floor(L) : ceil(L);
 	}
 
  static real
-#ifdef KR_headers
-f_OPprecision(e K_ASL) expr *e; D_ASL
-#else
 f_OPprecision(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L, R;
@@ -1269,11 +1060,7 @@ f_OPprecision(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-Round(x, prec) real x; int prec;
-#else
 Round(real x, int prec)
-#endif
 {
 	char *b, *s, *s0, *se;
 	int decpt, L, sign;
@@ -1304,16 +1091,12 @@ Round(real x, int prec)
 	*b = 0;
 	freedtoa(s0);
 	if (decpt)
-		sprintf(b, "e%d", decpt);
+		snprintf(b, buf + sizeof(buf) - b, "e%d", decpt);
 	return strtod(buf, (char **)0);
 	}
 
  static real
-#ifdef KR_headers
-f_OPround(e K_ASL) expr *e; D_ASL
-#else
 f_OPround(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L, R;
@@ -1326,11 +1109,7 @@ f_OPround(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPtrunc(e K_ASL) expr *e; D_ASL
-#else
 f_OPtrunc(expr *e A_ASL)
-#endif
 {
 	expr *e1;
 	real L, R;
@@ -1351,18 +1130,14 @@ f_OPtrunc(expr *e A_ASL)
 
 
  static real
-#ifdef KR_headers
-f_OPCOUNT(e K_ASL) expr *e; D_ASL
-#else
 f_OPCOUNT(expr *e A_ASL)
-#endif
 {
 	expr **ep, **epe;
 	real x;
 	ep = e->L.ep;
 	epe = e->R.ep;
 	e = *ep++;
-	if (x = (*e->op)(e K_ASL))
+	if ((x = (*e->op)(e K_ASL)))
 		x = 1.;
 	do {
 		e = *ep++;
@@ -1378,12 +1153,8 @@ jb_st {
 	jmp_buf jb;
 	} jb_st;
 
- static int 
-#ifdef KR_headers
-rcompj(a, b, v) char *a, *b, *v;
-#else
+ static int
 rcompj(const void *a, const void *b, void *v)
-#endif
 {
 	jb_st *J;
 	real t = *(real *)a - *(real *)b;
@@ -1396,11 +1167,7 @@ rcompj(const void *a, const void *b, void *v)
 	}
 
  static real
-#ifdef KR_headers
-f_OPALLDIFF(e K_ASL) expr *e; D_ASL
-#else
 f_OPALLDIFF(expr *e A_ASL)
-#endif
 {
 	int n;
 	expr **ep, **epe;
@@ -1431,11 +1198,7 @@ f_OPALLDIFF(expr *e A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-f_OPNUMBEROF(e K_ASL) expr *e; D_ASL
-#else
 f_OPNUMBEROF(expr *e A_ASL)
-#endif
 {
 	expr **ep, **epe;
 	real n, t;

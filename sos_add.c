@@ -42,8 +42,8 @@ THIS SOFTWARE.
 	void *SI = sos_add(nl,flags);
 
    (where nl is the open FILE* that will be passed to the .nl reader)
-   to adjust n_con, n_var, nzc, and nbv to allow room for sos_finish
-   to insert convexity constraints, etc.  After calling the .nl reader,
+   to prepare for sos_finish to insert convexity constraints and adjust
+   n_con, n_var, nzc, and nbv, etc.  After calling the .nl reader,
    one invokes
 
 	if (SI)
@@ -95,39 +95,27 @@ Coninfo {
  static real pl_bigM, mpl_bigM;
 
  static SufDesc*
-#ifdef KR_headers
-refd_copy(nu, ol, n) SufDesc *nu; SufDesc *ol; int n;
-#else
 refd_copy(SufDesc *nu, SufDesc *ol, int n)
-#endif
 {
 	if (!ol)
 		return ol;
 	memcpy(nu, ol, sizeof(SufDesc));
-	memcpy(nu->u.r = Malloc(n*sizeof(real)), ol->u.r, n*sizeof(real));
+	memcpy(nu->u.r = (real*)Malloc(n*sizeof(real)), ol->u.r, n*sizeof(real));
 	return nu;
 	}
 
  static int
-#ifdef KR_headers
-compar(a, b, v) char *a, *b, *v;
-#else
 compar(const void *a, const void *b, void *v)
-#endif
 {
 	int k;
 	Not_Used(v);
-	if (k = *(int*)a - *(int*)b)
+	if ((k = *(int*)a - *(int*)b))
 		return k;
 	return ((int*)a)[1] - ((int*)b)[1];
 	}
 
  static int
-#ifdef KR_headers
-rcompar(a, b, v) char *a, *b, *v;
-#else
 rcompar(const void *a, const void *b, void *v)
-#endif
 {
 	real *r = (real *)v, t;
 	t = r[*(int*)a] - r[*(int*)b];
@@ -137,11 +125,7 @@ rcompar(const void *a, const void *b, void *v)
 	}
 
  static int
-#ifdef KR_headers
-refcomp(a, b, v) char *a, *b, *v;
-#else
 refcomp(const void *a, const void *b, void *v)
-#endif
 {
 	real *r = (real *)v, t;
 	t = r[((int*)a)[1]] - r[((int*)b)[1]];
@@ -151,11 +135,7 @@ refcomp(const void *a, const void *b, void *v)
 	}
 
  static void
-#ifdef KR_headers
-reorder(ind, ref, pri, j0, k, p) int *ind, *pri, j0, k, *p; real *ref;
-#else
 reorder(int *ind, real *ref, int j0, int k, int *p)
-#endif
 {
 	int i, j, n, ti;
 	real tr;
@@ -186,27 +166,19 @@ reorder(int *ind, real *ref, int j0, int k, int *p)
 	}
 
  static void
-#ifdef KR_headers
-turnon(z, n) int *z; int n;
-#else
 turnon(int *z, int n)
-#endif
 {
 	while(n-- > 0)
 		*z++ = 1;
 	}
 
  static int
-#ifdef KR_headers
-nonbinary(k, CI, LU) int k; Coninfo *CI; real *LU;
-#else
 nonbinary(int k, Coninfo *CI, real *LU)
-#endif
 {
 	int *z;
 	real *lu, *u;
 
-	if (u = CI->u) {
+	if ((u = CI->u)) {
 		lu = CI->lu + k;
 		u += k;
 		}
@@ -240,18 +212,14 @@ nonbinary(int k, Coninfo *CI, real *LU)
 
  static SufDecl
 suftab[] = {
-	{ "ref", 0, ASL_Sufkind_var | ASL_Sufkind_real },
-	{ "sos", 0, ASL_Sufkind_var },
-	{ "sosno", 0, ASL_Sufkind_var | ASL_Sufkind_real },
-	{ "sosref", 0, ASL_Sufkind_var | ASL_Sufkind_real }
+	{ (char*)"ref", 0, ASL_Sufkind_var | ASL_Sufkind_real },
+	{ (char*)"sos", 0, ASL_Sufkind_var },
+	{ (char*)"sosno", 0, ASL_Sufkind_var | ASL_Sufkind_real },
+	{ (char*)"sosref", 0, ASL_Sufkind_var | ASL_Sufkind_real }
 	};
 
  Char*
-#ifdef KR_headers
-sos_add_ASL(asl, f, flags) ASL *asl; FILE *f; int flags;
-#else
 sos_add_ASL(ASL *asl, FILE *f, int flags)
-#endif
 {
 	Char **M1state1, **M1state2;
 	EdRead ER, *R;
@@ -288,7 +256,8 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 	fseek(f, ft0, SEEK_SET);
 
 	nsos1 = nsos2 = 0;
-	refd = grefd = 0;
+	gd = refd = grefd = 0;
+	z = 0;
 	if (!(flags & ASL_suf_sos_ignore_sosno)
 	 && (gd = suf_get("sosno", ASL_Sufkind_var | ASL_Sufkind_input))
 	 && (grefd = suf_get("ref", ASL_Sufkind_var | ASL_Sufkind_input)))
@@ -321,7 +290,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 		nsos1 = 0;
 		gn = gd->u.r;
 		for(i = ng = 0; i < n; i++) {
-			if (j = gn[i])
+			if ((j = gn[i]))
 				ng++;
 			}
 		if (!ng) {
@@ -335,7 +304,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 		gp = gp0 = (int**)Malloc(L);
 		zg = g0 = (int*)(gpe = gp + ng + 1);
 		for(i = 0; i < n; i++)
-			if (k = gn[i]) {
+			if ((k = gn[i])) {
 				*zg++ = k;
 				*zg++ = i;
 				}
@@ -350,7 +319,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 				turnon(z + (nlvc - nlvci), nlvci);
 			if (nlvoi)
 				turnon(z + (nlvo - nlvoi), nlvoi);
-			if (j = niv + nbv)
+			if ((j = niv + nbv))
 				turnon(z + (n-j), j);
 			}
 		*gp++ = g = g1 = zg = g0;
@@ -359,7 +328,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 			if ((g += 2) >= ge || *g != tg) {
 				/* Ignore SOS1 sets of 1 element   */
 				/* and SOS2 sets of <= 2 elements. */
-				if ((j += (g-zg>>1)) >= 2) {
+				if ((j += ((g-zg)>>1)) >= 2) {
 					nsosnz1 += j;
 					nsos1++;
 					if (!gp1 && tg > 0)
@@ -399,7 +368,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 		for(gp = gp0; gp < gp1; gp++) {
 			g = gp[0];
 			ge = gp[1] - 2;
-			j = (ge - g >> 1);
+			j = (ge - g) >> 1;
 			nnv += j - 2;
 			nnc += j;
 			nnz += 4*j - 3;
@@ -418,7 +387,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 		for(; gp < gpe; gp++) {
 			g = gp[0];
 			ge = gp[1];
-			j = ge - g >> 1;
+			j = (ge - g) >> 1;
 			nnc++;
 			nnz += j;
 			nnc += k = ge - g;
@@ -426,7 +395,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 			nnz += k << 1;
 			}
 		}
-	SI = Malloc(sizeof(SOSinfo));
+	SI = (SOSinfo*)Malloc(sizeof(SOSinfo));
 	memset(SI->zap, 0, sizeof(SI->zap));
 	SI->asl = asl;
 	if (v0) {
@@ -441,9 +410,9 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 	SI->gp1 = gp1;
 	SI->gpe = gpe;
 	SI->grefd = grefd = refd_copy(&SI->mysd[0], grefd, n);
-	SI->nnc = nnc;
-	SI->nnv = nnv;
-	SI->nnz = nnz;
+	asl->i.nsufext[ASL_Sufkind_con]  += SI->nnc = nnc;
+	asl->i.nsufext[ASL_Sufkind_var]  += SI->nnv = nnv;
+	asl->i.nsufext[ASL_Sufkind_prob] += SI->nnz = nnz;
 	SI->nsos = nsos;
 	SI->nsos1 = nsos1;
 	SI->nsos2 = nsos2;
@@ -455,11 +424,6 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
 	SI->z = z;
 	SI->nzc = asl->i.nzc_;
 	asl->i.nzc_ += nnz;
-	n_var += nnv;
-	c_vars += nnv;
-	o_vars += nnv;
-	nbv += nnv;
-	n_con += nnc;
  ret:
 	M1free_ASL(&asl->i, M1state1, M1state2);
 	if (SI) {
@@ -483,11 +447,7 @@ sos_add_ASL(ASL *asl, FILE *f, int flags)
  static real LUge[2];
 
  static cgrad**
-#ifdef KR_headers
-newcon(CI, ge) Coninfo *CI; int ge;
-#else
 newcon(Coninfo *CI, int ge)
-#endif
 {
 	int m = CI->m++;
 	real *lu;
@@ -507,11 +467,7 @@ newcon(Coninfo *CI, int ge)
 	}
 
  static void
-#ifdef KR_headers
-newcoef(CI, p, k, t) Coninfo *CI; cgrad ***p; int k; real t;
-#else
 newcoef(Coninfo *CI, cgrad ***p, int k, real t)
-#endif
 {
 	cgrad *cg = CI->cg++;
 	**p = cg;
@@ -521,11 +477,7 @@ newcoef(Coninfo *CI, cgrad ***p, int k, real t)
 	}
 
  static void
-#ifdef KR_headers
-Bound(CI, j, k, LU) Coninfo *CI; int j; int k; real *LU;
-#else
 Bound(Coninfo *CI, int j, int k, real *LU)
-#endif
 {
 	cgrad **cgb;
 	if (LU[1]) {
@@ -555,11 +507,7 @@ Bound(Coninfo *CI, int j, int k, real *LU)
 	}
 
  static void
-#ifdef KR_headers
-Bound2(CI, j, k0, k, LU) Coninfo *CI; int j; int k0; int k; real *LU;
-#else
 Bound2(Coninfo *CI, int j, int k0, int k, real *LU)
-#endif
 {
 	cgrad **cgb;
 	if (LU[1]) {
@@ -591,11 +539,7 @@ Bound2(Coninfo *CI, int j, int k0, int k, real *LU)
 	}
 
  static void
-#ifdef KR_headers
-debugchk(what, expected, got, exact) char *what; int expected, got, exact;
-#else
-debugchk(char *what, int expected, int got, int exact)
-#endif
+debugchk(const char *what, int expected, int got, int exact)
 {
 	if (got != expected && (exact || got > expected)) {
 		fprintf(Stderr, "sos_finish: expected %s = %d, got %d\n",
@@ -604,32 +548,9 @@ debugchk(char *what, int expected, int got, int exact)
 		}
 	}
 
- static void
-#ifdef KR_headers
-ps_func_adj(asl, cp) ASL *asl; ps_func **cp;
-#else
-ps_func_adj(ASL *asl, ps_func **cp)
-#endif
-{
-	ps_func *cps;
-	if (n_con > asl->i.n_con0) {
-		cps = (ps_func*)M1zapalloc(n_con * sizeof(ps_func));
-		if (asl->i.n_con0 > 0)
-			memcpy(cps, *cp, asl->i.n_con0*sizeof(ps_func));
-		*cp = cps;
-		}
-	}
-
  int
-#ifdef KR_headers
-sos_finish_ASL(asl, VP, flags, nsosnz_p, sospri_p, copri, sosbeg_p, sosind_p,
-	sosref_p)
-	ASL *asl; Char **VP; *nsosnz_p;
-	int flags, **sospri_p, *copri, **sosbeg_p, **sosind_p; real **sosref_p;
-#else
 sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 	int *copri, int **sosbeg_p, int **sosind_p, real **sosref_p)
-#endif
 {
 	Char **vp;
 	Coninfo CI;
@@ -637,11 +558,11 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 	SufDesc *grefd, *pd, *refd;
 	cde *Cde;
 	cde2 *Cde2;
-	cgrad *cg, *cg0, *cg1, **cgb, **cgp0, **cgx;
+	cgrad **Cgrd, *cg, *cg0, *cg1, **cgb, **cgp0, **cgx;
 	const char *s;
 	expr_n *en;
-	int f, i, j, j0, k, k0, m, n, niv0, nnc, nnv, nnv0, nnz, ns;
-	int nsos, nsos1, nsos2, nsosnz, nsosnz1, p0, p1;
+	int f, i, j, j0, k, k0, m, m0, n, niv0, nnc, nnv, nnv0, nnz, ns;
+	int nsos, nsos1, nsos2, nsosnz, nsosnz1, p1;
 	int *col1, *cs, *g, *ge, **gp, **gp0, **gp1, **gpe, *myp[2], *p;
 	int *pri, *sospri, *sosbeg, *sosbeg1, *sosind, *v, *v0, *ve, *z, **zg;
 	ograd *og;
@@ -675,7 +596,7 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 	z	= SI->z;
 
 	if (pl_bigM <= 0.) {
-		if (s = getenv("pl_bigM"))
+		if ((s = getenv("pl_bigM")))
 			pl_bigM = strtod(s,0);
 		if (pl_bigM <= 0.)
 			pl_bigM = 1e6;
@@ -694,6 +615,7 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 	else if (sospri_p)
 		L += nsos*sizeof(int);
 	mysr = 0;
+	Cgrd = Cgrad;
 	if (!sosref_p || !sosind_p || !sosbeg_p) {
 		if (sosref_p)
 			*sosref_p = 0;
@@ -721,6 +643,11 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 		sospri = *sospri_p = (int*)(sosbeg1 + nsos + 1);
 	memset(sosbeg, 0, (nsos+1)*sizeof(int));
 	f = Fortran;
+	cg0 = 0;	/* silence buggy "not-initialized" warning */
+	cgp0 = 0;	/* ditto */
+	n = n_var;	/* ditto */
+	k0 = nnv0 = 0;	/* ditto */
+	m0 = n_con;
 	if (nsos1) {
 		LUge[0] = 0.;
 		LUge[1] = Infinity;
@@ -729,10 +656,10 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 		CI.u = Uvx;
 		CI.clu = LUrhs;
 		CI.cu = Urhsx;
-		CI.m = asl->i.n_con0;
+		CI.m = m0;
 		CI.nbin = 0;
-		if (Cgrad) {
-			CI.cgp = Cgrad + asl->i.n_con0;
+		if (Cgrd) {
+			CI.cgp = Cgrd + m0;
 			CI.cg = (cgrad*)M1alloc(nnz*sizeof(cgrad));
 			}
 		else {
@@ -744,23 +671,22 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 		pri = 0;
 		if (sospri) {
 			memset(sospri, 0, nsos1*sizeof(int));
-			if (pd = suf_get("priority",
-					ASL_Sufkind_var | ASL_Sufkind_input))
+			if ((pd = suf_get("priority",
+					ASL_Sufkind_var | ASL_Sufkind_input)))
 				pri = pd->u.i;
 			}
 		i = 0;
 		for(gp = gp0; gp < gp1; gp++)
-			sosbeg[i++] = (gp[1] - gp[0] >> 1) - 1;
+			sosbeg[i++] = ((gp[1] - gp[0]) >> 1) - 1;
 		for(; gp < gpe; gp++)
-			sosbeg[i++] = gp[1] - gp[0] >> 1;
-		for(i = j = 0; i < nsos1; i++) {
+			sosbeg[i++] = (gp[1] - gp[0]) >> 1;
+		for(i = j = k = 0; i < nsos1; i++) { /* "k = 0" to omit an erroneous warning */
 			k = sosbeg[i] + j;
 			sosbeg[i] = j;
 			j = k;
 			}
 		sosbeg[nsos1] = k;
 		sufref = grefd->u.r;
-		n = asl->i.n_var0;
 		if (A_vals) {
 			cs = A_colstarts;
 			k = cs[i = n];
@@ -768,16 +694,19 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 			while(i < j)
 				cs[++i] = k;
 			}
+		p = get_vcmap_ASL(asl, ASL_Sufkind_var);
+ 		for(i = n, k = n + nnv; i < k; ++i)
+			p[i] = -1;
 		if (niv) {
 			/* tell write_sol about moved integer variables */
 
-			asl->i.z[0] = p = (int*)M1alloc(n*sizeof(int));
-			p1 = k = n;
-			p0 = n -= niv;
-			for(i = 0; i < n; i++)
-				p[i] = i;
-			for(; i < k; i++)
-				p[i] = i + nnv;
+			k = n + nnv;
+			p1 = n;
+			n -= niv;
+			while(--k > p1)
+				p[k] = p[k-nnv];
+			for(i = nnv; i > 0; --i)
+				p[k--] = -1;
 
 			/* copy integer variables up */
 
@@ -796,7 +725,7 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 					cs[--i] = j;
 				}
 			else for(i = n_con - nnc; --i >= 0; )
-				for(cg = Cgrad[i]; cg; cg = cg->next) {
+				for(cg = Cgrd[i]; cg; cg = cg->next) {
 					if (cg->varno >= n)
 						cg->varno += nnv;
 					}
@@ -935,9 +864,9 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 			/* Correct overestimation of number */
 			/* of new binary variables. */
 
-			p = asl->i.z[0];
-			for(i = p0; i < p1; i++)
-				p[i] -= CI.nbin;
+			p = asl->i.vmap;
+			for(i = n_var - niv - CI.nbin, k = i + niv; i < k; ++i)
+				p[i] = p[i + CI.nbin];
 			for(i = n_obj; --i >= 0; )
 				for(og = Ograd[i]; og; og = og->next) {
 					if (og->varno >= nnv0)
@@ -949,7 +878,7 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 					cs[i] = cs[i+CI.nbin];
 				}
 			else for(i = n_con - nnc; --i >= 0; )
-				for(cg = Cgrad[i]; cg; cg = cg->next) {
+				for(cg = Cgrd[i]; cg; cg = cg->next) {
 					if (cg->varno >= nnv0)
 						cg->varno -= CI.nbin;
 					}
@@ -960,7 +889,7 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 			o_vars -= CI.nbin;
 			nbv -= CI.nbin;
 			nnv -= CI.nbin;
-			if (zg = zerograds) {
+			if ((zg = zerograds)) {
 				j = n_var;
 				for(i = n_obj; i > 0; --i) {
 					for(p = *zg++; *p >= 0 && *p < j; p++);
@@ -969,22 +898,21 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 				}
 			}
 
+		nnc = CI.m - m0;
 		n_conjac[1] = n_con = CI.m;
-		nnc = CI.m - asl->i.n_con0;
 		asl->i.nzc_ -= nnz - k;
 		nnz = k;
 
 		en = (expr_n *)mem_ASL(asl, sizeof(expr_n));
 		en->v = 0.;
 		en->op = (efunc_n *)f_OPNUM;
-		i = asl->i.n_con0;
+		i = m0;
 		switch(asl->i.ASLtype) {
 		  case ASL_read_f:
 		  case ASL_read_fg:
 			Cde = ((ASL_fg*)asl)->I.con_de_;
 			goto more_Cde;
 		  case ASL_read_pfg:
-			ps_func_adj(asl, (ps_func**)&((ASL_pfg*)asl)->P.cps);
 			Cde = ((ASL_pfg*)asl)->I.con_de_;
  more_Cde:
 			while(i < CI.m)
@@ -994,12 +922,16 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 			Cde2 = ((ASL_fgh*)asl)->I.con2_de_;
 			goto more_Cde2;
 		  case ASL_read_pfgh:
-			ps_func_adj(asl, &((ASL_pfgh*)asl)->P.cps);
 			Cde2 = ((ASL_pfgh*)asl)->I.con2_de_;
  more_Cde2:
 			while(i < CI.m)
 				Cde2[i++].e = (expr2*)en;
 		  }
+		j = asl->i.n_con1;
+		asl->i.n_con1 = j + nnc;
+		if ((p = asl->i.cmap))
+			for(i = m0; i < CI.m; ++i)
+				p[i] = j++;
 		}
 	if (f)
 		for(sosbeg = *sosbeg_p, i = 0; i <= nsos; i++)
@@ -1009,10 +941,17 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 		goto freeup;
 
 	if (nnv) {
+		j = asl->i.n_var1;
+		asl->i.n_var1 = j + nnv;
+		if ((p = asl->i.vminv)) {
+			i = n_var;
+			k = i + nnv;
+			do p[i++] = j++; while(j < k);
+			}
 		lu = LUv;
 		k = n;	/* n == n_var - niv */
 		i = n + niv;
-		if (u = Uvx) {
+		if ((u = Uvx)) {
 			while(i > k) {
 				--i;
 				lu[i] = lu[i-nnv];
@@ -1035,15 +974,16 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 			}
 		}
 	n = n_var;
-	if (cgx = Cgrad) {
+	if (Cgrd) {
 
 		/* (re)compute goff fields */
 
-		m = n_con;
+		m = m0 + nnc;
+		n += nnv;
 		p = (int*)Malloc(L = n*sizeof(int));
 		memset(p, 0, L);
 		for(i = 0; i < m; i++)
-			for(cg = cgx[i]; cg; cg = cg->next)
+			for(cg = Cgrd[i]; cg; cg = cg->next)
 				p[cg->varno]++;
 		for(i = k = 0; i < n; i++) {
 			j = p[i];
@@ -1051,7 +991,7 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 			k += j;
 			}
 		for(i = 0; i < m; i++)
-			for(cg = cgx[i]; cg; cg = cg->next)
+			for(cg = Cgrd[i]; cg; cg = cg->next)
 				cg->goff = p[cg->varno]++;
 		free(p);
 		}
@@ -1060,12 +1000,11 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 
 		cgb = (cgrad**)Malloc(L = n*sizeof(cgrad*));
 		memset(cgb, 0, L);
-		m = asl->i.n_con0;
 		for(i = 0; i < nnc; i++)
 			for(cg = cgp0[i]; cg; cg = cg1) {
 				cg1 = cg->next;
 				j = cg->varno;
-				cg->varno = i + m;
+				cg->varno = i + m0;
 				cg->next = cgb[j];
 				cgb[j] = cg;
 				}
@@ -1098,9 +1037,14 @@ sos_finish_ASL(ASL *asl, void **VP, int flags, int *nsosnz_p, int **sospri_p,
 	if (mysr)
 		free(mysr);
 	for(i = 5; i--; )
-		if (vp = SI->zap[i]) {
+		if ((vp = SI->zap[i])) {
 			free(*vp);
 			*vp = 0;
 			}
+	n_var += nnv;
+	c_vars += nnv;
+	o_vars += nnv;
+	nbv += nnv;
+	n_con += nnc;
 	return nsos;
 	}

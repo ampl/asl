@@ -24,16 +24,56 @@ THIS SOFTWARE.
 
 #include <stdio.h>
 
+FILE *Stderr = 0;
+
+#ifdef __cplusplus
+extern "C" void Stderr_init_ASL(void);
+#endif
+
+#ifdef _WIN32
+
+/* In the MS Windows world, we must jump through */
+/* extra hoops in case we're just in a .dll, e.g., */
+/* if we're used in a MATLAB mex function. */
+
+#include <windows.h>
+#include <io.h>		/* for _open_osfhandle() */
+#include <fcntl.h>	/* for _O_TEXT */
+#include "arith.h"	/* for LONG_LONG_POINTERS */
+
+#ifdef LONG_LONG_POINTERS
+#define Long long long
+#else
+#define Long long
+#endif
+
+ void
+Stderr_init_ASL(void)
+{
+	HANDLE h;
+	int ih;
+
+	AllocConsole();	/* fails if unnecessary */
+	h = GetStdHandle(STD_OUTPUT_HANDLE);
+	ih = _open_osfhandle((Long)h, _O_TEXT);
+	if (ih == -1)
+		Stderr = fopen("con","w");
+	else
+		Stderr = _fdopen(ih, "w");
+	}
+
+#else /*!_WIN32*/
+
 #ifndef STDERR
 #define STDERR stderr
 #endif
-
-FILE *Stderr;
 
 #ifdef __cplusplus
 extern "C" void Stderr_init_ASL(void);
 #endif
 
  void
-Stderr_init_ASL()
+Stderr_init_ASL(void)
 { Stderr = STDERR; }
+
+#endif /*WIN32*/

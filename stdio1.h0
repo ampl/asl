@@ -89,6 +89,8 @@ extern void fflush_ASL ANSI((FILE*));
 #undef vsprintf
 #define printf Printf
 #define fprintf Fprintf
+#undef snprintf		/* for MacOSX */
+#undef vsnprintf	/* for MacOSX */
 #define snprintf Snprintf
 #define sprintf Sprintf
 #define perror Perror

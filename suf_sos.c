@@ -31,11 +31,7 @@ THIS SOFTWARE.
 #undef cde
 
  static void
-#ifdef KR_headers
-lumap(i, n, z, LU, U) int i; int n; int *z; real *LU; real *U;
-#else
 lumap(int i, int n, int *z, real *LU, real *U)
-#endif
 {
 	int j;
 
@@ -56,23 +52,19 @@ lumap(int i, int n, int *z, real *LU, real *U)
 	}
 
  static void
-#ifdef KR_headers
-suf_adjust(d, i, n, z) SufDesc *d; int i; int n; int *z;
-#else
 suf_adjust(SufDesc *d, int i, int n, int *z)
-#endif
 {
 	real *rp;
 	int *ip, j;
 
 	if (d->kind & ASL_Sufkind_real) {
-		if (rp = d->u.r) {
+		if ((rp = d->u.r)) {
 			for(; i < n; i++)
 				if ((j = z[i]) >= 0)
 					rp[j] = rp[i];
 			}
 		}
-	else if (ip = d->u.i)
+	else if ((ip = d->u.i))
 		for(; i < n; i++)
 			if ((j = z[i]) >= 0)
 				ip[j] = ip[i];
@@ -86,22 +78,14 @@ static int rcompar(const void*, const void*, void*);
 #endif
 
  static int
-#ifdef KR_headers
-compar(a, b, v) char *a, *b, *v;
-#else
 compar(const void *a, const void *b, void *v)
-#endif
 {
 	Not_Used(v);
 	return *(int*)a - *(int*)b;
 	}
 
  static int
-#ifdef KR_headers
-bsrch(k, n, x) int k; int n; real *x;
-#else
 bsrch(int k, int n, real *x)
-#endif
 {
 	int n1;
 	real *x0, *x1;
@@ -122,11 +106,7 @@ bsrch(int k, int n, real *x)
 	}
 
  static int
-#ifdef KR_headers
-rcompar(a, b, v) char *a, *b, *v;
-#else
 rcompar(const void *a, const void *b, void *v)
-#endif
 {
 	real *r = (real *)v, t;
 	t = r[*(int*)a] - r[*(int*)b];
@@ -136,11 +116,7 @@ rcompar(const void *a, const void *b, void *v)
 	}
 
  static void
-#ifdef KR_headers
-reorder(ind, ref, pri, j0, k, p) int *ind, *pri, j0, k, *p; real *ref;
-#else
 reorder(int *ind, real *ref, int j0, int k, int *p)
-#endif
 {
 	int i, j, n, ti;
 	real tr;
@@ -171,11 +147,7 @@ reorder(int *ind, real *ref, int j0, int k, int *p)
 	}
 
  static void
-#ifdef KR_headers
-name_map(n, z, nam) int n; int *z; char **nam;
-#else
 name_map(int n, int *z, char **nam)
-#endif
 {
 	int i, j, k;
 
@@ -188,28 +160,23 @@ name_map(int n, int *z, char **nam)
 	}
 
  int
-#ifdef KR_headers
-suf_sos_ASL(asl, flags, nsosnz_p, sostype_p, sospri_p, copri,
-	sosbeg_p, sosind_p, sosref_p)
-	ASL *asl; int flags, *nsosnz_p; char **sostype_p;
-	int **sospri_p, *copri, **sosbeg_p, **sosind_p; real **sosref_p;
-#else
 suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	int **sospri_p, int *copri, int **sosbeg_p, int **sosind_p,
 	real **sosref_p)
-#endif
 {
-	int f, i, j, j0, jz, k, m, ms1, n, ng, ns1;
-	int nsos, nsos1, nsos2, nsosnz, nsosnz1;
-	int *c, *col1, *ja, *ja1, *jae, *p, *pri, *rn, *rt;
-	int *sospri, *sosbeg, *sosind, *v, *v0, *ve, *z, *zg, *zv;
 	SufDesc *cd, *d, *gd, *grefd, *pd, *refd, *vd;
+	cgrad **Cgrd;
 	char *s0, *sostype;
-	real *a, *g, *g0, *ge, *gn, *gnos, *sosref, *sufref, t, t1;
+	int *c, *cm, *col1, *cz, *ja, *ja1, *jae, *p, *pri, *rn, *rt;
+	int *sospri, *sosbeg, *sosind, *v, *v0, *ve, *vm, *vz, *zc, *zg, *zv, *zv0, *zz;
+	int f, i, j, j0, jz, k, m, ms1, n, ndc, ndv, ng, np, ns1;
+	int nsos, nsos1, nsos2, nsosnz, nsosnz1;
 	ograd *og, **ogp;
-	size_t L;
+	real *a, *g, *g0, *ge, *gn, *gnos, *sosref, *sufref, t, t1;
+	size_t L, *jZa, *jZa1, *jZae;
 
 	nsos1 = nsos2 = 0;
+	gd = grefd = vd = 0;	/* silence buggy "not-initialized" warning */
 	if (!(flags & ASL_suf_sos_ignore_sosno)
 	 && (gd = suf_get("sosno", ASL_Sufkind_var | ASL_Sufkind_input))
 	 && (grefd = suf_get("ref", ASL_Sufkind_var | ASL_Sufkind_input)))
@@ -220,27 +187,65 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 		nsos2 = 1;
 	else if (!nsos1)
 		return 0;
+
+	cm = col1 = cz = v0 = ve = vz = zv0 = 0;	/* ditto */
+	ms1 = ns1 = nsosnz1 = 0;			/* ditto */
+	g0 = ge = 0;					/* ditto */
+	s0 = 0;						/* ditto */
+
+	c = 0;
+	if ((cd = suf_get("sos", ASL_Sufkind_con | ASL_Sufkind_input)))
+		c = cd->u.i;
 	nsos = nsosnz = 0;
 	n = n_var;
 	m = n_con;
-	z = zv = 0;
+	zc = zv = zz = 0;
 	if (nsos2) {
 		v = v0 = vd->u.i;
 		ve = v + n;
-		z = (int *)M1alloc((m+n)*sizeof(int));
-		zv = z + m;
+		zc = zz = (int *)Malloc((m+n)*sizeof(int));
+		zv = zv0 = zz + m;
+		cm = get_vcmap_ASL(asl, ASL_Sufkind_con);
+		vm = get_vcmap_ASL(asl, ASL_Sufkind_var);
+		asl->i.vminv = 0;
 		for(j = 0; j < n && !v[j]; j++)
 			zv[j] = j;
 		col1 = v + j;
+		ndv = ndc = 0;
+		for(i = j; i < n; ++i)
+			if (v[i] & 2)
+				++ndv;
+		if (c)
+			for(i = 0; i < m; ++i)
+				if (c[i] & 2)
+					++ndc;
+		if (ndv + ndc) {
+			np = ndc + ndv;
+			if (ndc)
+				++np;
+			if (ndv)
+				++np;
+			p = (int*)M1alloc(np*sizeof(int));
+			if (ndc) {
+				cz = asl->i.czap = p;
+				*cz++ = ndc;
+				p = cz + ndc;
+				}
+			if (ndv) {
+				vz = asl->i.vzap = p;
+				*vz++ = ndv;
+				}
+			}
 		ns1 = n;
 		for(k = j; j < n; j++) {
 			if ((i = v[j]) & 2) {
+				*vz++ = vm[j];
 				jz = -1;
 				if (ns1 == n)
 					ns1 = j;
 				}
 			else {
-				jz = k++;
+				vm[jz = k++] = vm[j];
 				if (i) {
 					nsosnz++;
 					if (nsos < (i >>= 4))
@@ -249,13 +254,14 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 				}
 			zv[j] = jz;
 			}
-		if (ns1 == n)
+		if (!ndv)
 			zv = 0;
 		else {
-			asl->i.z[0] = zv;
 			nbv += k - n;
 			n_var = k;
 			}
+		while(k < n)
+			vm[k++] = -1;
 		}
 	gnos = 0;
 	if (nsos1) {
@@ -264,7 +270,7 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 		ge = g + n;
 		ng = 0;
 		while(g < ge)
-			if (i = *g++) {
+			if ((i = *g++)) {
 				ng++;
 				}
 		if (!ng) {
@@ -277,7 +283,7 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 		gnos = (real*)Malloc(ng*sizeof(Uir));
 		zg = (int*)gnos;
 		for(g = g0; g < ge; )
-			if (i = (int)*g++)
+			if ((i = (int)*g++))
 				*zg++ = i;
 		qsortv((int*)gnos, ng, sizeof(int), compar, 0);
 		gn = gnos + ng;
@@ -285,19 +291,25 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 			*--gn = *--zg;
 		nsosnz += nsosnz1 = ng;
 		g = gnos;
+		j0 = 0;
 		j = (t = *g) < 0.;
-		for(i = 1; i < ng; i++)
-			if (gnos[i] != t) {
+		for(i = 1;; i++)
+			if (i >= ng || gnos[i] != t) {
 				/* Ignore SOS1 sets of 1 element   */
 				/* and SOS2 sets of <= 2 elements. */
 				if (i - j >= 2)
 					g++;
-				t = *g = gnos[j = i];
+				else {
+					nsosnz -= k = i - j0;
+					if (t > 0)
+						nsosnz1 -= k;
+					}
+				if (i >= ng)
+					break;
+				t = *g = gnos[j = j0 = i];
 				if (t < 0.)
 					j++;
 				}
-		if (i - j >= 2)
-			g++;
 		nsos += nsos1 = g - gnos;
 		}
  havenz:
@@ -334,8 +346,8 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 		pri = 0;
 		if (sospri) {
 			memset(sospri, 0, nsos1*sizeof(int));
-			if (pd = suf_get("priority",
-					ASL_Sufkind_var | ASL_Sufkind_input))
+			if ((pd = suf_get("priority",
+					ASL_Sufkind_var | ASL_Sufkind_input)))
 				pri = pd->u.i;
 			}
 		++sosbeg;
@@ -409,30 +421,42 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	if (nsos1)
 		for(i = 0; i <= nsos; i++)
 			sosbeg[i] += nsosnz1;
-	if (!(cd = suf_get("sos", ASL_Sufkind_con | ASL_Sufkind_input)))
-		z = 0;
+	if (!cd)
+		zc = 0;
 	else {
 		c = cd->u.i;
 		for(i = 0;; i++) {
 			if (i >= m) {
-				z = 0;
+				zc = 0;
 				break;
 				}
 			if (!(c[i] & 2)) {
-				z[i] = i;
+				zc[i] = i;
 				continue;
 				}
-			asl->i.z[1] = z;
-			z[ms1 = j = i] = -1;
-			while(++i < m)
-				z[i] = c[i] & 2 ? -1 : j++;
+			*cz++ = cm[ms1 = j = i];
+			zc[i] = -1;
+			while(++i < m) {
+				if (c[i] & 2) {
+					*cz++ = cm[i];
+					zc[i] = -1;
+					}
+				else {
+					cm[j] = cm[i];
+					zc[i] = j++;
+					}
+				}
 			n_con = j;
+			if (n_conjac[1] > j)
+				n_conjac[1] = j;
+			while(j < m)
+				cm[j++] = -1;
 			break;
 			}
 		}
 	if (zv) {
 		for(i = j = 0; i < n_obj; i++) {
-			for(ogp = &Ograd[i]; og = *ogp;)
+			for(ogp = &Ograd[i]; (og = *ogp);)
 				if ((og->varno = zv[og->varno]) < 0)
 					/* should not happen */
 					*ogp = og->next;
@@ -447,15 +471,16 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	if (zv && asl->i.varnames)
 		name_map(asl->i.n_var0, zv, asl->i.varnames);
 	i = m;
-	if (z) {
-		lumap(ms1, m, z, LUrhs, Urhsx);
+	if (zc) {
+		lumap(ms1, m, zc, LUrhs, Urhsx);
 		if (asl->i.connames)
-			name_map(asl->i.n_con0, z, asl->i.connames);
-		for(i = 0; i < m && z[i] >= 0; i++);
+			name_map(asl->i.n_con0, zc, asl->i.connames);
+		for(i = 0; i < m && zc[i] >= 0; i++);
 		}
 	if (!A_vals) {
-		if (!z)
+		if (!zc)
 			goto adjust_suf;
+		Cgrd = Cgrad;
 		L = sizeof(cde);
 		switch(asl->i.ASLtype) {
 		  case ASL_read_f:
@@ -474,56 +499,89 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 			L = sizeof(cde2);
 		  }
 		while(++i < m)
-			if ((j = z[i]) >= 0) {
-				Cgrad[j] = Cgrad[i];
+			if ((j = zc[i]) >= 0) {
+				Cgrd[j] = Cgrd[i];
 				memcpy(s0 + j*L, s0 + i*L, L);
 				}
 		goto adjust_suf;
 		}
 	if (!zv)
 		goto adjust_suf1;
-	ja = A_colstarts;
-	jae = ja + n;
 	rn = A_rownos;
-	if (nsos1)
-		for(rt = sosind - nsosnz1; rt < sosind; rt++)
-			*rt = zv[*rt - f] + f;
-	for(j = 0; *zv >= 0; ja++, zv++) {
-		k = ja[1] - f;
-		while(j < k)
-			if (rn[j++] - f >= i)
-				goto copystart;
-		}
- copystart:
-	a = A_vals;
-	i = k = ja[0] - f;
-	ja1 = ja;
-	do {
-		j = k;
-		k = *++ja - f;
-		if (*zv++ >= 0) {
-			for(*ja1++ = i + f; j < k; j++)
-				if ((jz = z[rn[j]-f]) >= 0) {
-					rn[i] = jz + f;
-					a[i++] = a[j];
-					}
+	if ((ja = A_colstarts)) {
+		jae = ja + n;
+		if (nsos1)
+			for(rt = sosind - nsosnz1; rt < sosind; rt++)
+				*rt = zv[*rt - f] + f;
+		for(j = 0; *zv >= 0; ja++, zv++) {
+			k = ja[1] - f;
+			while(j < k)
+				if (rn[j++] - f >= i)
+					goto copystart;
 			}
-		} while(ja < jae);
-	*ja1 = (nzc = i) + f;
+ copystart:
+		a = A_vals;
+		i = k = ja[0] - f;
+		ja1 = ja;
+		do {
+			j = k;
+			k = *++ja - f;
+			if (*zv++ >= 0) {
+				for(*ja1++ = i + f; j < k; j++)
+					if ((jz = zc[rn[j]-f]) >= 0) {
+						rn[i] = jz + f;
+						a[i++] = a[j];
+						}
+				}
+			} while(ja < jae);
+		*ja1 = (nzc = i) + f;
+		}
+	else if ((jZa = A_colstartsZ)) {
+		jZae = jZa + n;
+		if (nsos1)
+			for(rt = sosind - nsosnz1; rt < sosind; rt++)
+				*rt = zv[*rt - f] + f;
+		for(j = 0; *zv >= 0; jZa++, zv++) {
+			k = jZa[1] - f;
+			while(j < k)
+				if (rn[j++] - f >= i)
+					goto copystartZ;
+			}
+ copystartZ:
+		a = A_vals;
+		i = k = jZa[0] - f;
+		jZa1 = jZa;
+		do {
+			j = k;
+			k = *++jZa - f;
+			if (*zv++ >= 0) {
+				for(*jZa1++ = i + f; j < k; j++)
+					if ((jz = zc[rn[j]-f]) >= 0) {
+						rn[i] = jz + f;
+						a[i++] = a[j];
+						}
+				}
+			} while(jZa < jZae);
+		*jZa1 = (nZc = i) + f;
+		}
+	else
+		return 0; /* should not happen */
  adjust_suf:
 	if (zv)
 		for(d = asl->i.suffixes[0]; d; d = d->next)
 			if (d->kind & ASL_Sufkind_input && d != vd && d != refd)
-				suf_adjust(d, ns1, asl->i.n_var0, asl->i.z[0]);
+				suf_adjust(d, ns1, asl->i.n_var0, zv0);
  adjust_suf1:
-	if (z)
+	if (zc)
 		for(d = asl->i.suffixes[1]; d; d = d->next)
 			if (d->kind & ASL_Sufkind_input && d != cd)
-				suf_adjust(d, ms1, asl->i.n_con0, asl->i.z[1]);
+				suf_adjust(d, ms1, asl->i.n_con0, zc);
  sosbeg_adjust:
 	nsos += nsos1;
 	if (f)
 		for(sosbeg = *sosbeg_p, i = 0; i <= nsos; i++)
 			sosbeg[i] += f;
+	if (zz)
+		free(zz);
 	return nsos;
 	}

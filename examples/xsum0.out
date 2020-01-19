@@ -5,12 +5,14 @@ amplfunc.c	fd078f89	6583
 dminos	84cc26b	251
 dualconv.c	eb55ba16	17596
 enewt.m	f7be0c71	5356
+evalchk.c	e68d2016	4231
 evalf.m	fd13aa04	1697
 evalg.m	a3f0775	1505
 evalw.m	ef935ae5	1477
 fmng1.f	e14e7d8d	2897
 fnl21.f	ebc2e72f	3131
-gjh.c	1d118ff0	6200
+gjh.c	e5353e2c	6193
+hist.c	f5c37fe2	4680
 hkeywds.c	eb4d4fce	53
 init.m	156f1d30	2786
 keywds.c	624ef49	6758
@@ -19,7 +21,7 @@ lin2.c	fe2df350	2322
 lin3.c	13e37cae	2726
 linrc.c	ffb5438	4508
 makefile.sy	aa6ad36	5759
-makefile.u	b84e6b	7741
+makefile.u	1229d660	8055
 makefile.vc	fd1266e	5481
 makefile.wat	e30cd23f	5352
 mng.c	a9366c3	3574
@@ -33,7 +35,7 @@ rvmsg.c	160c0263	3756
 rvmsg.h	11021ce	1868
 savesol.m	1f5724b9	1675
 spamfun4.c	44eeda3	6043
-spamfunc.c	4bcac61	7079
+spamfunc.c	fdf81581	7159
 tnmain.c	fd38f276	5444
 v8.c	e75a64bb	35
 ve08.c	edb04b54	16436

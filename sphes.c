@@ -25,11 +25,7 @@ THIS SOFTWARE.
 #include "asl_pfgh.h"
 
  static void
-#ifdef KR_headers
-hv_fwd(asl, e) ASL_pfgh *asl; register expr *e;
-#else
 hv_fwd(ASL_pfgh *asl, register expr *e)
-#endif
 {
 	expr *e1, **ep;
 	real dO;
@@ -58,11 +54,11 @@ hv_fwd(ASL_pfgh *asl, register expr *e)
 		case Hv_vararg:
 			e->dO.r = 0;
 			for(d = ((expr_va*)e)->L.d; d->e; d++) {
-				if (e1 = d->ef) {
+				if ((e1 = d->ef)) {
 					hv_fwd(asl, e1);
 					e->dO.r += d->ee->dO.r;
 					}
-				else if (e1 = d->e)
+				else if ((e1 = d->e))
 					e->dO.r += e1->dO.r;
 				}
 			if (!((expr_va*)e)->val && (D = ((expr_va*)e)->R.D)) {
@@ -85,17 +81,17 @@ hv_fwd(ASL_pfgh *asl, register expr *e)
 
 		case Hv_if:
 			e->dO.r = 0;
-			if (e1 = ((expr_if*)e)->Tf) {
+			if ((e1 = ((expr_if*)e)->Tf)) {
 				hv_fwd(asl, e1);
 				e->dO.r = ((expr_if *)e)->Te->dO.r;
 				}
-			else if (e1 = ((expr_if*)e)->T)
+			else if ((e1 = ((expr_if*)e)->T))
 				e->dO.r = e1->dO.r;
-			if (e1 = ((expr_if*)e)->Ff) {
+			if ((e1 = ((expr_if*)e)->Ff)) {
 				hv_fwd(asl, e1);
 				e->dO.r += ((expr_if *)e)->Fe->dO.r;
 				}
-			else if (e1 = ((expr_if*)e)->F)
+			else if ((e1 = ((expr_if*)e)->F))
 				e->dO.r += e1->dO.r;
 			if (!((expr_if*)e)->val && (D = ((expr_if*)e)->D)) {
 				((expr_if*)e)->val = ((expr_if*)e)->T;
@@ -117,7 +113,7 @@ hv_fwd(ASL_pfgh *asl, register expr *e)
 
 		case Hv_sumlist:
 			ep = e->R.ep;
-			for(dO = 0; e1 = *ep; ep++)
+			for(dO = 0; (e1 = *ep); ep++)
 				dO += e1->dO.r;
 			e->dO.r = dO;
 			break;
@@ -158,11 +154,7 @@ hv_fwd(ASL_pfgh *asl, register expr *e)
 	}
 
  static void
-#ifdef KR_headers
-func_back(f) expr_f *f;
-#else
 func_back(expr_f *f)
-#endif
 {
 	argpair *da, *da1, *dae;
 	expr *e;
@@ -184,17 +176,13 @@ func_back(expr_f *f)
 	}
 
  static void
-#ifdef KR_headers
-hv_back(e) register expr *e;
-#else
 hv_back(register expr *e)
-#endif
 {
 	register expr *e1, **ep, *e2;
 	real adO, t1, t2;
 	de *d;
 
-	if (!e || !e->aO && !e->adO)
+	if (!e || (!e->aO && !e->adO))
 		return;
 	for(; e; e = e->bak)
 	    switch(e->a) {
@@ -224,7 +212,7 @@ hv_back(register expr *e)
 
 		case Hv_vararg:
 			for(d = ((expr_va*)e)->L.d; d->e; d++) {
-				if (e1 = d->ee) {
+				if ((e1 = d->ee)) {
 					e1->aO = e->aO;
 					e1->adO = e->adO;
 					hv_back(e1);
@@ -240,7 +228,7 @@ hv_back(register expr *e)
 			break;
 
 		case Hv_if:
-			if (e1 = ((expr_if *)e)->Te) {
+			if ((e1 = ((expr_if *)e)->Te)) {
 				e1->aO = e->aO;
 				e1->adO = e->adO;
 				hv_back(e1);
@@ -252,7 +240,7 @@ hv_back(register expr *e)
 					e1->adO = e->adO;
 					}
 				}
-			if (e1 = ((expr_if *)e)->Fe) {
+			if ((e1 = ((expr_if *)e)->Fe)) {
 				e1->aO = e->aO;
 				e1->adO = e->adO;
 				hv_back(e1);
@@ -274,7 +262,7 @@ hv_back(register expr *e)
 			ep = e->R.ep;
 			t1 = e->aO;
 			t2 = e->adO;
-			while(e1 = *ep++) {
+			while((e1 = *ep++)) {
 				e1->aO += t1;
 				e1->adO += t2;
 				}
@@ -353,11 +341,7 @@ hv_back(register expr *e)
 	}
 
  static void
-#ifdef KR_headers
-hv_fwd0(asl, c, v) ASL_pfgh *asl; register cexp *c; register expr_v *v;
-#else
 hv_fwd0(ASL_pfgh *asl, register cexp *c, register expr_v *v)
-#endif
 {
 	register linpart *L, *Le;
 	real x;
@@ -371,18 +355,14 @@ hv_fwd0(ASL_pfgh *asl, register cexp *c, register expr_v *v)
 		x = c->e->dO.r;
 	else
 		x = 0;
-	if (L = c->L)
+	if ((L = c->L))
 		for(Le = L + c->nlin; L < Le; L++)
 			x += ((expr_v*)L->v.vp)->dO.r;
 	v->dO.r = x;
 	}
 
  static void
-#ifdef KR_headers
-pshv_prod1(asl, r, nobj, ow, y) ASL_pfgh *asl; range *r; int nobj, ow, y;
-#else
 pshv_prod1(ASL_pfgh *asl, range *r, int nobj, int ow, int y)
-#endif
 {
 	int *cei, *cei0, *ceie, i;
 	linarg *la, **lap, **lap1, **lape;
@@ -402,7 +382,7 @@ pshv_prod1(ASL_pfgh *asl, range *r, int nobj, int ow, int y)
 		v->dO.r = *s++;
 		v->adO = v->aO = 0.;
 		}
-	if (cei = cei0 = r->cei) {
+	if ((cei = cei0 = r->cei)) {
 		i = *cei0++;
 		ceie = (cei = cei0) + i;
 		do {
@@ -419,7 +399,7 @@ pshv_prod1(ASL_pfgh *asl, range *r, int nobj, int ow, int y)
 			}
 		else if (!y)
 			continue;
-		if (e = b->D.ef) {
+		if ((e = b->D.ef)) {
 			hv_fwd(asl, e);
 			e = b->D.ee;
 			e->aO = 0;
@@ -438,7 +418,7 @@ pshv_prod1(ASL_pfgh *asl, range *r, int nobj, int ow, int y)
 		if (v->aO && (L = c->L))
 		    for(Le = L + c->nlin; L < Le; L++)
 			((expr_v*)L->v.vp)->aO++;
-		if (e = c->ee) {
+		if ((e = c->ee)) {
 			e->aO = 1.;
 			e->adO = v->adO;
 			hv_back(e);
@@ -457,11 +437,7 @@ static int compar(const void*, const void*);
 #endif
 
  static int
-#ifdef KR_headers
-compar(a, b) char *a, *b;
-#else
 compar(const void *a, const void *b)
-#endif
 { return *(int*)a - *(int*)b; }
 
 #undef nzc
@@ -470,11 +446,7 @@ compar(const void *a, const void *b)
 #define del_mblk(b,c) Del_mblk_ASL(a,b,(Char*)(c))
 
  static void
-#ifdef KR_headers
-new_Hesoprod(asl, L, R, coef) ASL_pfgh *asl; ograd *L, *R; real coef;
-#else
 new_Hesoprod(ASL_pfgh *asl, ograd *L, ograd *R, real coef)
-#endif
 {
 	Hesoprod *h, **hp, *h1, *h2;
 	int kh;
@@ -504,22 +476,14 @@ new_Hesoprod(ASL_pfgh *asl, ograd *L, ograd *R, real coef)
 	}
 
  static void
-#ifdef KR_headers
-del_Hesoprod(asl, x) ASL_pfgh *asl; Hesoprod *x;
-#else
 del_Hesoprod(ASL_pfgh *asl, Hesoprod *x)
-#endif
 {
 	x->next = asl->P.hop_free;
 	asl->P.hop_free = x;
 	}
 
  static real *
-#ifdef KR_headers
-saveog(asl, no, noe, y, kp) ASL_pfgh *asl; int no; int noe; int y; int *kp;
-#else
 saveog(ASL_pfgh *asl, int no, int noe, int y, int *kp)
-#endif
 {
 	real *o, *ogsave;
 	int i, k, n;
@@ -538,7 +502,7 @@ saveog(ASL_pfgh *asl, int no, int noe, int y, int *kp)
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + n_con; p < pe; p++)
+		for(pe = p + nlc; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
 				for(og = g->og; og; og = og->next)
 					n++;
@@ -557,7 +521,7 @@ saveog(ASL_pfgh *asl, int no, int noe, int y, int *kp)
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + n_con; p < pe; p++)
+		for(pe = p + nlc; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
 				for(og = g->og; og; og = og->next)
 					*o++ = og->coef;
@@ -566,11 +530,7 @@ saveog(ASL_pfgh *asl, int no, int noe, int y, int *kp)
 	}
 
  static void
-#ifdef KR_headers
-restog(asl, ogsave, no, noe, y, k) ASL_pfgh *asl; real *ogsave; int no; int noe; int y; int k;
-#else
 restog(ASL_pfgh *asl, real *ogsave, int no, int noe, int y, int k)
-#endif
 {
 	real *o = ogsave;
 	int i;
@@ -588,7 +548,7 @@ restog(ASL_pfgh *asl, real *ogsave, int no, int noe, int y, int k)
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + n_con; p < pe; p++)
+		for(pe = p + nlc; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
 				for(og = g->og; og; og = og->next)
 					og->coef = *o++;
@@ -597,16 +557,14 @@ restog(ASL_pfgh *asl, real *ogsave, int no, int noe, int y, int k)
 	}
 
  static fint
-#ifdef KR_headers
-bothadj(asl, spi) ASL_pfgh *asl; SputInfo *spi;
-#else
 bothadj(ASL_pfgh *asl, SputInfo *spi)
-#endif
 {
 	/* Adjust to compute both triangles of Hessian */
-	fint i, i0, i1, j, k, k0, L, n, n1, nod, nz;
-	int kz, *z, *z0, *z1;
-	fint *hcs, *hr, *hre, *hrn, *hrn0, *ucs, *ulc, *uli;
+	fint *hr, *hre, *hrn, *hrn0;
+	int kz;
+	size_t *hcs, *ucs;
+	size_t i, i0, i1, j, k, k0, L, n, n1, nz;
+	ssize_t nod, *ulc, *uli,  *z, *z0, *z1;
 
 	n = n_var;
 	if ((nod = spi->nod) >= 0) {
@@ -615,7 +573,7 @@ bothadj(ASL_pfgh *asl, SputInfo *spi)
 		goto done;
 		}
 	n1 = n + 1;
-	hcs = spi->hcolstarts;
+	hcs = spi->hcolstartsZ;
 	nod = nz = hcs[n] - hcs[0];
 	hr = spi->hrownos - 1;
 	i = i0 = Fortran;
@@ -628,12 +586,18 @@ bothadj(ASL_pfgh *asl, SputInfo *spi)
 	if (!(spi->nod = nod))
 		return 0;	/* diagonal Hessian */
 	nz += nod;
-	spi->khinfob = kz = htcl((nz+2*(nod+n1))*sizeof(fint));
-	spi->ulinc0 = uli = (fint*)new_mblk(kz);
-	spi->hcs[1] = hcs = uli + n1;
-	spi->hrn[1] = hrn0 = hcs + n1;
-	spi->ulcopy0 = ulc = hrn0 + nz;
-	z = z0 = (int*)new_mblk(kz = htcl(n*sizeof(int)));
+	L = nz*sizeof(fint) + (2*(nod+n1))*sizeof(size_t);
+	if (sizeof(size_t) != sizeof(fint))
+		L += n1*sizeof(fint);
+	spi->khinfob = kz = htcl(L);
+	spi->ulinc0 = uli = (ssize_t*)new_mblk(kz);
+	spi->ulcopy0 = ulc = uli + n1;
+	spi->hcs[1] = hcs = (size_t*)(ulc + 2*nod);
+	hrn0 = (fint*)(hcs + n1);
+	if (sizeof(size_t) != sizeof(fint))
+		hrn0 += n1;
+	spi->hrn[1] = hrn0;
+	z = z0 = (ssize_t*)new_mblk(kz = htcl(n*sizeof(ssize_t)));
 	z1 = z - Fortran;
 	ucs = spi->hcs[0];
 	hre = spi->hrn[0];
@@ -669,34 +633,38 @@ bothadj(ASL_pfgh *asl, SputInfo *spi)
 	spi->ulcopy = spi->ulcopy0;
  done:
 	spi->hrownos = spi->hrn[1];
-	spi->hcolstarts = spi->hcs[1];
+	spi->hcolstartsZ = spi->hcs[1];
 	return nod;
 	}
 
  static void
-#ifdef KR_headers
-upper_to_lower(asl, spi, nz) ASL_pfgh *asl; SputInfo *spi; fint nz;
-#else
-upper_to_lower(ASL_pfgh *asl, SputInfo *spi, fint nz)
-#endif
+upper_to_lower(ASL_pfgh *asl, SputInfo *spi, size_t nz)
 {	/* convert upper to lower triangular */
 
-	fint *cs, *hcolstarts, *hrownos, *rn;
-	int f, i, j, j1, j2, k, n;
-	int *rs, *u0, *utoL, *z;
+	fint *hrownos, *rn;
+	int k, k1, *u0, *utoL;
+	size_t L, *cs, *hcolstarts;
+	ssize_t f, i, j, j1, j2, n, n1, *rs, *z;
 
 	f = Fortran;
 	n = n_var;
+	n1 = n + 1;
 	hrownos = spi->hrownos;
-	hcolstarts = spi->hcolstarts;
-	k = htcl((nz + n + 1)*sizeof(fint));
-	rn = spi->hrownos = spi->ulinc0 = (fint*)new_mblk(k);
-	spi->khinfob = k;
-	spi->hcolstarts = cs = rn + nz;
-	k = htcl((n+nz)*sizeof(int));
-	rs = (int*)new_mblk(k);
+	hcolstarts = spi->hcolstartsZ;
+	L = nz*sizeof(fint) + n1*sizeof(size_t);
+	if (sizeof(size_t) != sizeof(fint))
+		L += n1*sizeof(fint);
+	spi->khinfob = k = htcl(L);
+	spi->hcolstartsZ = cs = (size_t*)new_mblk(k);
+	spi->ulinc0 = (ssize_t*)cs;
+	rn = (fint*)(cs + n1);
+	if (sizeof(size_t) != sizeof(fint))
+		rn += n1;
+	spi->hrownos = rn;
+	k = htcl((n+nz)*sizeof(ssize_t));
+	rs = (ssize_t*)new_mblk(k);
 	z = rs + n;
-	memset(rs, 0, n*sizeof(fint));
+	memset(rs, 0, n*sizeof(size_t));
 	for(i = 0; i < nz; i++)
 		rs[hrownos[i]-f]++;
 	for(i = j = 0; i < n; i++) {
@@ -727,9 +695,9 @@ upper_to_lower(ASL_pfgh *asl, SputInfo *spi, fint nz)
 		}
 	if (j) {
 		j += 2;
-		j1 = htcl(j*sizeof(int));
-		spi->uptolow = utoL = (int*)new_mblk(j1);
-		*utoL++ = j1;
+		k1 = htcl(j*sizeof(int));
+		spi->uptolow = utoL = (int*)new_mblk(k1);
+		*utoL++ = k1;
 		for(i = 0; i < nz; i++) {
 			if ((j = z[i]) <= i)
 				continue;
@@ -748,47 +716,44 @@ upper_to_lower(ASL_pfgh *asl, SputInfo *spi, fint nz)
 	}
 
  fint
-#ifdef KR_headers
-sphes_setup_ASL(a, pspi, nobj, ow, y, uptri) ASL *a; SputInfo **pspi;
-			int nobj, ow, y, uptri;
-#else
 sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
-#endif
 {
+	ASL_pfgh *asl;
+	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
+	SputInfo *spi, *spi1;
+	de *d;
+	derp *D1;
+	expr_if *iflist;
+	expr_v *v;
+	expr_va *valist;
+	fint *hr, *hre, *hrownos, rv;
+	int *ui, *zc, *zci;
 	int i, j, k, khinfo, kog, kz, n, n1, nhinfo, no, noe, nqslim, nzc;
 	int rfilter, robjno;
-	int *ui, *zc, *zci;
 	linarg *la, **lap, **lap1, **lape;
-	expr_v *v;
-	range *r, *r0, **rp, **rtodo;
-	real *ogsave, *s, *si, t;
 	ograd *og, *og1, **ogp, **ogpe;
-	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
-	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
-	fint *hcolstarts, *hr, *hre, *hrownos, rv, *tf;
-	derp *D1;
-	de *d;
+	ps_func *p, *pe;
 	psb_elem *b;
 	psg_elem *g, *ge;
-	ps_func *p, *pe;
-	ASL_pfgh *asl;
-	expr_va *valist;
-	expr_if *iflist;
-	SputInfo *spi, *spi1;
+	range *r, *r0, **rp, **rtodo;
+	real *ogsave, *s, *si, t;
+	size_t *hcolstarts, iz, jz, n1spi, *tf;
+	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
 
 	asl = pscheck_ASL(a, "sphes_setup");
+	n1 = n_var + 1;
 	if (!pspi)
 		pspi = &asl->i.sputinfo_;
 	if (nobj >= 0 && nobj < n_obj) {
 		robjno = -2 - nobj;
-		rfilter = n_obj > 1 || !y && n_con > 0;
+		rfilter = n_obj > 1 || (!y && nlc > 0);
 		ow = 0;
 		no = nobj;
 		noe = no + 1;
 		}
 	else {
 		robjno = nobj = -1;
-		rfilter = !ow && n_obj > 0 || !y && n_con > 0;
+		rfilter = (!ow && n_obj > 0) || (!y && nlc > 0);
 		no = noe = 0;
 		if (ow) {
 			noe = n_obj;
@@ -797,15 +762,16 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		}
 	if (y)
 		y = 1;
-	n = n_var;
-	if (spi = *pspi) {
+	if ((n = nlvo) < nlvc)
+		n = nlvc;
+	if ((spi = *pspi)) {
 		if (spi->ow == ow && spi->y == y && spi->nobj == nobj
 		 && spi->uptri == uptri)
 			goto done;
 		del_mblk(spi->khinfo, spi);
 		if (spi->ulinc0)
 			del_mblk(spi->khinfob, spi->ulinc0);
-		if (ui = spi->uptolow)
+		if ((ui = spi->uptolow))
 			del_mblk(*ui, ui);
 		*pspi = 0;
 		}
@@ -823,13 +789,15 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	zc = (int*)new_mblk_ASL(a, kz);
 	zci = zc + n;
 	memset(zc, 0, n*sizeof(int));
-	n1 = n + 1;
-	khinfo = htcl((2*n + 30)*sizeof(fint) + sizeof(SputInfo));
+	n1spi = sizeof(SputInfo) + n1*sizeof(size_t);
+	if (sizeof(size_t) != sizeof(fint))
+		n1spi += n1*sizeof(fint);
+	khinfo = htcl((n1 + 30)*sizeof(fint) + n1spi);
 	spi = (SputInfo*)new_mblk_ASL(a, khinfo);
-	hcolstarts = (fint*)(spi+1);
-	hr = hrownos = hcolstarts + n1;
-	nhinfo = ((sizeof(Char*)<<khinfo) - sizeof(SputInfo)) / sizeof(fint);
-	hre = hr + (nhinfo - n1);
+	hcolstarts = (size_t*)(spi+1);
+	hr = hrownos = (fint*)((char*)spi + n1spi);
+	nhinfo = ((sizeof(Char*)<<khinfo) - n1spi) / sizeof(fint);
+	hre = hr + nhinfo;
 	r0 = (range*)&asl->P.rlist;
 	for(r = asl->P.rlist.next; r != r0; r = r->rlist.next) {
 		if ((j = r->n) <= 0)
@@ -851,24 +819,25 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		r->hnext = *rp;
 		*rp = r;
 		}
+	kog = 0; /* silence bogus "not-initialized" warning */
 	ogsave = asl->P.npsgcomp ? saveog(asl, no, noe, y, &kog) : 0;
 	if (asl->P.nobjgroups)
 		for(i = no; i < noe; i++) {
 			p = asl->P.ops + i;
 			g = p->g;
 			for(ge = g + p->ng; g < ge; g++)
-			    if (og = g->og) {
-				do og->coef = 1; while(og = og->next);
+			    if ((og = g->og)) {
+				do og->coef = 1; while((og = og->next));
 				og = g->og;
 				new_Hesoprod(asl, og, og, 1.);
 				}
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + n_con; p < pe; p++)
+		for(pe = p + nlc; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
-			    if (og = g->og) {
-				do og->coef = 1; while(og = og->next);
+			    if ((og = g->og)) {
+				do og->coef = 1; while((og = og->next));
 				og = g->og;
 				new_Hesoprod(asl, og, og, 1.);
 				}
@@ -878,7 +847,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		rp = rtodo;
 		uhwi = *utodoi;
 		*utodoi++ = 0;
-		while(r = *rp) {
+		while((r = *rp)) {
 			rp = &r->hnext;
 			lap = r->lap;
 			lape = lap + r->n;
@@ -906,12 +875,12 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 					la = *lap1++;
 					og = la->nz;
 					v = la->v;
-					if (t = v->aO)
+					if ((t = v->aO))
 						new_Hesoprod(asl,og,og,t);
 					while(lap1 < lape) {
 					    la = *lap1++;
 					    v = la->v;
-					    if (t = v->aO) {
+					    if ((t = v->aO)) {
 						og1 = la->nz;
 						new_Hesoprod(asl,og,og1,t);
 						new_Hesoprod(asl,og1,og,t);
@@ -921,7 +890,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 				}
 			}
 		*rtodo++ = 0;	/* reset */
-		while(uhw = uhwi) {
+		while((uhw = uhwi)) {
 			uhwi = uhwi->next;
 			si = s;
 			ogp = uhw->ogp;
@@ -930,7 +899,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 			si = s;
 			do {
 				if ((og = *ogp) && og->varno == i)
-					*si = og->coef;
+					*si = 1.; /* og->coef til 20080629 */
 				si++;
 				} while(++ogp < ogpe);
 			pshv_prod1(asl, r, nobj, ow, y);
@@ -967,7 +936,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 
 		hop1 = *otodoi;
 		*otodoi++ = 0;
-		while(hop = hop1) {
+		while((hop = hop1)) {
 			hop1 = hop->next;
 			og = hop->left;
 			og1 = hop->right;
@@ -977,7 +946,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 				if (!(og = og->next))
 					break;
 				}
-			if (og = og1->next) {
+			if ((og = og1->next)) {
 				hop->right = og;
 				otodoj = otodo + og->varno;
 				hop->next = *otodoj;
@@ -990,16 +959,15 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		if (nzc > hre - hr) {
 			k = khinfo++;
 			spi1 = (SputInfo*)new_mblk_ASL(a, khinfo);
-			tf = (fint*)(spi1+1);
-			memcpy(tf, hcolstarts, (hr - hcolstarts)*sizeof(fint));
+			tf = (size_t*)(spi1+1);
+			memcpy(tf, hcolstarts, (char*)hr - (char*)hcolstarts);
 			del_mblk(k, spi);
 			spi = spi1;
 			hcolstarts = tf;
-			hrownos = tf + n1;
+			hrownos = (fint*)((char*)spi1 + n1spi);
 			hr = hrownos + hcolstarts[i];
-			nhinfo = ((sizeof(Char*)<<khinfo) - sizeof(SputInfo))
-				/ sizeof(fint);
-			hre = hrownos + (nhinfo - n1);
+			nhinfo = ((sizeof(Char*)<<khinfo) - n1spi) / sizeof(fint);
+			hre = hrownos + nhinfo;
 			}
 		if (nzc > nqslim) {
 			for(j = 0; j < n; j++)
@@ -1020,13 +988,15 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		}
 	for(iflist = asl->P.iflist; iflist; iflist = iflist->next)
 		iflist->dTlast->next = iflist->d0;
-	hcolstarts[n] = hr - hrownos;
-	if (j = Fortran) {
-		for(i = 0; i <= n; i++)
+	jz = hcolstarts[n] = hr - hrownos;
+	for(i = n; ++i < n1; )
+		hcolstarts[i] = jz;
+	if ((j = Fortran)) {
+		for(i = 0; i < n1; i++)
 			hcolstarts[i] += j;
-		i = (int)(hcolstarts[n] - j);
-		while(i)
-			hrownos[--i] += j;
+		iz = hcolstarts[n] - j;
+		while(iz)
+			hrownos[--iz] += j;
 		}
 	spi->hcs[0] = hcolstarts;
 	spi->hrn[0] = hrownos;
@@ -1040,12 +1010,13 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	*pspi = spi;
 	if (ogsave)
 		restog(asl, ogsave, no, noe, y, kog);
-	spi->ulinc0 = spi->ulinc = spi->ulcopy = 0;
+	spi->ulinc0 = spi->ulinc = 0;
+	spi->ulcopy = 0;
 	spi->uptolow = 0;
 	del_mblk(kz, zc);
  done:
 	spi->hrownos = spi->hrn[0];
-	spi->hcolstarts = hcolstarts = spi->hcs[0];
+	spi->hcolstartsZ = hcolstarts = spi->hcs[0];
 	rv = hcolstarts[n] - hcolstarts[0];
 	switch(uptri) {
 	  case 0:
@@ -1054,32 +1025,38 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	  case 2:
 		upper_to_lower(asl, spi, rv);
 	  }
+	hcolstarts = spi->hcolstartsZ;
+	if (sizeof(size_t) == sizeof(fint))
+		spi->hcolstarts = (fint*)hcolstarts;
+	else {
+		spi->hcolstarts = hr = (fint*)(hcolstarts + n1);
+		for(i = 0; i < n1; ++i)
+			hr[i] = hcolstarts[i];
+		}
 	return rv;
 	}
 
  void
-#ifdef KR_headers
-sphes_ASL(a, pspi, H, nobj, ow, y) ASL *a; SputInfo **pspi; real *H; int nobj; real *ow, *y;
-#else
 sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
-#endif
 {
 	/* sparse upper triangle of Hessian */
 
+	ASL_pfgh *asl;
+	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
+	SputInfo *spi;
+	expr_v *v;
+	fint *hr;
 	int i, j, k, kh, n, no, noe, *ui;
 	linarg *la, **lap, **lap1, **lape;
-	expr_v *v;
+	ograd *og, *og1, **ogp, **ogpe;
+	ps_func *p, *pe;
+	psg_elem *g, *ge;
 	range *r, *r0, **rp, **rtodo;
 	real *Hi, *H0, *H00;
 	real *cscale, *owi, *s, *si, t, t1, *vsc0, *vsc1, *vsc, *y1;
-	ograd *og, *og1, **ogp, **ogpe;
-	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
+	size_t *hcs;
+	ssize_t *ulc, *uli;
 	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
-	fint *hcs, *hr, *uli;
-	psg_elem *g, *ge;
-	ps_func *p, *pe;
-	ASL_pfgh *asl;
-	SputInfo *spi;
 
 	asl = pscheck_ASL(a, "sputhes");
 	xpsg_check_ASL(asl, nobj, ow, y);
@@ -1097,7 +1074,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	else {
 		nobj = -1;
 		no = noe = 0;
-		if (owi = ow) {
+		if ((owi = ow)) {
 			noe = n_obj;
 			i = 1;
 			}
@@ -1105,7 +1082,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	if (asl->P.hes_setup_called != 3)
 		sphes_setup_ASL(a, pspi, nobj, ow != 0, y != 0, 0);
 	spi = *pspi;
-	if (spi->nobj != nobj || spi->ow != i || spi->y != j) {
+	if (spi->nobj != nobj || spi->ow < i || spi->y < j) {
 		fprintf(Stderr,
 		 "\nsphes() call inconsistent with previous sphsetup()\n");
 		exit(1);
@@ -1114,7 +1091,8 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	rtodo = asl->P.rtodo;
 	utodo = utodoi = asl->P.utodo;
 	s = asl->P.dOscratch;
-	n = n_var;
+	if ((n = nlvo) < nlvc)
+		n = nlvc;
 	Hi = H0 = (real*)new_mblk_ASL(a, kh = htcl(n*sizeof(real)));
 	memset(Hi, 0, n * sizeof(real));
 	H0 -= Fortran;
@@ -1129,11 +1107,11 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 		}
 	if (asl->P.nobjgroups)
 	    for(; no < noe; no++)
-		if (t = *owi++) {
+		if ((t = *owi++)) {
 		    p = asl->P.ops + no;
 		    g = p->g;
 		    for(ge = g + p->ng; g < ge; g++)
-			if (t1 = t*g->g2)
+			if ((t1 = t*g->g2))
 				for(og = g->og; og; og = og->next)
 					if (og->coef) {
 						new_Hesoprod(asl, og, og, t1);
@@ -1144,10 +1122,10 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 		cscale = asl->i.lscale;
 		p = asl->P.cps;
 		y1 = y;
-		for(pe = p + n_con; p < pe; p++, y1++)
-			if (t = cscale ? *cscale++ * *y1 : *y1)
+		for(pe = p + nlc; p < pe; p++, y1++)
+			if ((t = cscale ? *cscale++ * *y1 : *y1))
 				for(g = p->g, ge = g + p->ng; g < ge; g++)
-				    if (t1 = t*g->g2)
+				    if ((t1 = t*g->g2))
 					for(og = g->og; og; og = og->next)
 					    if (og->coef) {
 						new_Hesoprod(asl, og, og, t1);
@@ -1158,15 +1136,14 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	hr  = spi->hrn[0];
 	uli = spi->ulinc;
 	H00 = H;
-	if (vsc = asl->i.vscale) {
-		vsc0 = vsc - Fortran;
-		vsc1 = vsc;
-		}
+	vsc = asl->i.vscale;
+	vsc0 = vsc - Fortran;
+	vsc1 = vsc;
 	for(i = 0; i < n; i++) {
 		rp = rtodo;
 		uhwi = *utodoi;
 		*utodoi++ = 0;
-		while(r = *rp) {
+		while((r = *rp)) {
 			rp = &r->hnext;
 			lap = r->lap;
 			lape = lap + r->n;
@@ -1194,12 +1171,12 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 					la = *lap1++;
 					og = la->nz;
 					v = la->v;
-					if (t = v->aO)
+					if ((t = v->aO))
 						new_Hesoprod(asl,og,og,t);
 					while(lap1 < lape) {
 					    la = *lap1++;
 					    v = la->v;
-					    if (t = v->aO) {
+					    if ((t = v->aO)) {
 						og1 = la->nz;
 						new_Hesoprod(asl,og,og1,t);
 						new_Hesoprod(asl,og1,og,t);
@@ -1209,7 +1186,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 				}
 			}
 		*rtodo++ = 0;	/* reset */
-		while(uhw = uhwi) {
+		while((uhw = uhwi)) {
 			uhwi = uhwi->next;
 			si = s;
 			ogp = uhw->ogp;
@@ -1227,7 +1204,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 			lape = lap + r->n;
 			do {
 				la = *lap++;
-				if (t = la->v->aO)
+				if ((t = la->v->aO))
 					for(og = la->nz; og; og = og->next)
 						if ((j = og->varno) <= i)
 							Hi[j] += t*og->coef;
@@ -1254,7 +1231,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 
 		hop1 = *otodoi;
 		*otodoi++ = 0;
-		while(hop = hop1) {
+		while((hop = hop1)) {
 			hop1 = hop->next;
 			og = hop->left;
 			og1 = hop->right;
@@ -1264,7 +1241,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 				if (!(og = og->next))
 					break;
 				}
-			if (og = og1->next) {
+			if ((og = og1->next)) {
 				hop->right = og;
 				otodoj = otodo + og->varno;
 				hop->next = *otodoj;
@@ -1293,11 +1270,11 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 		}
 	del_mblk(kh, Hi);
 	H = H00;
-	if (hr = spi->ulcopy)
-		for(uli = spi->ulcend; hr < uli; hr += 2)
-			H[hr[1]] = H[hr[0]];
-	else if (ui = spi->uptolow)
-		while(k = *++ui) {
+	if ((ulc = spi->ulcopy))
+		for(uli = spi->ulcend; ulc < uli; ulc += 2)
+			H[ulc[1]] = H[ulc[0]];
+	else if ((ui = spi->uptolow))
+		while((k = *++ui)) {
 			t = H[j = *++ui];
 			while(--k) {
 				t1 = H[i = *++ui];

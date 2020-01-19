@@ -289,22 +289,27 @@ AVL_Tree_size(AVL_Tree *T)
 	return T->nelem;
 	}
 
- static void
+ static int
 avl_visit1(void *v, Node *N, AVL_Visitor V)
 {
 	Node *N1;
+	int rv;
  top:
 	if ((N1 = N->left))
 		avl_visit1(v, N1, V);
-	(*V)(v, N->elem);
+	if ((rv = (*V)(v, N->elem)))
+		return rv;
 	if ((N = N->right))
 		goto top;
+	return 0;
 	}
 
- void
+ int
 AVL_visit(void *v, AVL_Tree *T, AVL_Visitor V)
 {
-	avl_visit1(v, T->Top, V);
+	if (!T->Top)
+		return 0;
+	return avl_visit1(v, T->Top, V);
 	}
 
 #endif /*AVL_TREE_JUST_IMPL_DECLS*/

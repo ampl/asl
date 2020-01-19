@@ -25,36 +25,74 @@ THIS SOFTWARE.
 #include "getstub.h"
 
  char *
-#ifdef KR_headers
-C_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 C_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
-	char *s, *rv;
-	ASL *asl = oi->asl;
+	ASL *asl;
+	char *s, *s1, *z, *zap;
+	unsigned char *rv;
+	unsigned int nq, q;
+	static char NullStr[] = "<NULL>";
 
-	rv = value;
-	if (*rv > ' ') {
-		while(*++rv > ' ');
-		if (*rv) {
-			*(char**)kw->info = s = (char*)M1alloc(rv - value + 1);
-			while((*s = *value++) > ' ')
-				s++;
-			*s = 0;
+	asl = oi->asl;
+	rv = (unsigned char *)value;
+	if (*rv == '?' && rv[1] <= ' ') {
+		zap = 0;
+		if (!(s = *(char**)kw->info))
+			s = NullStr;
+		else {
+			for(nq = 0, s1 = s; *s1; ++s1)
+				if (*s1 == '"')
+					++nq;
+			z = zap = (char*)Malloc((s1-s) + nq + 3);
+			*z++ = '"';
+			while(*s) {
+				if (*s == '"')
+					*z++ = '"';
+				*z++ = *s++;
+				}
+			*z++ = '"';
+			*z = 0;
+			s = zap;
 			}
-		else
-			*(char**)kw->info = value;
+		printf("%s%s%s\n", kw->name, oi->eqsign, s);
+		if (zap)
+			free(zap);
+		oi->option_echo &= ~ASL_OI_echothis;
+		return value+1;
 		}
-	return rv;
+	switch(q = *rv) {
+	  case '"':
+	  case '\'':
+		while(*++rv && (*rv != q || *++rv == q));
+		break;
+	  default:
+		q = 0;
+		while(*++rv > ' ');
+		if (!*rv) {
+			*(char**)kw->info = value;
+			goto done;
+			}
+	  }
+	*(char**)kw->info = s = (char*)M1alloc((char*)rv - value + 1);
+	if (q) {
+		while(*++value) {
+			if (*value == q) {
+				if (*++value != q)
+					break;
+				}
+			*s++ = *value;
+			}
+		}
+	else
+		while(*(unsigned char*)value > ' ')
+			*s++ = *value++;
+	*s = 0;
+ done:
+	return (char*)rv;
 	}
 
  char *
-#ifdef KR_headers
-CK_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 CK_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	C_Known *c = (C_Known*)kw->info;
 	Not_Used(oi);
@@ -63,11 +101,7 @@ CK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-#ifdef KR_headers
-Dval_ASL(oi, kw, value, v) Option_Info *oi; keyword *kw; char *value; real *v;
-#else
 Dval_ASL(Option_Info *oi, keyword *kw, char *value, real *v)
-#endif
 {
 	char buf[32], *rv;
 	real t;
@@ -87,22 +121,14 @@ Dval_ASL(Option_Info *oi, keyword *kw, char *value, real *v)
 	}
 
  char *
-#ifdef KR_headers
-DA_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 DA_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Dval_ASL(oi, kw, value,
 		(double *)((char*)oi->asl + Intcast kw->info));
 	}
 
  char *
-#ifdef KR_headers
-DK_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 DK_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	D_Known *c = (D_Known*)kw->info;
 	Not_Used(oi);
@@ -111,31 +137,19 @@ DK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-#ifdef KR_headers
-D_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 D_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Dval_ASL(oi, kw, value, (real*)kw->info);
 	}
 
  char *
-#ifdef KR_headers
-DU_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 DU_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Dval_ASL(oi, kw, value, (real*)(oi->uinfo + Intcast kw->info));
 	}
 
  char *
-#ifdef KR_headers
-LK_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 LK_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	L_Known *c = (L_Known*)kw->info;
 	Not_Used(oi);
@@ -144,11 +158,7 @@ LK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-#ifdef KR_headers
-Lval_ASL(oi, kw, value, v) Option_Info *oi; keyword *kw; char *value; Long *v;
-#else
 Lval_ASL(Option_Info *oi, keyword *kw, char *value, Long *v)
-#endif
 {
 	char *rv;
 	Long t;
@@ -167,31 +177,19 @@ Lval_ASL(Option_Info *oi, keyword *kw, char *value, Long *v)
 	}
 
  char *
-#ifdef KR_headers
-L_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 L_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Lval_ASL(oi, kw, value, (Long *)kw->info);
 	}
 
  char *
-#ifdef KR_headers
-LU_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 LU_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Lval_ASL(oi, kw, value, (Long *)(oi->uinfo + Intcast kw->info));
 	}
 
  char *
-#ifdef KR_headers
-Ival_ASL(oi, kw, value, v) Option_Info *oi; keyword *kw; char *value; int *v;
-#else
 Ival_ASL(Option_Info *oi, keyword *kw, char *value, int *v)
-#endif
 {
 	char *rv;
 	int t;
@@ -210,21 +208,13 @@ Ival_ASL(Option_Info *oi, keyword *kw, char *value, int *v)
 	}
 
  char *
-#ifdef KR_headers
-IA_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 IA_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Ival_ASL(oi, kw, value, (int *)((char*)oi->asl + Intcast kw->info));
 	}
 
  char *
-#ifdef KR_headers
-IK_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 IK_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	I_Known *c = (I_Known*)kw->info;
 	Not_Used(oi);
@@ -233,11 +223,7 @@ IK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-#ifdef KR_headers
-IK0_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 IK0_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	Not_Used(oi);
 	*(int*)kw->info = 0;
@@ -245,11 +231,7 @@ IK0_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-#ifdef KR_headers
-IK1_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 IK1_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	Not_Used(oi);
 	*(int*)kw->info = 1;
@@ -257,41 +239,25 @@ IK1_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-#ifdef KR_headers
-IU_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 IU_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Ival_ASL(oi, kw, value, (int *)(oi->uinfo + Intcast kw->info));
 	}
 
  char *
-#ifdef KR_headers
-I_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 I_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Ival_ASL(oi, kw, value, (int*)kw->info);
 	}
 
  char *
-#ifdef KR_headers
-WS_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 WS_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	return Ival_ASL(oi, kw, value, &oi->wantsol);
 	}
 
  char *
-#ifdef KR_headers
-SU_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 SU_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	char *rv;
 	short *v = (short *)(oi->uinfo + Intcast kw->info);
@@ -302,11 +268,7 @@ SU_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-#ifdef KR_headers
-FI_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
-#else
 FI_val(Option_Info *oi, keyword *kw, char *value)
-#endif
 {
 	Long L = *(fint*)kw->info;
 	char *rv = Lval_ASL(oi, kw, value, &L);

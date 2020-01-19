@@ -33,11 +33,7 @@ extern void funpset_ASL ANSI((ASL_pfgh*, funnel*));
 #define funnelset(x) funpset_ASL(asl, x)
 
  static void
-#ifdef KR_headers
-ihd_clear(asl) ASL_pfgh *asl;
-#else
 ihd_clear(ASL_pfgh *asl)
-#endif
 {
 	Ihinfo *ihi;
 	int i = asl->P.ihdcur;
@@ -49,26 +45,22 @@ ihd_clear(ASL_pfgh *asl)
 	}
 
  int
-#ifdef KR_headers
-xp_check_ASL(asl, x) ASL_pfgh *asl; real *x;
-#else
 xp_check_ASL(ASL_pfgh *asl, real *x)
-#endif
 {
+	cexp *c, *c1, *ce;
 	expr *e;
 	expr_v *v, *v0;
-	real *xe;
+	int *dvsp0, i, i0, i1, *vm;
 	linarg *la;
 	linpart *L, *Le;
 	ograd *og;
-	real t, *vscale;
-	cexp *c, *c1, *ce;
-	int i0, i1, i;
-	int *dvsp0;
+	real t, *vscale, *xe;
 
 	if (x0kind != ASL_first_x && !memcmp(Lastx, x, x0len))
 		return 0;
 
+	if (asl->i.Derrs)
+		deriv_errclear_ASL(&asl->i);
 	want_deriv = want_derivs;
 	memcpy(Lastx, x, x0len);
 	asl->i.nxval++;
@@ -77,17 +69,28 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 	x0kind = asl->I.x0kind_init;
 	xe = x + n_var;
 	v = v0 = var_e;
-	if (vscale = asl->i.vscale)
-		while(x < xe)
-			(v++)->v = *vscale++ * *x++;
-	else
-		while(x < xe)
-			(v++)->v = *x++;
+	vscale = asl->i.vscale;
+	if ((vm = asl->i.vmap)) {
+		if (vscale)
+			while(x < xe)
+				v0[*vm++].v = *vscale++ * *x++;
+		else
+			while(x < xe)
+				v0[*vm++].v = *x++;
+		}
+	else {
+		if (vscale)
+			while(x < xe)
+				(v++)->v = *vscale++ * *x++;
+		else
+			while(x < xe)
+				(v++)->v = *x++;
+		}
 
 	for(la = asl->P.lalist; la; la = la->lnext) {
 		og = la->nz;
 		t = var_e[og->varno].v*og->coef;
-		while(og = og->next)
+		while((og = og->next))
 			t += var_e[og->varno].v*og->coef;
 		la->v->v = t;
 		}
@@ -101,16 +104,16 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 		v = var_ex;
 		for(ce = c1 = c + asl->P.ncom; c < ce; c++) {
 			for(i1 = *++dvsp0; i0 < i1; i0++, c1++) {
-				cv_index = i0;
+				cv_index = i0 + 1;
 				e = c1->e;
 				asl->P.vp[i0]->v = (*e->op)(e C_ASL);
 				if (c1->funneled)
 					funnelset(c1->funneled);
 				}
 			e = c->e;
-			cv_index = i++;
+			cv_index = ++i;
 			t = (*e->op)(e C_ASL);
-			if (L = c->L)
+			if ((L = c->L))
 				for(Le = L + c->nlin; L < Le; L++)
 					t += L->fac * ((expr_v*)L->v.vp)->v;
 			else if (!c->d && (og = asl->P.dv[c-cexps].ll)) {
@@ -133,11 +136,7 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 	}
 
  void
-#ifdef KR_headers
-xp2known_ASL(asl, X, nerror) ASL* asl; real *X; fint *nerror;
-#else
 xp2known_ASL(ASL* asl, real *X, fint *nerror)
-#endif
 {
 	Jmp_buf err_jmp0;
 	int ij;
@@ -148,7 +147,7 @@ xp2known_ASL(ASL* asl, real *X, fint *nerror)
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
+		if ((*nerror = ij))
 			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
@@ -159,12 +158,7 @@ xp2known_ASL(ASL* asl, real *X, fint *nerror)
 	}
 
  static real *
-#ifdef KR_headers
-bigUmult(asl, h, r, nobj, ow, y)
-	ASL_pfgh *asl; real *h; range *r; int nobj; real *ow, *y;
-#else
 bigUmult(ASL_pfgh *asl, real *h, range *r, int nobj, real *ow, real *y)
-#endif
 {
 	real *s, t;
 	Umultinfo *u, *u0, *u1, *ue, **utodo, **utodoi;
@@ -207,10 +201,10 @@ bigUmult(ASL_pfgh *asl, real *h, range *r, int nobj, real *ow, real *y)
 		h += i;
 		for(j = 0; j <= i; j++)
 			h[j] = 0.;
-		while(u = u1) {
+		while((u = u1)) {
 			u1 = u->next;
 			s[u->i] = 0.;
-			if (og = u->og->next) {
+			if ((og = u->og->next)) {
 				u->og = og;
 				utodoi = utodo + og->varno;
 				u->next = *utodoi;
@@ -218,7 +212,7 @@ bigUmult(ASL_pfgh *asl, real *h, range *r, int nobj, real *ow, real *y)
 				}
 			}
 		for(u = u0; u < ue; u++)
-			if (t = u->v->aO)
+			if ((t = u->v->aO))
 				for(og = u->og0; og &&
 						(j = imap[og->varno]) <= i;
 						og = og->next)
@@ -229,11 +223,7 @@ bigUmult(ASL_pfgh *asl, real *h, range *r, int nobj, real *ow, real *y)
 	}
 
  void
-#ifdef KR_headers
-hvpinit_ASL(a, ndhmax, nobj, ow, y) ASL *a; int ndhmax, nobj; real *ow, *y;
-#else
 hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
-#endif
 {
 	ASL_pfgh *asl;
 	Ihinfo *ihi;
@@ -246,12 +236,12 @@ hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
 	ASL_CHECK(a, ASL_read_pfgh, "xvpinit");
 	asl = (ASL_pfgh*)a;
 	asl->P.nhvprod = 0;
+	if (!asl->P.hes_setup_called)
+		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc);
 	if (!(ihi = asl->P.ihi1) || ndhmax < asl->P.ihdmin)
 		return;
 	if (nobj < 0 || nobj >= n_obj)
 		nobj = -1;
-	if (!asl->P.hes_setup_called)
-		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc);
 	s = asl->P.dOscratch;
 	if (asl->P.ihdcur)
 		ihd_clear(asl);

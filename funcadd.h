@@ -124,7 +124,9 @@ typedef real (ufunc) ANSI((arglist *));
 	FUNCADD_TUPLE_VALUED = 32,	/* not yet allowed */
 
 		/* internal use */
-	FUNCADD_NO_ARGLIST = 8
+	FUNCADD_NO_ARGLIST = 8,
+	FUNCADD_NO_DUPWARN = 64,	/* no complaint if already defined */
+	FUNCADD_NONRAND_BUILTIN = 128	/* mean, variance, moment, etc. */
 	};
 
 /* If a constraint involves an imported function and presolve fixes all
@@ -325,7 +327,7 @@ enum {	/* bits in flags field of TableInfo */
 #undef vsnprintf
 #define Stderr (ae->StdErr)
 #define addfunc(a,b,c,d,e) (*ae->Addfunc)(a,b,c,d,e,ae)
-#define addrand(a,b,c,d,e) (*ae->Addrand)(a,b,c,d,e,ae)
+#define addrand(a,b,c,d,e,f) (*ae->Addrand)(a,b,c,d,e,f,ae)
 #define printf	(*ae->PrintF)
 #define fprintf (*ae->FprintF)
 #define snprintf (*ae->SnprintF)

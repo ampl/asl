@@ -29,6 +29,7 @@ THIS SOFTWARE.
 #ifndef NLP_H2_included
 #include "nlp2.h"
 #endif
+#define cde cde2
 #define la_ref la_ref2
 #define linarg linarg2
 #define range range2
@@ -308,16 +309,16 @@ typedef unsigned Long Ulong;
 
 #endif /* PSINFO_H0_included */
 #ifdef PSHVREAD
- extern void duthes_ASL ANSI((ASL*, real *H, int nobj, real *ow, real *y));
- extern void fullhes_ASL ANSI((ASL*,real*H,fint LH, int nobj,real*ow,real*y));
- extern void hvpinit_ASL ANSI((ASL*, int ndhmax, int nobj, real *ow, real *y));
- extern ASL_pfgh *pscheck_ASL ANSI((ASL*,char*));
- extern void pshv_prod_ASL ANSI((ASL_pfgh*,range*r,int nobj,real*ow,real*y));
- extern fint sphes_setup_ASL ANSI((ASL*, SputInfo**, int nobj, int ow, int y, int ul));
- extern void sphes_ASL ANSI((ASL*, SputInfo**, real *H, int nobj, real*ow, real *y));
- extern void xpsg_check_ASL ANSI((ASL_pfgh*, int nobj, real *ow, real *y));
+ extern void duthes_ASL(ASL*, real *H, int nobj, real *ow, real *y);
+ extern void fullhes_ASL(ASL*, real*H, fint LH, int nobj, real*ow, real*y);
+ extern void hvpinit_ASL(ASL*, int ndhmax, int nobj, real *ow, real *y);
+ extern ASL_pfgh *pscheck_ASL(ASL*, const char*);
+ extern void pshv_prod_ASL(ASL_pfgh*, range*r, int nobj, real*ow, real*y);
+ extern fint sphes_setup_ASL(ASL*, SputInfo**, int nobj, int ow, int y, int ul);
+ extern void sphes_ASL(ASL*, SputInfo**, real *H, int nobj, real*ow, real *y);
+ extern void xpsg_check_ASL(ASL_pfgh*, int nobj, real *ow, real *y);
 #else /* PSHVREAD */
- extern void xp1known_ASL ANSI((ASL*, real*, fint*));
+ extern void xp1known_ASL(ASL*, real*, fint*);
 #endif /* PSHVREAD */
 
 #ifdef __cplusplus

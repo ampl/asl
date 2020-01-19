@@ -1672,3 +1672,175 @@ An example where the bug bit (at the default x == y == 0):
 20080701
   funcadd.h: adjust calling sequence of function type AddRand
 (which is not yet used, but is planned for use.)
+
+20070707
+  misc.c: tweak a comment.
+  asl.h: change Intcast from (int) to (size_t) in hopes of fewer
+warnings on 64-bit machines; asldate.c not changed.
+  fg_write.c: tweak definition of offset_of to avoid warnings.
+
+20080729
+  fpinit.c:  add #ifdef goo for Itanium systems running ALTIX;
+asldate.c not changed.
+
+20080807
+  pfg_read.c, pfghread.c:  fix bug in pfghread()'s handling of
+imported functions that had numeric constant arguments before
+nonconstant ones:  partials for the nonconstant arguments were
+incorrectly referenced.
+
+20080808
+  pfg_read.c, pfghread.c:  fix another bug in pfghread()'s handling of
+imported functions that had numeric constant arguments before
+nonconstant ones:  second partials for the nonconstant arguments were
+incorrectly referenced, affecting Hessian computations.
+
+20080828
+  rops2.c:  Fix a bug f_OPPOW (used with pfgh_read()): expressions of
+the form x^y with x negative and y an integer were not diagnosed as
+nondifferentiable, but instead gave NaNs in derivative computations.
+
+20080907
+  printf.c: add C99 %a and %A processing (on IEEE-arithmetic systems).
+
+20081001
+  funcadd.h: tweak for random functions (a forthcoming feature).
+  configurehere: tweak to allow / in $CFLAGS.
+  asldate.c: not changed.
+
+20081105
+  printf.c: add include arith.h (when NO_PRINTF_A_FMT is not defined).
+  configurehere: tweak for MinGW.
+  asldate.c not changed.
+
+20081205
+  dtoa.c:  add recognition of C99-style hexadecimal floating-point
+values (unless compiled with NO_HEX_FP is #defined).
+  dtoa1.c: move #include "stdlib.h" up, to avoid trouble with a recent
+(2008) version of cygwin that gratuitously #includes stdlib.h.
+  asl.h, misc.c: add functions ASL* get_cur_ASL(void) and
+ASL* set_cur_ASL(ASL *) to get and set cur_ASL (with set_cur_ASL
+returning the previous value).
+
+20081211
+  dtoa.c: omit an unused variable; asldate.c not changed.
+
+20090102
+  dtoa.c: tweak to banish some compiler warnings; asldate.c not changed.
+
+20090316
+  comeval.c, xp[12]known.c: fix glitch in assigning cv_index (used in
+error messages for trouble evaluating defined variables).
+  dtoa1.c, dtoa.c: sync with netlib/fp/dtoa.c.
+
+20090414
+  dtoa1.c, dtoa.c: sync with netlib/fp/dtoa.c; asldate.c not changed.
+
+20090414
+  dtoa1.c, dtoa.c: sync with netlib/fp/dtoa.c (fixing a glitch unlikely
+to affect solver interfaces, but with update to asldate.c).
+
+20090422
+  rops.c, rops2.c:  Complain about inability to compute acosh'(t) for
+t == +-1.
+
+20090429
+  getstub.[ch]: add extern char *Lic_info_add_ASL, to which solvers can
+add arbitrary information (such as a copyright notice) that will appear
+with command-line invocation "solver -v" for a suitably written solver.
+
+20090430
+  getstub.c:  recognize "--help" as synonym for "-?" and "--version" as
+synonym for "-v".
+
+20090904
+  makefile.u: tweak for use with parallel make invocations (which are
+not useful for making amplsolver.a, but might occur in a context of
+which the solver interface library is only a part).  No change to
+asldate.c.
+
+20091209
+  repwhere.c: set errno = 0 at the end (in case it was set by fopen).
+  stdio1.h0: add two #undefs to silence MacOSX warnings.
+  xectim.c: assume -DNO_RUSAGE when _WIN32 is #defined (for MinGW,e.g.).
+  makefile.vc: remove special rule for xectim.obj (no longer needed).
+
+20091215
+  xectim.c: tweak for an older version of Microsoft Visual C++;
+asldate.c not changed.
+
+20091229
+  Various files:  add variant optypeb of optype; optypeb treats OPCPOW
+as binary.  This fixes a bug with qp_read supplying nonlinear ops when
+the problem is not quadratic (which, e.g., affects snopt when all
+constraints are linear).
+  Fix a couple of obscure bugs in fgh_read(...) (which should be of
+little interest; pfgh_read(...) is recommended instead).
+
+20100111
+  dtoa.c:  two obscure bug fixes (see /netlib/fp/changes); the changes
+are not relevant for normal solver use, but asldate.c is updated
+nonetheless.
+
+20100123
+  Fix glitch with printf's handling of negative numbers with %a or %A.
+The sign was ignored that the exponent was wrong.
+  dtoa.c: more obscure bug fixes (see /netlib/fp/changes) only relevant
+to absurdly long input strings to strtod().
+
+20100130
+  dtoa.c: more obscure bug fixes (see /netlib/fp/changes) only relevant
+to absurdly long input strings to strtod().
+
+20100707
+  dtoa.c: an obscure bug fix (see /netlib/fp/changes) that does not
+affect amplsolver.a; asldate.c not changed.
+
+20100915
+  dtoa.c:  change invisible to ASL (see /netlib/fp/changes); asldate
+not changed.
+
+20101105
+  avltree.[ch]: tweaks to AVL_visit to permit interrupting a tree walk.
+  dtoa.c, dtoa1.c: fix a bug that does not affect solvers (but does
+matter to other uses):  strings of more than 40 significant digits
+were occasionally converted incorrectly when the first significant
+digit appeared after the decimal point.
+
+20101129
+  configurehere: tweak for MacOSX: supply -D_NONSTD_SOURCE only if
+needed.  (It is needed under MacOSX 10.5, but not Snow Leopard, which
+also claims to be MacOSX 10.5.)
+
+20101220
+  README.f77:  add details for gfortran.
+
+20110127
+  arithchk.c, fpinitmt.c, stderr.c: tweaks for MinGW64; asldate.c
+not changed.
+
+20110304:
+  dtoa.c: add option of compiling with -DROUND_BIASED_without_Round_Up,
+which is not appropriate for the solver-interface library; asldate.c
+not changed.
+
+20110308
+  stderr.c: under MS Windows, try to cope with a failure of
+_open_osfhandle(...) by setting Stderr to fopen("con","w").  This may
+be relevant in a shared library (.dll).
+
+20110321
+  xsum0.out updated to reflect a modified comment in dtoa.c; asldate.c
+not unchanged.
+
+20110410
+  configurehere: add a "2>/dev/null" to silense a spurious message on
+some versions of Solaris; asldate.c not changed.
+
+20110428
+  xsum0.out updated to reflect a modified comment in dtoa.c; asldate.c
+not unchanged.
+
+20110620
+  configurehere: fix a misplaced backquote in the change of 20110410;
+asldate.c not changed.

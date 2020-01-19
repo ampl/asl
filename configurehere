@@ -18,7 +18,10 @@ case $CFLAGS in '') CFLAGS='-O';; esac
 
 # For Cygwin or MinGW/MSYS...
 EXEmodify=""
-case $WINDIR in C:*) case $CC in "") CC=gcc; EXEmodify=";s!a\\.out!a.exe!";; esac;; esac
+case $WINDIR in C:*)
+	case $CC in "") CC=gcc;; esac
+	EXEmodify=";s!a\\.out!a.exe!";;
+	esac
 
 ${CC=cc} -c xectim.c 2>/dev/null && rm xectim.o || CFLAGS="$CFLAGS -DNO_RUSAGE"
 
@@ -33,12 +36,14 @@ case `uname -m` in
 
 case `uname -s` in
 	AIX) CFLAGS="$CFLAGS -qnomaf";;
-	Darwin) CFLAGS="$CFLAGS -D_NONSTD_SOURCE";;
-	SunOS) case `uname -i` in
+	Darwin) if cc -c -D_NONSTD_SOURCE arithchk.c 2>/dev/null; then
+			CFLAGS="$CFLAGS -D_NONSTD_SOURCE";
+			rm arithchk.o; fi;;
+	SunOS) case `uname -i 2>/dev/null` in
 		i386)  SC="$SC;s/^a = \\\\$/a = fpsetprec.s \\\\/";;
 		i86pc) SC="$SC;s/^a = \\\\$/a = fpsetprec64.s \\\\/";;
 		esac;;
-	CYGWIN_*) SC="$SC;s/a\.out/a.exe/";;
+	CYGWIN_*) case $EXEmodify in "") SC="$SC;s/a\.out/a.exe/";; esac;;
 	esac
 
 case $CFLAGS in -O);; *) SC="$SC;s@^CFLAGS = -O@CFLAGS = $CFLAGS@";; esac

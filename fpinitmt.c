@@ -161,10 +161,15 @@ siglisten(void)
 	HANDLE h;
 	char *s;
 
+#ifdef LONG_LONG_POINTERS
+#define STRTOUL strtoull
+#else
+#define STRTOUL strtoul
+#endif
 	if (s = getenv("SW_sigpipe")) {
-		if (!(Sig[0] = (HANDLE)strtoul(s,&s,10))
+		if (!(Sig[0] = (HANDLE)STRTOUL(s,&s,10))
 		 || *s != ','
-		 || !(Sig[1] = (HANDLE)strtoul(s+1,&s,10)))
+		 || !(Sig[1] = (HANDLE)STRTOUL(s+1,&s,10)))
 			return;
 		if (*s == ',')
 			isatty_ASL = (int)strtoul(s+1,&s,10);
@@ -205,6 +210,14 @@ fpinit_ASL(void)
 		}
 	}
 
+#ifdef __GNUC__
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 5
+#undef NO_matherr
+#define NO_matherr
+#endif
+#endif
+
+#ifndef NO_matherr
 #ifdef __MINGW32__
 #define matherr _matherr
 #endif
@@ -223,6 +236,7 @@ matherr( struct _exception *e )
 	  }
 	return 0;
 	}
+#endif /*NO_matherr*/
 
 #ifdef Need_set_errno
 

@@ -68,7 +68,7 @@ com1eval_ASL(ASL_fg *asl, int i, int ie)
 	ce = cexps1 + ie;
 	i += ncom0;
 	do {
-		cv_index = ++i;	/* identify var in case of error */
+		cv_index = ncom0 + ++i;	/* identify var in case of error */
 		e = c->e;
 		t = (*e->op)(e C_ASL);
 		if (L = c->L)

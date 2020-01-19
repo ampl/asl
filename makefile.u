@@ -201,7 +201,7 @@ comeval.o con1ival.o conval.o mip_pri.o objval.o qpcheck.o\
  readsol.o: nlp.h $(Aslh)
 misc.o nl_obj.o sos_add.o suf_sos.o:\
 	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
-op_type.o: op_type.hd
+op_type.o: op_type.hd op_typeb.hd
 fgh_read.o: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
 rops.o: nlp.h errchk.h $(Aslh)
 rops2.o: nlp2.h errchk.h $(Aslh)
@@ -245,7 +245,11 @@ arith.h: arithchk.c fpinit.c
 #
 # as appropriate.
 
-details.c: details.c0
+# For possible use with nested parallel make invocations, make details.c
+# depend artifically on arith.h and stdio1.h, so the big amplsolver.a compile
+# will start only after arith.h and stdio1.h have been created.
+
+details.c: details.c0 arith.h stdio1.h
 	sed "s!System_details!`uname -sr`!" details.c0 >details.c
 
 float.h: float.h0
@@ -374,6 +378,7 @@ xs0 = \
 	objval_.c \
 	op_type.c \
 	op_type.hd \
+	op_typeb.hd \
 	opcode.hd \
 	opnos.hd \
 	pfg_read.c \

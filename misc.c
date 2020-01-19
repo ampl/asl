@@ -44,6 +44,22 @@ ASLhead ASLhead_ASL = {&ASLhead_ASL, &ASLhead_ASL};
  static char anyedag[] = "fg_read (or one of its variants)";
  static char psedag[] = "pfg_read, pfgh_read, or jacpdim";
 
+ ASL *
+#ifdef KR_headers
+set_cur_ASL(a) ASL *a;
+#else
+set_cur_ASL(ASL *a)
+#endif
+{
+	ASL *rv = cur_ASL;
+	cur_ASL = a;
+	return rv;
+	}
+
+  ASL *
+get_cur_ASL(VOID)
+{ return cur_ASL; }
+
  void
 #ifdef KR_headers
 exit_ASL(R, n) EdRead *R; int n;
@@ -523,10 +539,20 @@ badline(EdRead *R)
 #endif
 {
 	ASL *asl = R->asl;
+	FILE *nl;
+	char *s, *se;
+	int x;
+
 	fprintf(Stderr, "bad line %ld of %s", R->Line, filename);
 	if (xscanf == ascanf) {
-		if (!R->lineinc)
-			R->rl_buf[1] = 0;
+		if (!R->lineinc) {
+			nl = R->nl;
+			s = R->rl_buf;
+			se = s + sizeof(R->rl_buf) - 1;
+			while(s < se && (x = getc(nl)) >= ' ')
+				*++s = x;
+			*s = 0;
+			}
 		fprintf(Stderr, ": %s\n", R->rl_buf);
 		}
 	else
@@ -821,6 +847,8 @@ mem_ASL(ASL *asl, unsigned int len)
 		return M1alloc(len);
 #ifdef Double_Align
 	len = (len + (sizeof(real)-1)) & ~(sizeof(real)-1);
+#else
+	len = (len + (sizeof(int)-1)) & ~(sizeof(int)-1);
 #endif
 	ACQUIRE_DTOA_LOCK(MEM_LOCK);
 	memNext = asl->i.memNext;
@@ -966,7 +994,7 @@ f_OPNUM_ASL(e) expr_n *e;
 f_OPNUM_ASL(expr_n *e)
 #endif
 {
-#ifdef _WIN32	/* Work around a Microsoft liner bug... */
+#ifdef _WIN32	/* Work around a Microsoft linker bug... */
 		/* Without the following test, f_OPNUM gets confused */
 		/* with f_OPVARVAL.  Both get mapped to the same address */
 		/* in the r_ops_ASL array defined in fg_read.c. */

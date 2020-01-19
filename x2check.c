@@ -25,27 +25,37 @@ THIS SOFTWARE.
 #include "jac2dim.h"
 
  int
-#ifdef KR_headers
-x2_check_ASL(asl, X) ASL_fgh *asl; real *X;
-#else
 x2_check_ASL(ASL_fgh *asl, real *X)
-#endif
 {
 	expr_v *V;
+	int *vm;
 	real *Xe, *vscale;
 
 	if (x0kind == ASL_first_x || memcmp(Lastx, X, x0len)) {
+		if (asl->i.Derrs)
+			deriv_errclear_ASL(&asl->i);
 		want_deriv = want_derivs;
 		memcpy(Lastx, X, x0len);
 		asl->i.nxval++;
 		V = var_e;
 		Xe = X + n_var;
-		if (vscale = asl->i.vscale)
-			while(X < Xe)
-				(V++)->v = *vscale++ * *X++;
-		else
-			while(X < Xe)
-				(V++)->v = *X++;
+		vscale = asl->i.vscale;
+		if ((vm = asl->i.vmap)) {
+			if (vscale)
+				while(X < Xe)
+					V[*vm++].v = *vscale++ * *X++;
+			else
+				while(X < Xe)
+					V[*vm++].v = *X++;
+			}
+		else {
+			if (vscale)
+				while(X < Xe)
+					(V++)->v = *vscale++ * *X++;
+			else
+				while(X < Xe)
+					(V++)->v = *X++;
+			}
 		x0kind = 0;
 		if (comb)
 			comeval(asl, 0, comb);
@@ -55,11 +65,7 @@ x2_check_ASL(ASL_fgh *asl, real *X)
 	}
 
  void
-#ifdef KR_headers
-x2known_ASL(a, X, nerror) ASL *a; real *X; fint *nerror;
-#else
 x2known_ASL(ASL *a, real *X, fint *nerror)
-#endif
 {
 	Jmp_buf err_jmp0;
 	int ij;
@@ -70,7 +76,7 @@ x2known_ASL(ASL *a, real *X, fint *nerror)
 	if (nerror && *nerror >= 0) {
 		a->i.err_jmp_ = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
+		if ((*nerror = ij))
 			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */

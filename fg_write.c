@@ -261,7 +261,7 @@ eput(Staticfgw *S, expr *e)
 		e = &etemp;
 		}
 	nop = Intcast op;
-	if ((i = optype[nop]) < 7)
+	if ((i = optypeb[nop]) < 7)
 		(*pf)(nl, "o%d\n", nop = Intcast op);
 	switch(i) {
 	 case 1:
@@ -327,12 +327,12 @@ eput(Staticfgw *S, expr *e)
 		break;
 	 default:
 		fprintf(Stderr, "fg_write: unexpected type %d in eput.\n",
-			optype[nop]);
+			optypeb[nop]);
 		longjmp(S->wjb, 1);
 	 }
 	}
 
-#define offset_of(t,c) ((int)(long)(char *)&((t*)0)->c)
+#define offset_of(t,c) ((size_t)(char *)&((t*)0)->c)
 
  static void
 #ifdef KR_headers
