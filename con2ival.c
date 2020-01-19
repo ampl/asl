@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -71,12 +71,12 @@ con2ival_ASL(ASL *a, int i, real *X, fint *nerror)
 		asl->i.ncxval = (int*)M1alloc(L = n_con*sizeof(int));
 		memset(asl->i.ncxval, 0, L);
 		}
-	if (!(x0kind & ASL_have_conval)) {
+	if (!(x0kind & ASL_have_concom)) {
 		if (comb < combc)
 			comeval(asl, comb, combc);
 		if (comc1)
 			com1eval(asl, 0, comc1);
-		x0kind |= ASL_have_conval;
+		x0kind |= ASL_have_concom;
 		}
 	asl->i.ncxval[i] = asl->i.nxval;
 	co_index = i;
@@ -109,7 +109,7 @@ con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	cgrad *gr, **gr0;
 	real *Adjoints, *vscale;
 	Jmp_buf err_jmp0;
-	int i0, ij, L;
+	int i0, ij, L, xksave;
 	ASL_fgh *asl;
 	real scale;
 	static char who[] = "con2grd";
@@ -127,9 +127,13 @@ con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		x2_check_ASL(asl,X);
-	if (!asl->i.ncxval || asl->i.ncxval[i] != asl->i.nxval) {
-		want_deriv = 1;
+	if ((!asl->i.ncxval || asl->i.ncxval[i] != asl->i.nxval)
+	 && (!(x0kind & ASL_have_conval)
+	     || i < n_conjac[0] || i >= n_conjac[1])) {
+		xksave = asl->i.x_known;
+		asl->i.x_known = 1;
 		con2ival_ASL(a,i,X,nerror);
+		asl->i.x_known = xksave;
 		if (nerror && *nerror)
 			return;
 		}

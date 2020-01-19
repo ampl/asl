@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997-1998, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -22,10 +22,14 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-/* Sample mex function for getting functions, gradients, and dense Hessians
-   from an AMPL .nl file.  Start with
+/* Sample mex function (in MATLAB 5.x format) for getting functions,
+   gradients, and dense Hessians from an AMPL .nl file.  Start with
 
 	[x,bl,bu,v,cl,cu] = amplfunc('stub')
+
+   or, for complementarity problems,
+
+	[x,bl,bu,v,cl,cu,cv] = amplfunc('stub')
 
    to read in a problem (discarding the previous problem, if any).
    The return values are:
@@ -34,6 +38,9 @@ THIS SOFTWARE.
 	v = dual initial guess
 	bl, bu = lower and upper bounds on x
 	cl, cu = lower and upper bounds on c (the constraint bodies).
+	cv variables complementing constraints:  if cv(i) > 0, then
+		constraint i complements x(cv(i)); otherwise
+		constraint i is an ordinary constraint.
 
    Then
 
@@ -61,10 +68,16 @@ THIS SOFTWARE.
 #undef printf
 #include "asl_pfgh.h"
 
+#ifdef _WIN32
+/* Omit sw "signal" catching and x86 precision adjustment. */
+#define ASL_NO_FP_INIT
+#include "fpinit.c"
+#endif /* _WIN32 */
+
 static char msgbuf[256];
 
  static real*
-sizechk(Matrix *mp, char *who, fint m)
+sizechk(const mxArray *mp, char *who, fint m)
 {
 	int m1, n1;
 	m1 = mxGetM(mp);
@@ -90,29 +103,33 @@ usage(void)
 {
 	mexErrMsgTxt("amplfunc usage:\n\n\
 	[x,bl,bu,v,cl,cu] = amplfunc('stub')\nor\n\
+	[x,bl,bu,v,cl,cu,cv] = amplfunc('stub')\nor\n\
 	[f,c] = amplfunc(x,0)\nor\n\
 	[g,Jac] = amplfunc(x,1)\nor\n\
 	W = amplfunc(v)\nor\n\
-	amplfunc('solution message',x,v)\nwith\n\
+	amplfunc('solution message',x,v)\nor\n\
+	amplfunc('solution message',x,v,solve_result_num)\nwith\n\
 	x = primal, v = dual variables");
 	}
 
  void
-mexFunction(int nlhs, Matrix **plhs, int nrhs, Matrix **prhs)
+mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 	FILE *nl;
-	char *buf1, buf[512], *what;
+	char *buf1, buf[512], *what, **whatp;
 	static fint n, nc, nz;
-	fint nerror;
+	fint i, nerror;
 	real *J1, *W, *c, *f, *g, *v, *t, *x;
 	static real *J;
 	cgrad *cg, **cgp, **cgpe;
 	static size_t Jsize;
 	Jmp_buf err_jmp0;
 	ASL *asl = cur_ASL;
+	static char ignore_complementarity[] =
+		"Warning: ignoring %d complementarity conditions.\n";
 
-	if (nrhs == 1 && mxIsString(prhs[0])) {
-		if (nlhs != 6)
+	if (nrhs == 1 && mxIsChar(prhs[0])) {
+		if (nlhs < 6 || nlhs > 7)
 			usage();
 		if (mxGetString(prhs[0], buf1 = buf, sizeof(buf)))
 			mexErrMsgTxt("Expected 'stub' as argument\n");
@@ -131,42 +148,53 @@ mexFunction(int nlhs, Matrix **plhs, int nrhs, Matrix **prhs)
 		nc = n_con;
 		nz = nzc;
 		J = (real *)M1alloc(nz*sizeof(real));
-		X0 = mxGetPr(plhs[0] = mxCreateFull(n, 1, REAL));
-		LUv = mxGetPr(plhs[1] = mxCreateFull(n, 1, REAL));
-		Uvx = mxGetPr(plhs[2] = mxCreateFull(n, 1, REAL));
-		pi0 = mxGetPr(plhs[3] = mxCreateFull(nc, 1, REAL));
-		LUrhs = mxGetPr(plhs[4] = mxCreateFull(nc, 1, REAL));
-		Urhsx = mxGetPr(plhs[5] = mxCreateFull(nc, 1, REAL));
+		X0 = mxGetPr(plhs[0] = mxCreateDoubleMatrix(n, 1, mxREAL));
+		LUv = mxGetPr(plhs[1] = mxCreateDoubleMatrix(n, 1, mxREAL));
+		Uvx = mxGetPr(plhs[2] = mxCreateDoubleMatrix(n, 1, mxREAL));
+		pi0 = mxGetPr(plhs[3] = mxCreateDoubleMatrix(nc, 1, mxREAL));
+		LUrhs = mxGetPr(plhs[4] = mxCreateDoubleMatrix(nc, 1, mxREAL));
+		Urhsx = mxGetPr(plhs[5] = mxCreateDoubleMatrix(nc, 1, mxREAL));
+		if (nlhs == 7) {
+			cvar = (int*)M1alloc(nc*sizeof(int));
+			plhs[6] = mxCreateDoubleMatrix(nc, 1, mxREAL);
+			x = mxGetPr(plhs[6]);
+			}
+		else if (n_cc)
+			printf(ignore_complementarity, n_cc);
 		pfgh_read(nl, ASL_findgroups);
 		Jsize = nc*n*sizeof(real);
+		if (nlhs == 7)
+			for(i = 0; i < nc; i++)
+				x[i] = cvar[i];
 		return;
 		}
 
-	if (!filename)
+	if (!asl)
 		mexErrMsgTxt("amplfunc(\"stub\") has not been called\n");
 	nerror = -1;
 	err_jmp1 = &err_jmp0;
+	what = "(?)";
+	whatp = &what;
 	if (nlhs == 2) {
 		if (nrhs != 2)
 			usage();
 		x = sizechk(prhs[0],"x",n);
 		t = sizechk(prhs[1],"0 or 1", 1);
+		if (setjmp(err_jmp0.jb)) {
+			sprintf(msgbuf, "Trouble evaluating %s\n", *whatp);
+			mexErrMsgTxt(msgbuf);
+			}
 		if (t[0] == 0.) {
-			f = mxGetPr(plhs[0] = mxCreateFull(1, 1, REAL));
-			c = mxGetPr(plhs[1] = mxCreateFull(nc, 1, REAL));
-			if (setjmp(err_jmp0.jb)) {
-				sprintf(msgbuf, "Trouble evaluating %s\n",
-					what);
-				mexErrMsgTxt(msgbuf);
-				}
+			f = mxGetPr(plhs[0] = mxCreateDoubleMatrix(1, 1, mxREAL));
+			c = mxGetPr(plhs[1] = mxCreateDoubleMatrix(nc, 1, mxREAL));
 			what = "f";
 			*f = objval(0, x, &nerror);
 			what = "c";
 			conval(x, c, &nerror);
 			return;
 			}
-		g = mxGetPr(plhs[0] = mxCreateFull(n, 1, REAL));
-		J1 = mxGetPr(plhs[1] = mxCreateFull(nc, n, REAL));
+		g = mxGetPr(plhs[0] = mxCreateDoubleMatrix(n, 1, mxREAL));
+		J1 = mxGetPr(plhs[1] = mxCreateDoubleMatrix(nc, n, mxREAL));
 		what = "g";
 		objgrd(0, x, g, &nerror);
 		if (nc) {
@@ -180,22 +208,25 @@ mexFunction(int nlhs, Matrix **plhs, int nrhs, Matrix **prhs)
 			}
 		return;
 		}
-	if (nlhs == 0 && nrhs == 3) {
+	if (nlhs == 0 && (nrhs == 3 || nrhs == 4)) {
 		/* eval2('solution message', x, v): x = primal, v = dual */
-		if (!mxIsString(prhs[0]))
+		/* optional 4th arg = solve_result_num */
+		if (!mxIsChar(prhs[0]))
 			usage();
 		x = sizechk(prhs[1],"x",n);
 		v = sizechk(prhs[2],"v",nc);
 		if (mxGetString(prhs[0], buf, sizeof(buf)))
 			mexErrMsgTxt(
 			 "Expected 'solution message' as first argument\n");
+		solve_result_num = nrhs == 3 ? -1 /* unknown */
+			: (int)*sizechk(prhs[3],"solve_result_num",1);
 		write_sol(buf, x, v, 0);
 		return;
 		}
 	if (nlhs != 1 || nrhs != 1)
 		usage();
 	v = sizechk(prhs[0],"v",nc);
-	W = mxGetPr(plhs[0] = mxCreateFull(n, n, REAL));
+	W = mxGetPr(plhs[0] = mxCreateDoubleMatrix(n, n, mxREAL));
 
 	what = "W";
 	fullhes(W, n, 0, 0, v);

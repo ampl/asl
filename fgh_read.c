@@ -337,7 +337,7 @@ eread(EdRead *R, int deriv)
 			if (kd) {
 				al->derivs = b;
 				al->hes = hes;
-				memset(hes, 0, kd2*sizeof(real));
+				memset(b, 0, (numargs + kd2)*sizeof(real));
 				}
 			else
 				al->derivs = al->hes = 0;
@@ -1305,7 +1305,8 @@ zerograd_chk(VOID)
 			while(n < og->varno)
 				*z++ = n++;
 			og = og->next;
-			n++;
+			if (++n >= nv)
+				break;
 			}
 		while(n < nv)
 			*z++ = n++;
@@ -1396,8 +1397,8 @@ br_read(EdRead *R, int nc, real **Lp, real *U, int *Cvar, int nv)
 				if (xscanf(R, "%d %d", &k, &j) == 2
 				 && j > 0 && j <= nv) {
 					Cvar[i] = j;
-					*L = k & 1 ? 0. : negInfinity;
-					*U = k & 2 ? 0. : Infinity;
+					*L = k & 2 ? negInfinity : 0.;
+					*U = k & 1 ?    Infinity : 0.;
 					break;
 					}
 				}

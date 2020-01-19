@@ -17,10 +17,6 @@ SL = -bM:SRE -T512 -H512 -lm -lc
 amplfunc.dll: funcadd.o
 	ld -o amplfunc.dll funcadd.o -bE:funcout.exp $(SL)
 
-## Catch: LD_LIBRARY_PATH is not honored; the -L arguments specified
-## when a program is linked control the search path for finding
-## shared libraries.
-
 ## Sample solver creation, AIX versions prior to 4.3...
 ## For AIX >= 4.3, it is possible for amplsolver.a to
 ## offer a funcadd1.o that invokes dlopen to load the amplfunc.dll

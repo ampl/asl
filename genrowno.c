@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -24,13 +24,24 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
+/* Solvers that handle sparse nonlinear constraints and wish */
+/* to have Jacobian nonzeros stored sparsely by columns in */
+/* A_rownos may simply call gen_rownos() after calling the .nl */
+/* reader (with A_vals left at its default value = NULL). */
+
  void
-#ifdef KR_headers
-der0prop(d) register derp *d;
-#else
-der0prop(register derp *d)
-#endif
+gen_rownos_ASL(ASL *asl)
 {
-	for(; d; d = d->next)
-		*d->a.rp += *d->b.rp * *d->c.rp;
+	cgrad *cg, **cgp, **cgpe;
+	int *a, n;
+
+	if (n_con <= 0 || nzc <= 0)
+		return;
+	if (!(a = A_rownos))
+		A_rownos = a = (int*)M1alloc(nzc*sizeof(int));
+	n = Fortran;
+	cgp = Cgrad;
+	for(cgpe = cgp + n_con; cgp < cgpe; n++)
+		for(cg = *cgp++; cg; cg = cg->next)
+			a[cg->goff] = n;
 	}
