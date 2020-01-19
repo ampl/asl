@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-1999, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -142,13 +142,17 @@ qp_opify_ASL(ASL *a)
 	expr_v *v, *ve;
 	ASL_fg *asl;
 	efunc **f, *varval;
+	int nv;
 
 	ASL_CHECK(a, ASL_read_fg, "qp_opify");
 	asl = (ASL_fg*)a;
 	f = r_ops_ASL;
 	varval = r_ops_ASL[&f_OPVARVAL - &r_ops[0]];
+	if ((nv = c_vars) < o_vars)
+		nv = o_vars;
+	nv += comb + comc + como + comc1 + como1;
 	v = var_e;
-	ve = v + comb + comc + como + comc1 + como1;
+	ve = v + nv;
 	while(v < ve)
 		(v++)->op = f_OPVARVAL;
 	ed1oploop(obj_de, n_obj, f, varval);

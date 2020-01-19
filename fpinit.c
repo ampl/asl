@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1999, 2000 Lucent Technologies
+Copyright (C) 1999-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -28,11 +28,17 @@ int isatty_ASL; /* for use with "sw" under NT */
 #ifdef MSDOS
 #define MSpc
 #else
+
+#ifdef _WIN32
+#undef WIN32
+#define WIN32
+#endif
+
 #ifdef WIN32
 #define MSpc
 #endif
-#endif
-#endif
+#endif /*MSDOS*/
+#endif /*MSpc*/
 
 #ifdef KR_headers
 #define Void /*void*/
@@ -47,7 +53,10 @@ extern "C" {
 #endif
 #undef FP_INIT_DONE
 
+#ifndef ASL_NO_FP_INIT
+
 #ifdef __linux__
+#ifndef NO_fpu_control
 #define FP_INIT_DONE
 #include "fpu_control.h"
 
@@ -72,7 +81,8 @@ fpinit_ASL(Void)
 	_FPU_SETCW(__fpu_control);
 #endif
 	}
-#endif
+#endif /* NO_fpu_control */
+#endif /* __linux__ */
 
 #ifdef sgi
 #ifndef _ABIO32
@@ -131,15 +141,20 @@ fpinit_ASL(Void)
 #endif
 #endif /* __i386 __sun */
 
-/* Currently, this is not needed -- mode FP_PD is the default on FreeBSD...
- * #ifdef __FreeBSD__
- * #include "ieeefp.h"
- * #define FP_INIT_DONE
- *  void
- * fpinit_ASL(Void)
- * {	fpsetprec(FP_PD);
- * 	}
- * #endif */ /* __FreeBSD__ */
+/* Currently, FP_PD is the default on FreeBSD, but enabled traps */
+/* can cause surprises, so we restore the default IEEE mask. */
+#ifdef __FreeBSD__
+#include "floatingpoint.h"
+#define FP_INIT_DONE
+ void
+fpinit_ASL(Void)
+{
+	fpsetprec(FP_PD);
+	fpsetmask(0);
+	}
+#endif /* __FreeBSD__ */
+
+#endif /* ASL_NO_FP_INIT */
 
 #ifndef FP_INIT_DONE
 void fpinit_ASL(Void) {}

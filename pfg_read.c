@@ -1626,6 +1626,7 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 
 			  case f_OPMULT:
 				if (Raf->varno < 0 && !Raf->next) {
+ swap:
 					taf = Laf;
 					Laf = Raf;
 					Raf = taf;
@@ -1642,6 +1643,13 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 						while(taf = taf->next);
 					ogfree(S, Laf);
 					return Raf;
+					}
+				break;
+
+			  case f_OPDIV:
+				if (Raf->varno < 0 && !Raf->next) {
+					Raf->coef = 1. / Raf->coef;
+					goto swap;
 					}
 			  }
 			afree(S, Laf, &e->L.e);
@@ -2861,8 +2869,10 @@ psfind(Static *S)
 			r->lasttermno = (*lap)->nz->varno;
 			while(i < j) {
 				la = lap[i];
-				if (la->v)
+				if (la->v) {
 					i++;
+					la->termno = 0; /* for psgcomp */
+					}
 				else {
 					lap[i] = lap[--j];
 					lap[j] = la;
@@ -4566,22 +4576,22 @@ pfg_read_ASL(a, nl, flags) ASL *a; FILE *nl; int flags;
 pfg_read_ASL(ASL *a, FILE *nl, int flags)
 #endif
 {
-	int allG, i, i1, j, k, nc, nco, no, nv, nvc, nvo, nz, readall;
-	unsigned x;
-	expr_v *e;
+	ASLTYPE *asl;
+	EdRead ER, *R;
+	Jmp_buf JB;
+	Static SS, *S;
 	cgrad *cg, **cgp;
+	char fname[128];
+	expr_v *e;
+	func_info *fi;
+	int allG, i, i1, j, k, *ka, maxfwd1, nc, nco, nlin, no;
+	int nv, nvc, nvo, nz, readall;
 	ograd *og, **ogp;
 	real t;
-	int *ka;
-	int maxfwd1, nlin;
-	func_info *fi;
-	char fname[128];
-	EdRead ER, *R;
-	Static SS, *S;
-	Jmp_buf JB;
+	unsigned x;
 
 	ASL_CHECK(a, asltype, who);
-#define asl ((ASLTYPE*)a)
+	asl = (ASLTYPE*)a;
 	S = S_init(&SS, asl);
 	ed_reset(asl);
 	SS.R = R = EdReadInit_ASL(&ER, a, nl, S);
@@ -4593,6 +4603,8 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			return i;
 			}
 		}
+	if (!(flags & ASL_find_default_no_groups))
+		flags |= ASL_findgroups;
 	if ((readall = flags & ASL_keep_all_suffixes)
 	 && a->i.nsuffixes)
 		readall |= 1;
@@ -4699,6 +4711,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		ER.can_end = 1;
 		i = edag_peek(R);
 		if (i == EOF) {
+			fclose(nl);
 			do_ewalk(S);
 			if (imap)
 				del_mblk(kimap, imap);
@@ -4718,8 +4731,9 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			nzjac = nz;
 			if (!Lastx)
 				Lastx = (real *)M1alloc(nv0*sizeof(real));
-			fclose(nl);
 #ifdef PSHVREAD
+			a->i.ncxval = (int*)M1zapalloc(nco*sizeof(int));
+			a->i.noxval = a->i.ncxval + nc;
 			a->p.Conival= conpival_ASL;
 			a->p.Congrd = conpgrd_ASL;
 			a->p.Objval = objpval_ASL;
@@ -5242,7 +5256,7 @@ hes_setup(ASL *a, int flags, int obj, int nobj, int con, int ncon)
 	else
 		asl->I.x0kind_init = 0;
 	del_mblk(kzc, zci);
-	asl->P.hes_setup_called = 1 | (flags << 1);
+	asl->P.hes_setup_called = 1 | (flags << 2);
 	asl->P.khesoprod = 5;
 	asl->P.hop_free = 0;
 	asl->P.nmax = nmax;

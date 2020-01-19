@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -298,5 +298,18 @@ SU_val(Option_Info *oi, keyword *kw, char *value)
 	int L = *v;
 	rv = Ival_ASL(oi, kw, value, &L);
 	*v = L;
+	return rv;
+	}
+
+ char *
+#ifdef KR_headers
+FI_val(oi, kw, value) Option_Info *oi; keyword *kw; char *value;
+#else
+FI_val(Option_Info *oi, keyword *kw, char *value)
+#endif
+{
+	Long L;
+	char *rv = Lval_ASL(oi, kw, value, &L);
+	*(fint*)kw->info = L;
 	return rv;
 	}

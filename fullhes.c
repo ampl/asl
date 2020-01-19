@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -68,11 +68,11 @@ fullhes_ASL(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
 	ASL_pfgh *asl;
 
 	asl = pscheck_ASL(a, "fullhes");
+	xpsg_check_ASL(asl, nobj, ow, y);
 	if (nobj >= 0 && nobj < n_obj) {
-		ow = 0;
 		no = nobj;
 		noe = no + 1;
-		owi = &edag_one_ASL;
+		owi = ow ? ow + no : &edag_one_ASL;
 		}
 	else {
 		nobj = -1;
@@ -82,7 +82,7 @@ fullhes_ASL(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
 		}
 
 	if (!asl->P.hes_setup_called)
-		(*asl->p.Hesset)(a, 1, no, noe-no, 0, n_con);
+		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc);
 	s = asl->P.dOscratch;
 	n = c_vars >= o_vars ? c_vars : o_vars;
 	if (n <= 0)

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1998, 2000 Lucent Technologies
+Copyright (C) 1997, 1998, 2000, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -577,7 +577,7 @@ hvp0comp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y0)
 	if (x0kind & ASL_need_funnel)
 		funnelhes(asl);
 	if (nobj >= 0 && nobj < n_obj) {
-		ow = &edag_one_ASL;
+		ow = ow ? ow + nobj : &edag_one_ASL;
 		no = nobj;
 		noe = no + 1;
 		}
@@ -818,18 +818,8 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcomp");
 #define asl ((ASL_pfgh*)a)
-	if (nobj >= 0 && nobj < n_obj) {
-		owi = &edag_one_ASL;
-		ow = 0;
-		no = nobj;
-		noe = no + 1;
-		}
-	else {
-		nobj = -1;
-		no = noe = 0;
-		if (owi = ow)
-			noe = n_obj;
-		}
+	if (a->i.x_known != 2)
+		xpsg_check_ASL(asl, nobj, ow, y);
 	nv = n_var;
 	kp = htcl(nv*sizeof(real));
 	p0 = 0;
@@ -928,7 +918,18 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 	wi = s + ns;
 	while(wi > s)
 		*--wi = 0.;
-	if (asl->P.nobjgroups)
+	if (asl->P.nobjgroups) {
+	    if (nobj >= 0 && nobj < n_obj) {
+		owi = ow ? ow + nobj : &edag_one_ASL;
+		no = nobj;
+		noe = no + 1;
+		}
+	    else {
+		nobj = -1;
+		no = noe = 0;
+		if (owi = ow)
+			noe = n_obj;
+		}
 	    for(; no < noe; no++)
 		if (t = *owi++) {
 		    ps = asl->P.ops + no;
@@ -945,6 +946,7 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 					while(og = og->next);
 				}
 		}
+	    }
 	if (asl->P.ncongroups && y) {
 		cscale = a->i.lscale;
 		ps = asl->P.cps;
@@ -987,12 +989,21 @@ pshv_prod_ASL(ASL_pfgh *a, range *r, int nobj, real *ow, real *y)
 	ps_func *p;
 	cexp *c;
 	expr *e;
-	real *cscale, *s, t;
+	real *cscale, *s, owi, t;
 	psb_elem *b;
 	psg_elem *g;
 
 	cscale = a->i.lscale;
 #define asl a
+	if (nobj >= 0 && nobj < n_obj) {
+		if (ow) {
+			if ((owi = ow[nobj]) == 0.)
+				nobj = -1;
+			ow = 0;
+			}
+		else
+			owi = 1;
+		}
 	if (x0kind & ASL_need_funnel)
 		funnelhes(asl);
 	s = asl->P.dOscratch;
@@ -1017,7 +1028,7 @@ pshv_prod_ASL(ASL_pfgh *a, range *r, int nobj, real *ow, real *y)
 		if ((i = b->conno) < 0) {
 			i = -2 - i;
 			if (i == nobj)
-				t = 1.;
+				t = owi;
 			else if (ow)
 				t = ow[i];
 			else

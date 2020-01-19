@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -68,6 +68,12 @@ THIS SOFTWARE.
 #undef printf
 #include "asl_pfgh.h"
 
+#ifdef _WIN32
+/* Omit sw "signal" catching and x86 precision adjustment. */
+#define ASL_NO_FP_INIT
+#include "fpinit.c"
+#endif /* _WIN32 */
+
 static char msgbuf[256];
 
  static real*
@@ -110,7 +116,7 @@ usage(void)
 mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 	FILE *nl;
-	char *buf1, buf[512], *what;
+	char *buf1, buf[512], *what, **whatp;
 	static fint n, nc, nz;
 	fint i, nerror;
 	real *J1, *W, *c, *f, *g, *v, *t, *x;
@@ -174,20 +180,21 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		mexErrMsgTxt("spamfunc(\"stub\") has not been called\n");
 	nerror = -1;
 	err_jmp1 = &err_jmp0;
+	what = "(?)";
+	whatp = &what;
 	if (nlhs == 2) {
 		if (nrhs != 2)
 			usage();
 		x = sizechk(prhs[0],"x",n);
 		t = sizechk(prhs[1],"0 or 1", 1);
+		if (setjmp(err_jmp0.jb)) {
+			sprintf(msgbuf, "Trouble evaluating %s\n", *whatp);
+			mexErrMsgTxt(msgbuf);
+			}
 		if (t[0] == 0.) {
 			f = mxGetPr(plhs[0] = mxCreateDoubleMatrix(1, 1, mxREAL));
 			c = mxGetPr(plhs[1] = mxCreateDoubleMatrix(nc, 1, mxREAL));
 			what = "f";
-			if (setjmp(err_jmp0.jb)) {
-				sprintf(msgbuf, "Trouble evaluating %s\n",
-					what);
-				mexErrMsgTxt(msgbuf);
-				}
 			*f = objval(0, x, &nerror);
 			what = "c";
 			conval(x, c, &nerror);

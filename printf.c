@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -289,7 +289,7 @@ x_sprintf
 	double x;
 	int alt, base, c, decpt, dot, conv, i1, k, lead0, left,
 		len, prec, prec1, psign, rv, sgn, sign, width;
-	int *ip;
+	long Ltmp, *ip;
 	short sh;
 	unsigned short us;
 	unsigned int ui;
@@ -476,17 +476,19 @@ x_sprintf
 					while(s > buf);
 				continue;
 			case 'n':
-				ip = va_arg(ap, int*);
+				ip = va_arg(ap, long*);
+				if (!ip)
+					ip = &Ltmp;
 				c = outbuf - ob0 + rv;
 				switch(len) {
 				  case 0:
-					*ip = c;
+					*(int*)ip = c;
 					break;
 				  case 1:
-					*(long *)ip = c;
+					*ip = c;
 					break;
 				  case 2:
-					*(short *)ip = c;
+					*(short*)ip = c;
 				  }
 				break;
 			case 'p':
@@ -528,6 +530,8 @@ x_sprintf
 			case 's':
 				s0 = 0;
 				s = va_arg(ap, char*);
+				if (!s)
+					s = "<NULL>";
 				if (prec < 0)
 					prec = 0;
  have_s:

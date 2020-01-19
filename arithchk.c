@@ -193,3 +193,10 @@ main()
 	fprintf(f, "/* Unknown arithmetic */\n");
 	return 1;
 	}
+
+#ifdef __sun
+#ifdef __i386
+/* kludge for Intel Solaris */
+void fpsetprec(int x) { }
+#endif
+#endif

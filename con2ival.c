@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999, 2000 Lucent Technologies
+Copyright (C) 1997, 1999-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -49,7 +49,7 @@ con2ival_ASL(ASL *a, int i, real *X, fint *nerror)
 	cde *d;
 	expr *e1;
 	real f;
-	int ij, L;
+	int ij;
 	cgrad *gr, **gr0;
 	Jmp_buf err_jmp0;
 	ASL_fgh *asl;
@@ -67,10 +67,8 @@ con2ival_ASL(ASL *a, int i, real *X, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		x2_check_ASL(asl,X);
-	if (!asl->i.ncxval) {
-		asl->i.ncxval = (int*)M1alloc(L = n_con*sizeof(int));
-		memset(asl->i.ncxval, 0, L);
-		}
+	if (!asl->i.ncxval)
+		asl->i.ncxval = (int*)M1zapalloc(n_con*sizeof(int));
 	if (!(x0kind & ASL_have_concom)) {
 		if (comb < combc)
 			comeval(asl, comb, combc);

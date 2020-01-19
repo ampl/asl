@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1998 Lucent Technologies
+Copyright (C) 1997, 1998, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -142,6 +142,7 @@ psg_elem {		/* group element details of partially-separable func */
 ps_func {
 	int	nb;		/* number of basic terms */
 	int	ng;		/* number of group terms */
+	int	nxval;		/* for psgcomp */
 	psb_elem *b;		/* the basic terms */
 	psg_elem *g;		/* the group terms */
 	} ps_func;
@@ -314,6 +315,7 @@ typedef unsigned Long Ulong;
  extern void pshv_prod_ASL ANSI((ASL_pfgh*,range*r,int nobj,real*ow,real*y));
  extern fint sphes_setup_ASL ANSI((ASL*, SputInfo**, int nobj, int ow, int y, int ul));
  extern void sphes_ASL ANSI((ASL*, SputInfo**, real *H, int nobj, real*ow, real *y));
+ extern void xpsg_check_ASL ANSI((ASL_pfgh*, int nobj, real *ow, real *y));
 #else /* PSHVREAD */
  extern void xp1known_ASL ANSI((ASL*, real*, fint*));
 #endif /* PSHVREAD */

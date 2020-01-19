@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1998, 2000 Lucent Technologies
+Copyright (C) 1997-1998, 2000-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -729,7 +729,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		*pspi = 0;
 		}
 	if (!asl->P.hes_setup_called)
-		(*asl->p.Hesset)(a, 1, no, noe-no, 0, n_con);
+		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc);
 	asl->P.hes_setup_called = 3;
 	asl->P.iflist = 0;
 	asl->P.valist = 0;
@@ -982,16 +982,17 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	SputInfo *spi;
 
 	asl = pscheck_ASL(a, "sputhes");
+	xpsg_check_ASL(asl, nobj, ow, y);
 	if (!pspi)
 		pspi = &a->i.sputinfo_;
 	i = j = 0;
 	if (y)
 		j = 1;
 	if (nobj >= 0 && nobj < n_obj) {
-		ow = 0;
 		no = nobj;
 		noe = no + 1;
-		owi = &edag_one_ASL;
+		owi = ow ? ow + no : &edag_one_ASL;
+		ow = 0;
 		}
 	else {
 		nobj = -1;

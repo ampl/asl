@@ -985,3 +985,149 @@ Thu Mar 22 14:07:07 EST 2001
   funcadd.h: fix a typo in a comment (s/funcadd/addfunc/).
   misc.c: tweak to permit reading ASCII .nl files massaged to have
 either Microsoft (\r\n) or Macintosh (\r) end-of-line notation.
+
+Fri Apr 27 18:01:04 EDT 2001
+  suf_sos.c: fix a glitch that will matter to MIP solvers that handle
+SOS2 sets once AMPL's forthcoming "variable in union of intervals"
+extension is available.  A fault was possible.
+
+Wed May  9 23:36:02 EDT 2001
+  printf.c:  Have printf("%s",0) print "<NULL>" rather than fault.
+This affects both solvers and imported (user-defined) functions.
+  funcadd.h: add some #ifdef _WIN32 goo for added flexibility.
+
+Thu May 10 17:34:16 EDT 2001
+  qp_read.c: fix a bug in qp_opify that would cause a fault when it bit.
+  con1ival.c, con2ival.c, conpval.c, conpvaldb.c, obj2val.c, objval.c:
+trivial adjustment:  use M1zapalloc() instead of M1alloc and memset.
+
+Wed May 23 13:16:03 EDT 2001
+  suf_sos.c:  fix bug (mis-ordered statements) that could bite on
+problems with both nonconvex piecewise-linear terms (linearized by
+AMPL) and explicit .sosno and .ref suffixes.  When processing .sosno
+and .ref, sort SOS1 members on increasing .ref values.  Adjust for
+possible use with nonlinear solvers:  if A_vals is null, adjust Cgrad
+and con_de to reflect removed constraints.
+  asl.h, suf_sos.c:  add recognition of bit ASL_suf_sos_just_SOS1
+in the flags argument to suf_sos().  If this bit is set, SOS2
+constraints added by AMPL while transforming nonconvex piecewise-
+linear terms are retained and just the associated SOS1 constraint
+is removed.
+  getstub.h, value.c: add FI_val for a fint value in a known place.
+  sphes.c: in the call sphes(h, no, ow, y), if 0 <= no < n_obj and ow
+is nonzero, use weight ow[no] rather than 1. for the objective.
+  fpinit.c, makefile.u:  for more flexibility on Linux systems, add
+"#ifndef NO_fpu_control" logic to fpinit.c and a comment on it to
+makefile.u.
+
+Thu May 24 08:45:36 EDT 2001
+  suf_sos.c:  change to ASL_suf_sos_just_SOS1 bit: if on, retain all
+constraints added when linearizing nonconvex piecewise-linear terms.
+
+Thu May 31 17:10:29 EDT 2001
+  conpval.c objval.c xp[12]known.c:  add some missing "err_jmp = 0"
+assignments (to prevent trouble under unusual conditions -- most
+solvers are unaffected).
+  Sundry files:  adjust all Hessian computations to treat arguments
+(nobj, ow) the same as in last week's change to sphes.c:  if ow is
+nonzero and 0 <= nobj < n_obj, use weight ow[nobj] rather than 1.
+Also add interlocks to make it true for sphes() that the Hessian is
+computed at the most recent primal variables x passed to any of the
+function or gradient routines (congrd, conival, conval, jacval,
+objgrd, or objval) or to xknown() or xknowne().  Hitherto explicit
+previous gradient computations were required on problems with "group"
+partially separable structure.
+
+Fri Jun  1 11:38:31 EDT 2001
+  Fix glitches in compilation with -DKR_headers.
+  Correct yesterday's changes to make Hessian computations right when
+nonlinear gradients of relevant functions lacking "group" partially
+separable structure have not been computed at the current x.
+  For hvcomp(), assigning asl->i.x_known = 2 before a series of calls
+on hvcomp turns off the tests that would bring gradient information
+up to date.  This saves overhead and is appropriate if the program
+logic ensures that all relevant gradients have been computed at the
+current x.  If you do this, be sure to invoke "xunknown();" after the
+series of hvcomp calls.
+  Header file changes yesterday and today make it necessary to recompile
+solver source files that include asl_pfgh.h or jacpdim.h.
+
+Sat Jun  2 01:01:42 EDT 2001
+  Shortly after the previous update, Bob Vanderbei reported a new bug:
+after pfgh_read(), first derivatives were miscomputed when a unitary
+function was applied to a sum of three or more nonlinear terms, two
+or more of which involved the same "internal variables", such as
+x+y and x-y in the following simple example:
+	var x := -1; var y := 1;
+	minimize f: sqrt((sin(x+y) + (y-x))^2 + (y-x+1)^2);
+
+Sat Jun  2 17:07:48 EDT 2001
+  conpval.c:  fix a new fault with calls on duthes, fullhes, sphes, or
+hvcomp with y = 0.
+  asl.h: add #define for hvinit() with apparent prototype
+	void hvinit(int nobj, real *ow, real *y)
+which should be called before hvcomp when calling hvcomp at the same
+x (primal variable values) but different (nobj, ow, y).
+  objval_.c: add corresponding Fortran (f77) callable
+	subroutine hvinit(nobj, ow, y)
+	integer nobj
+	double precision ow(*), y(*)
+  duthes.c, fullhes.c, sphes.c and xp2known.c:  change default hesset()
+calls to make all nonlinear objectives and constraints available for
+Hessian computations.  Though not yet described in "Hooking Your
+Solver to AMPL", hesset() with apparent prototype
+	void hesset(int flags, int obj, int nnobj, int con, int nncon)
+has long been #defined in asl.h.  It must be called once after
+pfgh_read() to indicate which objectives and constraints will
+participate in Hessian computations:  objectives obj <= i < obj + nnobj
+and constraints con <= i < con + nncon will subsequently be considered
+(with obj = 0 for the first constraint and con = 0 for the first
+objective).  Currently, the flags argument should be 1.  Since
+problems may be declared to have more than one objective, when
+treating objective nobj (0 <= nobj < n_obj), it is best to invoke
+        hesset(1,nobj,1,0,nlc) after pfgh_read() so only the desired
+objective will affect the sparsity pattern presented to the solver
+(when using sphes()).  When there is no objective, use
+obj = nnobj = 0, as in hesset(1,0,0,0,nlc).
+
+Thu Jun  7 17:37:42 EDT 2001
+  asl.h, pfg_read.c, pfghread.c:  change to interpretation of flags
+argument to pfg_read and pfgh_read:  unless ASL_find_default_no_groups
+appears in flags, assume ASL_findgroups.  When
+ASL_find_default_no_groups appears, only explicit specifications of
+ASL_findOgroups, ASL_findCgroups or ASL_findgroups are now honored.
+Thus pfgh_read(nl,0) would now be "normal" usage, as it's generally
+desirable to have the increased efficiency that finding group
+structure can bring.  One exception is lancelot, which only wants
+to see group structure for objectives.  The sample driver for
+lancelot is updated accordingly.
+
+Fri Jun 15 13:44:38 EDT 2001
+  conpval.c:  fix a glitch in the changes of 20010531:  objgrd rather
+than congrd was called to compute partials needed for Hessian
+computations (under apparently unusual conditions).  In the example
+behind this correction, the bug caused the surprising error message
+	objpgrd: got NOBJ = 1; expected 0 <= NOBJ < 1
+
+Tue Jun 19 00:41:37 EDT 2001
+  makefile.u: change "a.out" to "./a.out" (in case $PATH excludes ".").
+
+Wed Jun 20 16:36:55 EDT 2001
+  fpinit.c:  use IEEE default exception mask with FreeBSD.
+
+Mon Jun 25 15:11:43 EDT 2001
+  arithchk.c, makefile.u:  add (undesirable) #ifdefs to simplify
+makefile modifications needed for Intel Solaris.
+
+Mon Aug 13 23:47:27 EDT 2001
+  fpinit.c, funcadd1.c, makefile.*:  omit WIN32 in favor of _WIN32
+(which is predefined by the WIN32 compilers in WIN32 mode).
+  fpinit.c: provide "#ifdef ASL_NO_FP_INIT" for examples/amplfunc.c.
+  examples/amplfunc.c and spamfunc.c: under _WIN32, include fpinit.c
+with ASL_NO_FP_INIT #defined (to prevent possible surprises).
+  No change to asldate.c.
+
+Thu Aug 23 09:42:07 EDT 2001
+  suf_sos.c: When processing .sosno and .ref, if .priority is available,
+give each SOS1 and SOS2 set specified by .sosno the maximum priority
+of any of its variables (rather than the minimum).

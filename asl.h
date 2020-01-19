@@ -223,11 +223,11 @@ Edagpars {
 	void (*Objgrd) ANSI((ASL*, int nobj, real *X, real *G, fint *nerror));
 	void (*Conval) ANSI((ASL*, real *X, real *R, fint *nerror));
 	void (*Jacval) ANSI((ASL*, real *X, real *J, fint *nerror));
-	real (*Conival)ANSI((ASL*, int ncon, real *X, fint *ne));
+	real (*Conival)ANSI((ASL*, int ncon, real *X, fint *nerror));
 	void (*Congrd) ANSI((ASL*, int nc, real *X, real *G, fint *nerror));
-	void (*Hvcomp) ANSI((ASL*,real *hv,real *p,int no,real *ow,real *y));
+	void (*Hvcomp) ANSI((ASL*, real *hv,real *p,int no,real *ow,real *y));
 	void (*Hvinit) ANSI((ASL*, int, int, real*, real*));
-	void (*Hesset) ANSI((ASL*,int flags,int no,int nno,int nc,int nnc));
+	void (*Hesset) ANSI((ASL*, int flags,int no,int nno,int nc,int nnc));
 	void (*Xknown) ANSI((ASL*, real*, fint*));
 	void (*Duthes) ANSI((ASL*, real *H, int nobj, real *ow, real *y));
 	void (*Fulhes) ANSI((ASL*, real *H,fint LH, int no, real *ow, real *y));
@@ -244,6 +244,7 @@ Edagpars {
 #define conival(i,x,ne)		(*((ASL*)asl)->p.Conival)((ASL*)asl,i,x,ne)
 #define congrd(i,x,g,ne)	(*((ASL*)asl)->p.Congrd)((ASL*)asl,i,x,g,ne)
 #define hvcomp(hv,P,no,ow,y)	(*((ASL*)asl)->p.Hvcomp)((ASL*)asl,hv,P,no,ow,y)
+#define hvinit(no,ow,y)		(*((ASL*)asl)->p.Hvinit)((ASL*)asl,ihd_limit,no,ow,y)
 #define hesset(f,o,n,c,nc)	(*((ASL*)asl)->p.Hesset)((ASL*)asl,f,o,n,c,nc)
 #define duthes(h,n,ow,y)	(*((ASL*)asl)->p.Duthes)((ASL*)asl,h,n,ow,y)
 #define fullhes(h,lh,n,ow,y)	(*((ASL*)asl)->p.Fulhes)((ASL*)asl,h,lh,n,ow,y)
@@ -728,7 +729,11 @@ enum ASL_reader_flag_bits {	/* bits in flags arg */
 	ASL_omit_all_suffixes = 256,
 	ASL_keep_derivs = 512,
 	ASL_allow_missing_funcs = 1024,
-	ASL_forbid_missing_funcs = 2048
+	ASL_forbid_missing_funcs = 2048,
+	ASL_find_default_no_groups = 8192	/* Assume ASL_findgroups */
+						/* when this bit is off. */
+	/* When ASL_find_default_no_groups is on, pfg_read and pfgh_read */
+	/* only honor explicit specification of the ASL_findgroups bits. */
 	};
 
 enum ASL_reader_error_codes {
@@ -746,9 +751,14 @@ enum ASL_suf_sos_flags { /* bits in flags parameter of suf_sos() */
 	ASL_suf_sos_explict_free = 1,	/* caller will explicitly free */
 					/* returned arrays */
 	ASL_suf_sos_ignore_sosno = 2,	/* ignore .sosno */
-	ASL_suf_sos_ignore_amplsos = 4	/* ignore SOS information from */
+	ASL_suf_sos_ignore_amplsos = 4,	/* ignore SOS information from */
 					/* transformations of piecewise- */
 					/* linear terms (etc.) by AMPL */
+	ASL_suf_sos_just_SOS1 = 8	/* assume solver only knows about */
+					/* SOS1 sets:  retain variables */
+					/* and constraints that imply SOS2 */
+					/* sets in transformations of */
+					/* piecewise-linear terms. */
 	};
 
 enum ASL_write_flags {
@@ -823,6 +833,7 @@ enum ASL_writer_error_codes {
  extern char *getenv_ASL ANSI((const char*));
  extern int htcl_ASL ANSI((unsigned int));
  extern void hvcomp_ ANSI((real *hv, real *p, fint *nobj, real *ow, real *y));
+ extern void hvinit_ ANSI((fint *nobj, real *ow, real *y));
  extern FILE *jac0dim_ASL ANSI((ASL*, char *stub, ftnlen stub_len));
  extern int  jac1dim_ASL ANSI((ASL*,char *stub, fint *M, fint *N, fint *NO,
 			fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len));

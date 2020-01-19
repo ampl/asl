@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1998, 2000 Lucent Technologies
+Copyright (C) 1997-1998, 2000-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -129,6 +129,7 @@ extern void  usage_ASL ANSI((Option_Info*, int exit_code));
 #define DK_val DK_val_ASL	/* known real (double) value in known place */
 #define DU_val DU_val_ASL	/* real (double) value: offset from uinfo */
 #define D_val D_val_ASL		/* real (double) value in known place */
+#define FI_val FI_val_ASL	/* fint value in known place */
 #define IA_val IA_val_ASL	/* int value in asl */
 #define IK0_val IK0_val_ASL	/* int value 0 in known place */
 #define IK1_val IK1_val_ASL	/* int value 1 in known place */
@@ -145,7 +146,7 @@ extern void  usage_ASL ANSI((Option_Info*, int exit_code));
 extern char WS_desc_ASL[];	/* desc for WS_val, constrained problems */
 extern char WSu_desc_ASL[];	/* desc for WS_val, unconstrained problems */
 
-extern Kwfunc C_val, CK_val, DA_val, DK_val, DU_val, D_val, IA_val;
+extern Kwfunc C_val, CK_val, DA_val, DK_val, DU_val, D_val, FI_val, IA_val;
 extern Kwfunc IK0_val, IK1_val, IK_val, IU_val, I_val, LK_val, LU_val;
 extern Kwfunc L_val, Ver_val, WS_val;
 extern Kwfunc SU_val;

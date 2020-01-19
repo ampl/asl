@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -76,6 +76,7 @@ x1known_ASL(ASL *asl, real *X, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	x0_check_ASL((ASL_fg*)asl, X);
 	asl->i.x_known = 1;
+	err_jmp = 0;
 	}
 
  static void
@@ -104,7 +105,7 @@ obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
 	cde *d;
 	expr *e1;
 	real f;
-	int ij, L;
+	int ij;
 	ograd **gr0;
 	ograd *gr;
 	Jmp_buf err_jmp0;
@@ -123,10 +124,8 @@ obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		x0_check_ASL(asl,X);
-	if (!asl->i.noxval) {
-		asl->i.noxval = (int*)M1alloc(L = n_obj*sizeof(int));
-		memset(asl->i.noxval, 0, L);
-		}
+	if (!asl->i.noxval)
+		asl->i.noxval = (int*)M1zapalloc(n_obj*sizeof(int));
 	co_index = -(i + 1);
 	if (!(x0kind & ASL_have_objcom)) {
 		if (ncom0 > combc)

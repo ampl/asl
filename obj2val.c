@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -54,7 +54,7 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	expr *e1;
 	expr_v *V;
 	real f;
-	int ij, L;
+	int ij;
 	ograd *gr, **gr0;
 	Jmp_buf err_jmp0;
 	ASL_fgh *asl;
@@ -70,10 +70,8 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
 	x2_check(X);
-	if (!asl->i.noxval) {
-		asl->i.noxval = (int*)M1alloc(L = n_obj*sizeof(int));
-		memset(asl->i.noxval, 0, L);
-		}
+	if (!asl->i.noxval)
+		asl->i.noxval = (int*)M1zapalloc(n_obj*sizeof(int));
 	co_index = -(i + 1);
 	if (!(x0kind & ASL_have_objcom)) {
 		if (ncom0 > combc)

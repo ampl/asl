@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -157,7 +157,7 @@ AuxInfo {
 	AuxInfo *next;
 	char *auxname;
 	void *v;
-	void (*f)(AmplExports*, void*, ...);
+	void (*f) ANSI((AmplExports*, void*, ...));
 	};
 
  struct
@@ -231,6 +231,9 @@ extern char *i_option_ASL, *ix_details_ASL[];
 
 extern void func0add ANSI((AmplExports*));	/* statically linked */
 extern void func1add ANSI((AmplExports*));	/* for amplodbc.dll  */
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
 extern void funcadd  ANSI((AmplExports*));	/* dynamically linked */
 
 #ifdef __cplusplus

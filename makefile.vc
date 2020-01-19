@@ -1,5 +1,5 @@
 # /****************************************************************
-# Copyright (C) 1997-2000 Lucent Technologies
+# Copyright (C) 1997-2001 Lucent Technologies
 # All Rights Reserved
 #
 # Permission to use, copy, modify, and distribute this software and
@@ -141,7 +141,7 @@ mach.obj: arith.h
 bscanf.obj conscale.obj derprop.obj dynlink.obj func_add.obj\
  funcadd.obj funcadd1.obj funcaddk.obj funcaddr.obj funcadd0.obj g_fmt.obj\
  genrowno.obj jac0dim.obj jacdim.obj jacinc.obj names.obj obj_prec.obj\
- objval_.obj repwhere.obj sjac0dim.obj studchk0.obj suf_sos.obj: $(Aslh)
+ objval_.obj repwhere.obj sjac0dim.obj studchk0.obj: $(Aslh)
 xp1known.obj: asl_pfg.h psinfo.h nlp.h $(Aslh)
 duthes.obj fullhes.obj htcl.obj sphes.obj: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 getstub.obj value.obj writesol.obj wrtsol_.obj: getstub.h $(Aslh)
@@ -151,7 +151,8 @@ conpval.obj pshvprod.obj xp2known.obj:\
 	jacpdim.h asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 comeval.obj con1ival.obj conval.obj mip_pri.obj objval.obj qpcheck.obj\
  readsol.obj: nlp.h $(Aslh)
-misc.obj nl_obj.obj: nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
+misc.obj nl_obj.obj suf_sos.obj:\
+	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 op_type.obj: op_type.hd
 fgh_read.obj: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
 rops.obj: nlp.h errchk.h $(Aslh)
@@ -159,7 +160,7 @@ rops2.obj: nlp2.h errchk.h $(Aslh)
 conadj.obj fg_write.obj qp_read.obj: nlp.h r_opn.hd $(Aslh)
 f_read.obj fg_read.obj: nlp.h r_opn.hd dvalue.hd $(Aslh)
 objconst.obj: r_opn0.hd nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
-pfg_read.obj: asl_pfg.h r_opn0.hd dvalue.hd nlp.h $(Aslh)
+pfg_read.obj: asl_pfg.h r_opn0.hd dvalue.hd nlp.h psinfo.h $(Aslh)
 pfghread.obj: jacpdim.h asl_pfgh.h opnos.hd r_opn0.hd dvalue.hd\
 	psinfo.h nlp2.h $(Aslh)
 nqpcheck.obj: nlp.h r_qp.hd $(Aslh)
@@ -178,9 +179,6 @@ arith.h: arithchk.c
 
 stdio1.h: stdio1.h0
 	copy stdio1.h0 stdio1.h
-
-funcadd1.obj: funcadd1.c
-	$(CC) -c $(CFLAGS) -DWIN32 funcadd1.c
 
 stderr.obj: stderr.c
 	$(CC) -c $(CFLAGS) -DSTDERR=stdout stderr.c

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -133,6 +133,7 @@ xp1known_ASL(ASL *asl, real *x, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	xp1_check_ASL((ASL_pfg*)asl, x);
 	asl->i.x_known = 1;
+	err_jmp = 0;
 	}
 
 #ifdef __cplusplus

@@ -23,8 +23,8 @@ Ignoring 1 objectives.
      I      FINAL X(I)        D(I)          G(I)
 
      1     .146447E+00      .250E+01     -.284E-11
-     2     .500000E+00      .200E+01      .389E-15
+     2     .500000E+00      .200E+01      .370E-15
      3     .853553E+00      .250E+01      .283E-11
 nl21: Absolute Function Convergence
 5 function, 5 gradient evaluations
-Final sum of squares = 2.260737963913791e-24
+Final sum of squares = 2.260737969306395e-24

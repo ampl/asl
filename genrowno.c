@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 2000 Lucent Technologies
+Copyright (C) 2000, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -30,7 +30,11 @@ THIS SOFTWARE.
 /* reader (with A_vals left at its default value = NULL). */
 
  void
+#ifdef KR_headers
+gen_rownos_ASL(asl) ASL *asl;
+#else
 gen_rownos_ASL(ASL *asl)
+#endif
 {
 	cgrad *cg, **cgp, **cgpe;
 	int *a, n;

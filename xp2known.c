@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999, 2000 Lucent Technologies
+Copyright (C) 1997, 1999-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -151,6 +151,7 @@ xp2known_ASL(ASL* asl, real *X, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	xp_check_ASL((ASL_pfgh*)asl, X);
 	asl->i.x_known = 1;
+	err_jmp = 0;
 	}
 
  static real *
@@ -234,7 +235,7 @@ hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
 	Ihinfo *ihi;
 	range *r;
 	real *h, *s, *si;
-	int i, ihc, n1, no, noe;
+	int i, ihc, n1;
 	linarg **lap, **lap1, **lape;
 	expr_v *v;
 
@@ -243,19 +244,10 @@ hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
 	asl->P.nhvprod = 0;
 	if (!(ihi = asl->P.ihi1) || ndhmax < asl->P.ihdmin)
 		return;
-	if (nobj >= 0 && nobj < n_obj) {
-		ow = 0;
-		no = nobj;
-		noe = no + 1;
-		}
-	else {
+	if (nobj < 0 || nobj >= n_obj)
 		nobj = -1;
-		no = noe = 0;
-		if (ow)
-			noe = n_obj;
-		}
 	if (!asl->P.hes_setup_called)
-		(*asl->p.Hesset)(a, 1, no, noe-no, 0, n_con);
+		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc);
 	s = asl->P.dOscratch;
 	if (asl->P.ihdcur)
 		ihd_clear(asl);

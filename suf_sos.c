@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1999, 2000 Lucent Technologies
+Copyright (C) 1999-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -23,6 +23,12 @@ THIS SOFTWARE.
 ****************************************************************/
 
 #include "asl.h"
+#define SKIP_NL2_DEFINES
+#include "nlp.h"
+#include "nlp2.h"
+#include "asl_pfg.h"
+#include "asl_pfgh.h"
+#undef cde
 
  static void
 #ifdef KR_headers
@@ -118,6 +124,55 @@ bsrch(int k, int n, real *x)
 	return -1; /* not reached */
 	}
 
+ static int
+#ifdef KR_headers
+rcompar(a, b, v) char *a, *b, *v;
+#else
+rcompar(const void *a, const void *b, void *v)
+#endif
+{
+	real *r = (real *)v, t;
+	t = r[*(int*)a] - r[*(int*)b];
+	if (t == 0.)
+		return 0;
+	return t < 0. ? -1 : 1;
+	}
+
+ static void
+#ifdef KR_headers
+reorder(ind, ref, pri, j0, k, p) int *ind, *pri, j0, k, *p; real *ref;
+#else
+reorder(int *ind, real *ref, int j0, int k, int *p)
+#endif
+{
+	int i, j, n, ti;
+	real tr;
+
+	ref += j0;
+	ind += j0;
+	n = k - j0;
+	for(i = 0; i < n; i++)
+		p[i] = i;
+	qsortv(p, n, sizeof(int), rcompar, ref);
+	for(i = 0; i < n; i++) {
+		if ((j = p[i]) > i) {
+			ti = ind[i];
+			tr = ref[i];
+			for(k = i;;) {
+				ind[k] = ind[j];
+				ref[k] = ref[j];
+				j = p[k = j];
+				p[k] = -1 - j;
+				if (j == i) {
+					ind[k] = ti;
+					ref[k] = tr;
+					break;
+					}
+				}
+			}
+		}
+	}
+
  int
 #ifdef KR_headers
 suf_sos_ASL(asl, flags, nsosnz_p, sostype_p, sospri_p, copri,
@@ -130,17 +185,17 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	real **sosref_p)
 #endif
 {
-	int f, i, j, jz, k, m, ms1, n, ng, ns1;
-	int nsos, nsos1, nsos2, nsosnz, nsosnz1;
-	int *c, *col1, *ja, *ja1, *jae, *pri, *rn;
+	int f, i, j, j0, jz, k, m, ms1, n, ng, ns1;
+	int nsos, nsos1, nsos2, nsos21, nsosnz, nsosnz1;
+	int *c, *col1, *ja, *ja1, *jae, *p, *pri, *rn, *rt;
 	int *sospri, *sosbeg, *sosind, *v, *v0, *ve, *z, *zg, *zv;
 	SufDesc *cd, *d, *gd, *grefd, *pd, *refd, *vd;
-	char *sostype;
-	real *a, *g, *g0, *ge, *gn, *gnos, *sosref, *sufref, t;
+	char *s0, *sostype;
+	real *a, *g, *g0, *ge, *gn, *gnos, *sosref, *sufref, t, t1;
 	ograd *og, **ogp;
 	size_t L;
 
-	nsos1 = nsos2 = 0;
+	nsos1 = nsos2 = nsos21 = 0;
 	if (!(flags & ASL_suf_sos_ignore_sosno)
 	 && (gd = suf_get("sosno", ASL_Sufkind_var | ASL_Sufkind_input))
 	 && (grefd = suf_get("ref", ASL_Sufkind_var | ASL_Sufkind_input)))
@@ -148,26 +203,34 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	if (!(flags & ASL_suf_sos_ignore_amplsos)
 	 && (vd = suf_get("sos", ASL_Sufkind_var | ASL_Sufkind_input))
 	 && (cd = suf_get("sos", ASL_Sufkind_con | ASL_Sufkind_input))
-	 && (refd = suf_get("sosref", ASL_Sufkind_var|ASL_Sufkind_input)))
+	 && (refd = suf_get("sosref", ASL_Sufkind_var|ASL_Sufkind_input))) {
 		nsos2 = 1;
+		if (flags & ASL_suf_sos_just_SOS1)
+			nsos21 = 1;
+		}
 	else if (!nsos1)
 		return 0;
 	nsos = nsosnz = 0;
 	n = n_var;
 	m = n_con;
+	z = zv = 0;
 	if (nsos2) {
-		asl->i.z[1] = z = (int *)M1alloc((m  + n)*sizeof(int));
-		asl->i.z[0] = zv = z + m;
 		v = v0 = vd->u.i;
 		ve = v + n;
-		for(j = 0; j < n && !v[j]; j++)
-			zv[j] = j;
+		if (nsos21)
+			for(j = 0; j < n && !v[j]; j++);
+		else {
+			asl->i.z[1] = z = (int *)M1alloc((m+n)*sizeof(int));
+			asl->i.z[0] = zv = z + m;
+			for(j = 0; j < n && !v[j]; j++)
+				zv[j] = j;
+			}
 		col1 = v + j;
-		ns1 = -1;
+		ns1 = n;
 		for(k = j; j < n; j++) {
 			if ((i = v[j]) & 2) {
 				jz = -1;
-				if (ns1 < 0)
+				if (ns1 == n)
 					ns1 = j;
 				}
 			else {
@@ -178,10 +241,13 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 						nsos = i;
 					}
 				}
-			zv[j] = jz;
+			if (zv)
+				zv[j] = jz;
 			}
-		nbv += k - n;
-		n_var = k;
+		if (!nsos21) {
+			nbv += k - n;
+			n_var = k;
+			}
 		}
 	if (nsos1) {
 		typedef union {real r; int i;} Uir; /* for sizeof */
@@ -218,7 +284,7 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
  havenz:
 	if (nsosnz_p)
 		*nsosnz_p = nsosnz;
-	if (nsos2)
+	if (zv)
 		lumap(ns1, n, zv, LUv, Uvx);
 	L = nsos + (nsos + 1)*sizeof(int)
 		+ nsosnz*(sizeof(int) + sizeof(double));
@@ -268,6 +334,22 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 				if (pri && pri[k] < sospri[i])
 					sospri[i] = pri[k];
 				}
+
+		/* reorder each SOS1 set by sosref */
+		p = (int*)gnos;
+		for(i = k = 0; i < nsos1; i++) {
+			j = j0 = k;
+			k = sosbeg[i];
+			t = sosref[j++];
+			while(j < k) {
+				t1 = sosref[j++];
+				if (t1 < t) {
+					reorder(sosind, sosref, j0, k, p);
+					break;
+					}
+				}
+			}
+
 		free(gnos);
 		if (!nsos2)
 			goto sosbeg_adjust;
@@ -301,6 +383,8 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	if (nsos1)
 		for(i = 0; i <= nsos; i++)
 			sosbeg[i] += nsosnz1;
+	if (nsos21)
+		goto sosbeg_adjust;
 	c = cd->u.i;
 	for(i = 0; i < m; i++) {
 		if (!(c[i] & 2)) {
@@ -331,12 +415,37 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	if (asl->i.conames)
 		name_map_ASL(asl->i.n_con0, n_obj, z, asl->i.conames);
 	for(i = 0; z[i] >= 0; i++);
+	if (!A_vals) {
+		L = sizeof(cde);
+		switch(asl->i.ASLtype) {
+		  case ASL_read_f:
+		  case ASL_read_fg:
+			s0 = (char*)((ASL_fg*)asl)->I.con_de_;
+			break;
+		  case ASL_read_fgh:
+			L = sizeof(cde2);
+			s0 = (char*)((ASL_fgh*)asl)->I.con2_de_;
+			break;
+		  case ASL_read_pfg:
+			s0 = (char*)((ASL_pfg*)asl)->I.con_de_;
+			break;
+		  case ASL_read_pfgh:
+			s0 = (char*)((ASL_pfgh*)asl)->I.con2_de_;
+			L = sizeof(cde2);
+		  }
+		while(++i < m)
+			if ((j = z[i]) >= 0) {
+				Cgrad[j] = Cgrad[i];
+				memcpy(s0 + j*L, s0 + i*L, L);
+				}
+		goto adjust_suf;
+		}
 	ja = A_colstarts;
 	jae = ja + n;
 	rn = A_rownos;
 	if (nsos1)
-		for(rn = sosind - nsosnz1; rn < sosind; rn++)
-			*rn = zv[*rn - f] + f;
+		for(rt = sosind - nsosnz1; rt < sosind; rt++)
+			*rt = zv[*rt - f] + f;
 	for(j = 0; *zv >= 0; ja++, zv++) {
 		k = ja[1] - f;
 		while(j < k)
@@ -359,6 +468,7 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 			}
 		} while(ja < jae);
 	*ja1 = (nzc = i) + f;
+ adjust_suf:
 	for(d = asl->i.suffixes[0]; d; d = d->next)
 		if (d != vd && d != refd)
 			suf_adjust(d, ns1, asl->i.n_var0, asl->i.z[0]);

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -114,6 +114,19 @@ hvcomp_(real *hv, real *p, fint *nobj, real *ow, real *y)
 	if (!(a = cur_ASL))
 		badasl_ASL(a,0,"objval");
 	(*a->p.Hvcomp)(a, hv, p, (int)*nobj, ow, y);
+	}
+
+ void
+#ifdef KR_headers
+hvinit_(nobj, ow, y) fint *nobj; real *ow, *y;
+#else
+hvinit_(fint *nobj, real *ow, real *y)
+#endif
+{
+	ASL *a;
+	if (!(a = cur_ASL))
+		badasl_ASL(a,0,"hvinit");
+	(*a->p.Hvinit)(a, a->p.ihd_limit_, (int)*nobj, ow, y);
 	}
 
  static ASL *

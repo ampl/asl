@@ -31,7 +31,7 @@ extern "C" {
 
 #define Egulp 400
 
- static int com11, n_com1, ncom_togo, nvref;
+ static int com11, n_com1, ncom_togo, nvar0, nvinc, nvref;
  static int *vrefnext, *vrefx;
  static expr_if *if2list_end;
  static expr_va *varg2list_end;
@@ -344,7 +344,7 @@ eread(EdRead *R, int deriv)
 			al->dig = dig;
 			al->funcinfo = fi->funcinfo;
 			al->AE = asl->i.ae;
-			sa = al->sa = (char **)(al + 1);
+			al->sa = (Const char**)(sa = (char **)(al + 1));
 			ap = rvf->ap = (argpair *)(sa + symargs);
 			rvf->da = da = ap + k;
 			sap = rvf->sap = da + kd;
@@ -434,7 +434,11 @@ eread(EdRead *R, int deriv)
 			break;
 
 		case 'v':
-			if (xscanf(R,"%d",&k) != 1 || k < 0 || k > max_var)
+			if (xscanf(R,"%d",&k) != 1 || k < 0)
+				badline(R);
+			if (k >= nvar0)
+				k += nvinc;
+			if (k > max_var)
 				badline(R);
 			if (k < nv01 && deriv && !zc[k]++)
 				zci[nzc++] = k;
@@ -549,6 +553,8 @@ eread(EdRead *R, int deriv)
 			 || xscanf(R, "%d", &k) != 1
 			 || k < 0 || k >= max_var)
 				badline(R);
+			if (k >= nvar0)
+				k += nvinc;
 			rv = (expr *)mem(sizeof(expr));
 			rv->op = f_OPPLTERM;
 			rv->L.p = p;
@@ -1252,7 +1258,7 @@ goff_comp(VOID)
 	cgrad *cg;
 
 	cgx = Cgrad;
-	cgxe = cgx + n_con;
+	cgxe = cgx + asl->i.n_con0;
 	while(cgx < cgxe)
 		for(cg = *cgx++; cg; cg = cg->next)
 			cg->goff = ka[cg->varno]++;
@@ -1263,7 +1269,7 @@ colstart_inc(VOID)
 {
 	int *ka, *kae;
 	ka = A_colstarts;
-	kae = ka + nv0;
+	kae = ka + asl->i.n_var0;
 	while(ka <= kae)
 		++*ka++;
 	}
@@ -1348,17 +1354,21 @@ adjust(VOID)
 
  static void
 #ifdef KR_headers
-br_read(R, nc, Lp, U, Cvar, nv) EdRead *R; real **Lp, *U; int *Cvar, nv;
+br_read(R, nc, nc1, Lp, U, Cvar, nv)
+	EdRead *R; real **Lp, *U; int nc, nc1, *Cvar, nv;
 #else
-br_read(EdRead *R, int nc, real **Lp, real *U, int *Cvar, int nv)
+br_read(EdRead *R, int nc, int nc1, real **Lp, real *U, int *Cvar, int nv)
 #endif
 {
 	int i, inc, j, k;
 	real *L;
 	ASL *asl = R->asl;
 
-	if (!(L = *Lp))
-		L = *Lp = (real *)M1alloc(2*sizeof(real)*nc);
+	if (!(L = *Lp)) {
+		if (nc1 < nc)
+			nc1 = nc;
+		L = *Lp = (real *)M1alloc(2*sizeof(real)*nc1);
+		}
 	if (U)
 		inc = 1;
 	else {
@@ -1490,7 +1500,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 	int *ka, readall;
 	unsigned x;
 	expr_v *e;
-	cgrad **CG, *cg, **cgp;
+	cgrad *cg, **cgp;
 	ograd *og, **ogp;
 	char fname[128];
 	func_info *fi;
@@ -1553,6 +1563,9 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		+ nfunc*sizeof(func_info *)
 		+ nvref*sizeof(int)
 		+ no;
+	nvar0 = a->i.n_var0;
+	if (!(nvinc = a->i.n_var_ - nvar0))
+		nvar0 += ncom0 + ncom1;
 	if (pi0) {
 		memset(pi0, 0, nc*sizeof(real));
 		if (havepi0)
@@ -1596,10 +1609,6 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		ER.can_end = 1;
 		i = edag_peek(R);
 		if (i == EOF) {
-			for(CG = Cgrad, k = 0; k < nc; k++, CG++)
-				if (!*CG)
-					scream(R, ASL_readerr_corrupt,
-						"Cgrad[%d] = 0\n", k);
 			free(imap);
 			adjoints = (real *)M1zapalloc(amax*Sizeof(real));
 			adjoints_nv1 = &adjoints[nv1];
@@ -1718,8 +1727,11 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 				co_read(R, obj_de + k);
 				break;
 			case 'V':
-				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3
-				 || k < nv0 || k >= nv)
+				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
+					badline(R);
+				if (k >= nvar0)
+					k += nvinc;
+				if (k < nv0 || k >= nv)
 					badline(R);
 				if (j)
 					cexp1_read(R, j, k, nlin);
@@ -1730,19 +1742,24 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 				Suf_read_ASL(R, readall);
 				break;
 			case 'r':
-				br_read(R, nc, &LUrhs, Urhsx, cvar, nv0);
+				br_read(R, asl->i.n_con0, n_con, &LUrhs,
+					Urhsx, cvar, asl->i.n_var0);
 				break;
 			case 'b':
-				br_read(R, nv0, &LUv, Uvx, 0, 0);
+				br_read(R, asl->i.n_var0, n_var, &LUv,
+					Uvx, 0, 0);
 				break;
 			case 'k':
 				k_seen++;
-				k = nv0;
+				k = asl->i.n_var0;
 				if (!xscanf(R,"%d",&j) || j != k - 1)
 					badline(R);
-				if (!(ka = A_colstarts))
+				if (!(ka = A_colstarts)) {
+					if ((i = k) < n_var)
+						i = n_var;
 					ka = A_colstarts = (int *)
-						M1alloc((k+1)*Sizeof(int));
+						M1alloc((i+1)*Sizeof(int));
+					}
 				*ka++ = 0;
 				*ka++ = 0;	/* sic */
 				while(--k > 0)

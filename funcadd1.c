@@ -37,6 +37,11 @@ funcadd(AmplExports *ae)
 
 #else
 
+#ifdef _WIN32
+#undef WIN32
+#define WIN32
+#endif
+
 #ifdef WIN32
 #include "windows.h"
 #undef Char
