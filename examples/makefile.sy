@@ -50,7 +50,7 @@ Lp = cport.lib $(Lf2c)
 Mf2c = $S\main.obj
 
 # cport.lib = PORT subroutine library.
-# Ask netlib@netlib.bell-labs.com to
+# Ask netlib@netlib.org to
 #	send dmngb dmnhb dn2g dn2gb dq7rgs from port
 # to get source for the relevant (small) part of PORT.
 # f2c.lib is for f2c's version of Fortran I/O: we assume

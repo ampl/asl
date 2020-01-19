@@ -50,7 +50,7 @@ LFLAGS = -bt=nt -l=nt
 Lf2c = $S\watf2c.lib
 Lp = cport.lib $(Lf2c)
 # cport.lib = PORT subroutine library.
-# Ask netlib@netlib.bell-labs.com to
+# Ask netlib@netlib.org to
 #	send dmngb dmnhb dn2g dn2gb dq7rgs from port
 # to get source for the relevant (small) part of PORT.
 # f2c.lib is for f2c's version of Fortran I/O: we assume
