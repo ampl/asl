@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1992 Lucent Technologies
+Copyright (C) 1992, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -28,9 +28,9 @@ extern "C" {
 #endif
  char *
 #ifdef KR_headers
-basename(s) register char *s;
+basename_ASL(s) register char *s;
 #else
-basename(register char *s)
+basename_ASL(register char *s)
 #endif
 {
 	register char *rv = s;
