@@ -8,7 +8,7 @@ arithchk.c	efc0d389	4669
 asl.h	b5bff62	33780
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	4e3188c	29
+asldate.c	e91e7c3c	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 b_search.c	18aac04a	3312
@@ -26,7 +26,7 @@ conscale.c	83a1310	3526
 conval.c	78074e7	4119
 derprop.c	e1181b02	1359
 details.c0	fa7ec7b3	182
-dtoa.c	f3ec32d0	68012
+dtoa.c	26b8ad8	67983
 dtoa1.c	ed967a36	3071
 duthes.c	ea8758e9	3635
 dvalue.hd	fedc7579	1104
@@ -52,7 +52,7 @@ funcaddr.c	fc16b89a	1197
 g_fmt.c	efcfdd3b	3452
 genrowno.c	1a8171dc	1805
 getenv.c	e86c81a2	1466
-getstub.c	1941b36e	11576
+getstub.c	e55757	11670
 getstub.h	e7b2107f	6756
 htcl.c	2dd6c9	2281
 jac0dim.c	e34b75be	6779
@@ -63,7 +63,7 @@ jacpdim.h	ea424f77	2266
 mach.c	ea56afd	2026
 mainexit.c	e4761b9b	1713
 makefile.sy	feecf687	5080
-makefile.u	111e2f97	9725
+makefile.u	b5146ed	9746
 makefile.vc	f9835ec	6258
 makefile.wat	e0a819a4	5374
 mip_pri.c	19e54f76	7877
@@ -83,10 +83,10 @@ op_type.c	103eae0f	1202
 op_type.hd	46993b1	1265
 opcode.hd	fa56de9c	1326
 opnos.hd	ce11c7b	64
-pfg_read.c	f83e7d39	103104
-pfghread.c	9dfd5ad	1261
+pfg_read.c	9e9f4c9	103122
+pfghread.c	e2353d03	1261
 printf.c	ea54b7ea	17870
-pshvprod.c	26f2746	20797
+pshvprod.c	e1661d98	20801
 psinfo.h	ee2214c4	9761
 punknown.c	1212583b	1697
 qp_read.c	1dd530e3	3859

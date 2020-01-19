@@ -28,6 +28,8 @@ THIS SOFTWARE.
 extern int _8087;
 #endif
 
+char *Lic_info_ASL = "";
+
  static int
 #ifdef KR_headers
 kw_width(kw, n, pkwe) keyword *kw, **pkwe; int n;
@@ -298,6 +300,8 @@ show_version_ASL(Option_Info *oi)
 	if (oi->driver_date > 0)
 		printf(", driver(%ld)", oi->driver_date);
 	printf(", ASL(%ld)\n", ASLdate_ASL);
+	if (Lic_info_ASL && *Lic_info_ASL)
+		printf("%s\n", Lic_info_ASL);
 	}
 
  char *

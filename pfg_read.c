@@ -2833,7 +2833,7 @@ psfind(Static *S)
 	range *r, *r0;
 	linarg *la, **lap;
 #ifdef PSHVREAD
-	int ihdlim, ihdmax, ihdmin, n;
+	int ihdlim, ihdlim1, ihdmax, ihdmin, n;
 	Ihinfo *ihi, *ihi0, *ihi1;
 #endif
 	ASLTYPE *asl = S->asl;
@@ -2907,8 +2907,8 @@ psfind(Static *S)
 		}
 #ifdef PSHVREAD
 	if ((ihdlim = ihd_limit) > 0) {
-		ihdmin = ihdlim + 1;
-		n = ihdmin*sizeof(Ihinfo);
+		ihdmin = ihdlim1 = ihdlim + 1;
+		n = ihdlim1*sizeof(Ihinfo);
 		asl->P.ihi = ihi0 = (Ihinfo*)M1zapalloc(n);
 		ihdmax = 0;
 		for(r = asl->P.rlist.next; r != r0; r = r->rlist.next)
@@ -2916,7 +2916,7 @@ psfind(Static *S)
 				if (n > r->nv)
 					n = r->nv;
 				if (n > ihdlim)
-					n = ihdlim;
+					n = ihdlim1;
 				else {
 					if (ihdmax < n)
 						ihdmax = n;
@@ -2931,7 +2931,7 @@ psfind(Static *S)
 		asl->P.ihdmax = ihdmax;
 		asl->P.ihdmin = ihdmin;
 		ihi1 = ihi = ihi0 + ihdlim;
-		ihi->ihd = ihdlim + 1;	/* sentinel */
+		ihi->ihd = ihdlim1;	/* sentinel */
 		for(i = ihdlim; i > 0; --i)
 			if (n = (--ihi)->nr) {
 				ihi->next = ihi1;

@@ -165,9 +165,10 @@ a = \
 	xp1known.c \
 	xp2known.c
 
+ARFLAGS = ruv
 amplsolver.a: $a
 	$(CC) -c $(CFLAGS) $?
-	x=`echo $? | sed 's/\.[cs]/.o/g'` && ar ruv amplsolver.a $$x && rm $$x
+	x=`echo $? | sed 's/\.[cs]/.o/g'` && ar $(ARFLAGS) amplsolver.a $$x && rm $$x
 	ranlib amplsolver.a || true
 # If your system lacks ranlib, add a dummy ranlib to your
 # search path, e.g.

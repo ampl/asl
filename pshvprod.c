@@ -935,8 +935,7 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 		    ps = asl->P.ops + no;
 		    g = ps->g;
 		    for(ge = g + ps->ng; g < ge; g++)
-			if (t2 = g->g2) {
-				og = g->og;
+			if ((t2 = g->g2) && (og = g->og)) {
 				t1 = p[og->varno]*og->coef;
 				while(og = og->next)
 					t1 += p[og->varno]*og->coef;
@@ -953,8 +952,7 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 		for(pe = ps + n_con; ps < pe; ps++, y++)
 		    if (t = cscale ? *cscale++ * *y : *y)
 			for(g = ps->g, ge = g + ps->ng; g < ge; g++)
-			    if (t2 = g->g2) {
-				og = g->og;
+			    if ((t2 = g->g2) && (og = g->og)) {
 				t1 = p[og->varno]*og->coef;
 				while(og = og->next)
 					t1 += p[og->varno]*og->coef;

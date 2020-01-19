@@ -1385,3 +1385,12 @@ asldate.c not changed.
 Sun Apr 11 23:39:41 MDT 2004
   dtoa.c:  update contact info. for dmg and correct page numbers in
 comment on Steele & White (1990); asldate.c not changed.
+
+Sat Aug 21 22:04:17 MDT 2004
+  makefile.u: minor tweak to permit "make ARFLAGS='-X64  ruv'" (after
+one has copied makefile.u to makefile and made other necessary changes).
+  getstub.c: add Lic_info_ASL, a char* value that can be set to have
+show_version_ASL() print license information.
+  pfg_read.c pfghread.c, pshvprod.c: fix bugs (e.g., faults on some
+problems) with hvcomp.
+
