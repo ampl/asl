@@ -181,8 +181,16 @@ dtoa1.obj: dtoa.c arith.h stdio1.h
 # the number of bits in integral data types.  (It's probably best not to
 # add such options to CFLAGS.)
 
+XBINLIBS =
+
+# If your compiler requires libraries that it does not supply automatically
+# (i.e., if your compiler is broken, as reportedly Microsoft's VC++ 7 is:
+# it is said to need "XBINLIBS = bufferoverflowu.lib"), modify the above
+# XBINLIB assignment suitably, or invoke
+#   "nmake ... XBINLIBS=..."
+
 arith.h: arithchk.c
-	comptry.bat $(CC) $(CFLAGS) -DNO_FPINIT arithchk.c
+	comptry.bat $(CC) $(CFLAGS) -DNO_FPINIT arithchk.c $(XBINLIBS)
 	arithchk >arith.h
 	del arithchk.exe
 	del arithchk.obj

@@ -8,7 +8,7 @@ arithchk.c	efc0d389	4669
 asl.h	ed5107dc	33907
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	d5065b9	29
+asldate.c	19c29b8b	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 b_search.c	18aac04a	3312
@@ -42,9 +42,9 @@ fpinit.c	88e33ac	3317
 fpinitmt.c	e3c0b8b1	4338
 fpsetprec.s	1d0b2972	535
 fullhes.c	eeea81e	3978
-func_add.c	fe87c1c0	12548
+func_add.c	ff08ec61	12538
 funcadd.c	153afbf1	3487
-funcadd.h	fd146a16	14539
+funcadd.h	fb37b900	14452
 funcadd0.c	ee0ae780	1392
 funcadd1.c	fe7ca886	8243
 funcaddk.c	1913fb94	3359
@@ -52,7 +52,7 @@ funcaddr.c	fc16b89a	1197
 g_fmt.c	efcfdd3b	3452
 genrowno.c	1a8171dc	1805
 getenv.c	e86c81a2	1466
-getstub.c	e55757	11670
+getstub.c	c00a014	11677
 getstub.h	e7b2107f	6756
 htcl.c	2dd6c9	2281
 jac0dim.c	e34b75be	6779
@@ -63,13 +63,13 @@ jacpdim.h	ea424f77	2266
 mach.c	ea56afd	2026
 mainexit.c	e4761b9b	1713
 makefile.sy	feecf687	5080
-makefile.u	b5146ed	9746
-makefile.vc	f9835ec	6258
+makefile.u	c1c1a1c	9578
+makefile.vc	5d33578	6576
 makefile.wat	e0a819a4	5374
 mip_pri.c	19e54f76	7877
 misc.c	6c65fea	20201
 mypow.c	1571ef65	2294
-names.c	f4fa0647	4205
+names.c	e0cd2a0c	4207
 nl_obj.c	faef2e84	2054
 nlp.h	f94bd3fd	5474
 nlp2.h	e685079d	7241
@@ -88,7 +88,7 @@ pfghread.c	e2d88399	1261
 printf.c	ea54b7ea	17870
 pshvprod.c	e1661d98	20801
 psinfo.h	ee2214c4	9761
-punknown.c	1212583b	1697
+punknown.c	fa46cf10	1704
 qp_read.c	1dd530e3	3859
 qpcheck.c	16ec2d20	1782
 qsortv.c	14eac08c	4858
@@ -107,7 +107,7 @@ sos_add.c	f0109117	24089
 sphes.c	e4630bb9	27102
 sprintf.c	e6ce1d45	3050
 sscanf.c	e8b1a5c0	2932
-stderr.c	e0b448ee	1487
+stderr.c	f64a39f8	1343
 stdio1.h0	f9011b5b	2841
 strerror.c	1c5c813a	1362
 studchk0.c	d874b49	1387
@@ -118,6 +118,6 @@ wrtsol_.c	c341232	2150
 ws_desc.c	fceb8f65	214
 wsu_desc.c	fbb1c30c	170
 x2check.c	e7ff7f30	2203
-xectim.c	15171226	2327
+xectim.c	ebfe817d	2709
 xp1known.c	907b5ac	3535
 xp2known.c	f1dca600	6558

@@ -131,7 +131,7 @@ lcon_name_ASL(ASL *asl, int n)
 		get_row_names(asl);
 	np = asl->i.lconnames + n;
 	if (!(rv = *np)) {
-		*np = rv = (char*)mem(Sprintf(buf,"_slcon[%d]",n+1)+1);
+		*np = rv = (char*)mem(Sprintf(buf,"_slogcon[%d]",n+1)+1);
 		strcpy(rv, buf);
 		}
 	return rv;
