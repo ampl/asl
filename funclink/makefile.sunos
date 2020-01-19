@@ -1,0 +1,28 @@
+# Makefile for SunOS (with the default K&R compiler, cc)
+
+.SUFFIXES: .c .o
+
+# $S = ampl/solvers directory
+S = ..
+CC = cc
+CFLAGS = -DKR_headers -I$S -O
+.c.o:
+	$(CC) -c $(CFLAGS) $*.c
+
+### To make libampl.so.0.0 in the current directory
+
+libampl.so.0.0: funcaddk.c
+	$(CC) $(CFLAGS) -c -pic funcaddk.c
+	ld -o libampl.so.0.0 funcaddk.o
+
+# Shell variable LD_LIBRARY_PATH can specify a colon-separated
+# sequence of directories in which to look for shared objects.
+
+## Sample solver creation...
+
+# $(myobjects) = list of .o files
+myobjects = ....
+LL = /usr/local/lib
+
+mysolver: $(myobjects)
+	$(CC) -o mysolver -L. -L$(LL) $(myobjects) -lampl $S/amplsolver.a -lm

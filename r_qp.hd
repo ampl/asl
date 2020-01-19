@@ -1,0 +1,9 @@
+#define OPPLUS 0
+#define OPMINUS 1
+#define OPMULT 2
+#define OPDIV 3
+#define OPUMINUS 16
+#define OPSUMLIST 54
+#define OP2POW 60
+#define OPNUM 63
+#define OPVARVAL 67

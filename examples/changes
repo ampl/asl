@@ -1,0 +1,73 @@
+Sun May 16 12:21:33 EDT 1993
+  Add arg need_stub to getstub.c (==> changes to getstub.h, mng.c, nl2.c).
+  Change %ld to %d in some format strings in lin1.c and lin2.c.
+  New variant linrc.c of lin1.c that uses names from stub.row and stub.col
+file if available.
+
+Sun Jun 20 08:59:19 EDT 1993
+  Many minor changes, plus new sample input and output files.
+Postscript for "Hooking Your Solver to AMPL" is now available
+as "93-10 from research/nam".
+
+Wed Jun 30 23:46:08 EDT 1993
+  Postscript for "Hooking Your Solver to AMPL" (available as
+"93-10 from research/nam") updated to describe new ordering of
+nonlinear variables and counts in .nl files that describe
+nonlinear integer variables.
+
+Thu Sep  2 07:52:54 EDT 1993
+  nl2.c: fix bug in loop that checks for bounds on variables:
+<	for(i = j = 0; i < N;  i++)
+---
+>	for(i = j = 0; i < P;  i++)
+
+Thu Nov 18 08:39:21 EST 1993
+  README: comments about ftp updated.
+
+Wed Feb 22 10:20:23 EST 1995
+  dualconv.c: add #ifdef KR_headers stuff for K&R C compilers.
+  linrc.c: minor adjustment to permit compilation on non-Unix systems
+(such as MS-DOS).
+
+Mon Apr 21 22:45:29 EDT 1997
+  Update for revised amplsolver.a and "Hooking Your Solver to AMPL".
+
+Thu Aug 14 00:19:57 EDT 1997
+  Update MATLAB interface files amplfunc.c and spamfunc.c for MATLAB
+5.x, renaming the old MATLAB 4.x versions amplfun4.c and spamfun4.c.
+
+Thu Mar 26 22:22:02 EST 1998
+  Trivial tweaks to ve08.c (we know that nerror >= 0).
+  amplfunc.c, spamfunc.c: new optional 7th left-hand (return) argument
+to amplfunc('stub') and spamfunc('stub'): the cvar array: if positive,
+cvar(i) is the subscript of the variable (in 1..length(x)) that
+complements constraint i.
+  evalg.m: minor correction: initialize j = 0.
+  makefile: adjust to reflect funcadd1.c in the parent (solvers)
+directory.
+
+Fri Mar 27 15:49:25 EST 1998
+  Adjust makefiles to reflect addition of funcadd1.o to ../amplsolver.a.
+
+Wed Apr 15 14:33:56 EDT 1998
+  Adjust amplfunc.c, enewt.m, rvmsg.c, savesol.m, spamfunc.c, tnmain.c,
+and ve08.c to return solve_result to AMPL (by assigning solve_result_num);
+minor tweak to solve message format by solvers "v8" and "ve08".
+
+Tue Jul 14 15:52:34 EDT 1998
+  linrc.c: compute clen and rlen (which matters if constraint or
+variable names exceed 8 characters in length).
+  Cosmetic change to amplfunc.c and spamfunc.c that eliminates a
+pointless warning message by some compilers.
+
+Wed Jul 29 09:32:15 EDT 1998
+  README: add table of possible solve_result_num values for mng, mnh, nl2.
+
+Fri Apr  9 00:46:03 EDT 1999
+  dualconv.c: set asl->i.n_var0 and asl->i.n_con0, which became
+necessary after changes for declared suffixes.
+
+Thu Apr 15 16:25:02 EDT 1999
+  makefile and various .out files: add 2>&1 to various test invocation
+lines.  On Microsoft systems, amplsolv.lib merges stderr with stdout,
+and this change makes the output files agree.

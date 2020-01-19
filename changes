@@ -1,0 +1,592 @@
+Mon Apr 21 22:35:13 EDT 1997
+  Extensive revisions to the entire ampl/solvers tree, corresponding
+to an updated "Hooking Your Solver to AMPL":
+	ftp://netlib.bell-labs.com/ampl/REFS/hooking.ps.gz
+
+Tue Apr 22 07:56:07 EDT 1997
+  pfg_read.c pfghread.c: fix glitch that could cause a fault (during
+setup for Hessian computations).
+
+Thu Apr 24 12:46:31 EDT 1997
+  misc.c: fix a glitch in reading suffix tables (a forthcoming AMPL
+extension).
+
+Sun May 18 13:40:12 EDT 1997
+  Tweaks: use a replaceable "getenv"; augment r_opn.hd (for a
+forthcoming driver); add rule for stderr.obj to makefile.*.
+
+Thu May 29 23:20:52 EDT 1997
+  Fix bug with xknown() with problems involving defined variables:
+derivatives were sometimes miscomputed.
+
+Wed Jun  4 11:44:14 EDT 1997
+  Adjust struct psb_elem in psinfo.h (currently just for use
+in lancelot/lancelot.c).  Recompile amplsolver.a (or amplsolv.lib) from
+scratch, even if you get just the updated files (asldate.c, pfg_read.c,
+psinfo.h, xsum0.out).
+  Add file README.f77 with changes that permit using the native Fortran
+77 compiler on some systems.
+
+Tue Jun 17 22:29:37 EDT 1997
+  Fix a fault that was possible in the .nl readers when the .nl file
+was written with presolve turned off.
+
+Thu Jun 26 23:52:36 EDT 1997
+  Adjust Malloc and M1alloc so Malloc(0) and M1alloc(0) return nonzero
+values even if malloc is buggy in that malloc(0) returns 0.
+
+Wed Jul  9 14:55:48 EDT 1997
+  Adjust Realloc so Realloc(0,n) works analogously to Malloc(0).
+  New field n_eqn gives (in struct Edaginfo) gives the number of
+equality constraints (if known from versions of ampl >= 19970627),
+or -1. This change requires recompiling all of amplsolver.a and any
+solver objects that #include "asl.h".
+  Tweak to reading numbers of complementarity constraints in .nl headers
+(to be further documented later).
+  getstub.c: fix glitch that sometimes caused -? to say
+"...[options] [options]..." rather than "...[options]...".
+  obj_prec.c: adjust to use getenv_ASL.
+
+Mon Jul 21 12:33:08 EDT 1997
+  funcaddk.c: add missing line (AmplExports *ae = al->AE;) to function
+mean.
+
+Tue Jul 22 16:53:59 EDT 1997
+  func_add.c: ignore argtype = 6.
+
+Thu Aug 14 00:34:10 EDT 1997
+  Adjust getstub.c and getstub.h to permit specifying that underscores
+should be retained (rather than turned into blanks) in names passed to
+a Solver_KW_func.  An enum now names bits in the "flags" field, with
+ASL_OI_want_funcadd (== 1) meaning that funcadd should be called, and
+ASL_OI_keep_underscores (== 2) meaning that underscores should be kept.
+
+Tue Aug 19 15:39:22 EDT 1997
+  pfg_read.c (and pfghread.c): fix bugs with linear defined variables
+referenced by other linear defined variables.  Example:
+	set I := 1..4;
+	var x{I} >= 0 := .25;
+	convex: sum{i in I} x[i] = 1;
+	var y = x[1];
+	var d = 1 + y;
+	s.t. zot{j in 1..2}: x[j] + d >= .1;
+	minimize foo: sin(x[1]);
+led to an infinite loop.  A more complicated example led to an assertion
+failure.  (Henceforth, compile pfghread.c and pfg_read.c with -DDEBUG
+if you want the assertions checked.)
+
+Wed Aug 20 16:11:24 EDT 1997
+  Once again, pfg_read.c (and pfghread.c): fix another bug with linear
+defined variables that involve other linear defined variables, this time
+when constant terms are involved.  The constant terms sometimes got
+lost.  Example:
+	set I := 1..3;
+	var x{i in I} >= 0 := i;
+	var y = x[1];
+	var z = y + 1;
+	s.t. bletch: sum{i in I} x[i] + y + z == 2;
+	s.t. zap: sum{i in 1..2} x[i] + z == 2;
+
+Fri Sep 12 01:09:37 EDT 1997
+ funcadd.c: for hypot(0,0), set the Hessian to all zeros.
+ mip_pri.c: change "AMPl" to "AMPL".
+ pfg_read.c (and pfghread.c):
+   1. Fix glitch affecting Hessian computations when imported
+(user-defined) functions involve some constant arguments.
+   2. Fix more bugs in handling defined variables.  Example:
+	var x0 >= 0 := 1;
+	var x1 >= 0 := 3;
+	var v2 = x1 - 2;
+	var v3 = v2 * x0 + 10.4;	# the constant term 10.4
+	s.t. c: v3 = 0;			# caused trouble
+   3. Fix bug in allocation of al->hes for imported functions:
+constant arguments were not counted.
+ sphes.c: fix glitch in computing sparsity of Hessians when imported
+functions are involved.
+
+Fri Sep 12 18:51:41 EDT 1997
+  pfg_read.c (and pfghread.c): fix two glitches that caused faults with
+certain models.
+
+Fri Oct 10 17:13:14 EDT 1997
+  stdio1.h0: protect #define Char with #ifndef Char .
+  asl.h, jac0dim.c: change neqn to n_eqn (new field giving the number
+of equations), to reduce the chance of name classes (such as occurred
+in fsqp/fsqp.c).  The comments above for 19970709 have been adjusted.
+
+Sat Oct 11 16:32:51 EDT 1997
+  Add to README another pointer to makefile comments; update xsum0.out
+(missed yesterday).
+
+Thu Oct 16 13:47:06 EDT 1997
+  con1ival.c, con2ival.c: fix bug with congrd(n, i, x, g, nerror)
+(Fortran 77 notation): if called with nerror < 0 at an (i,x) pair
+at which conival was not called, no gradient was computed.
+
+Thu Oct 23 20:09:51 EDT 1997
+  pfg_read.c pfghread.c: fix bug that could cause a fault on some
+machines (e.g., HP).
+
+Mon Nov  3 23:45:32 EST 1997
+  f_read.c fg_read.c fgh_read.c pfg_read.c pfghread.c:  fix bug in
+reading cvar array for complementarity constraints (to be further
+documented later).
+
+Fri Nov  7 03:41:23 EST 1997
+  Add variants of xknown() with apparent signatures
+	void xknowne(real *X, fint *nerror);
+	void xknowe_(real *X, fint *nerror);
+that treat errors in evaluating common expressions the same way as
+other routines (objval, conval, etc.) that have a final nerror argument.
+
+Fri Nov  7 09:20:15 EST 1997
+  mip_pri.c nqpcheck.c: for simplicitly, back off changes early this AM
+that made some arrays available to either free() or M1record().  Arrays
+returned by these routines are freed automatically by ASL_free(&asl).
+
+Tue Nov 11 16:25:21 EST 1997
+  misc.c: fix botch introduced 19971107: s/xknowe(/xknowne(/
+  asl.h misc.c: change M1record to a Char** function, permitting one
+to Realloc or free the recorded memory block if one updates or zeros
+*(the return value from M1record) accordingly.
+
+Tue Dec  2 23:50:40 EST 1997
+  README.f77: point out need to remove -lf2c (references to libf2c.a)
+when using native Fortran compilers.
+
+Tue Jan 13 22:45:01 EST 1998
+  nqpcheck.c: if called with NULL for any of rowqp, colqp, or delsqp,
+omit changes that require adding quadratic-term contributions to
+the return values of objval, conval, and conival (as is done by
+function qterm in examples/qtest.c).
+
+Wed Jan 14 08:49:00 EST 1998
+  jac0dim.c: tweak (to treatment of Arith_Kind_ASL) foreshadowing
+forthcoming changes.
+
+Wed Feb  4 13:25:05 EST 1998
+  jac0dim.c: adjust jacdim variants to assume stub is null-terminated
+if stub_len <= 0.  (This slightly simplifies invocations of these
+routines, as it removes the need for a strlen call, and though choosing
+file names with blanks in them is a very bad idea, this change permits
+blanks in the "stub".)
+
+Wed Feb 11 15:10:54 EST 1998
+  .nl file readers: fix a fault that was possible with certain
+nonlinear .nl files generated with "option presolve 0".
+
+Wed Mar 25 23:26:13 EST 1998
+  con1ival.c, con2ival.c: fix bug in handling nerror when a gradient
+is requested at a point different from the one where the constraint
+was most recently evaluated.  The bug caused wrong gradients to be
+returned (the input G was unchanged).
+  misc.c: fix glitch in Realloc's checking for a null return.
+  Many routines: minor updates; new facilities for receiving and
+transmitting user-defined suffixes (to be described later).  On most
+systems, nonlinear solvers should no longer link with funcadd0.o, but
+rather should link automatically with funcadd1.o, which is now in
+amplsolver.a.  Exceptions: under MSDOS and AIX earlier than AIX 4.2,
+nonlinear solvers should still link with funcadd0.o (or otherwise,
+as indicated in the funclink subdirectory).
+
+Thu Mar 26 18:03:37 EST 1998
+  New file funcaddr.c, for compiling funcadd1.c so as to release
+amplfunc.dll when ASL_free() is called, rather than at the end of
+execution.  This is for use with shared libraries that may be loaded
+and unloaded repeatedly during a single program execution, such as
+MATLAB mex files.  Use of funcaddr.c is now illustrated in the rules
+for amplfunc.mex and spamfunc.mex in examples/makefile.
+
+Fri Mar 27 14:40:16 EST 1998
+  getstub.c: minor tweak for what now should be an unusual case:
+statically linking a funcadd.o with the solver.
+
+Mon Mar 30 16:43:25 EST 1998
+  asl.h: make solve_result_num a synonym for asl->i.solve_code_, the
+value that appears in AMPL sessions as solve_result_num.
+
+Thu Apr  2 17:36:57 EST 1998
+  func_add.c: if -ix is not given, assume -i$AMPLFUNC .
+
+Mon Apr  6 16:09:37 EDT 1998
+  qp_read.c: fix bug in qp_opify()'s handling of min(...) and max(...)
+expressions.
+
+Fri Apr 10 23:16:08 EDT 1998
+  makefile: add funcaddr.c to xsum.out.
+
+Fri May  8 11:33:00 EDT 1998
+  funcadd1.c: permit compiling with (e.g.) -DFUNCADD="funcadd_ASL_"
+to change the name sought in amplfunc.dll from "funcadd_ASL" to
+"funcadd_ASL_".  Unless compiled with -DNO_DLOPEN_ERROR_MESSAGE,
+print a warning (on Stderr) when -i or $AMPLFUNC is specified
+and the library does not exist or cannot be loaded.  On systems
+that provide a dlerror() function that returns a string explaining
+what went wrong, print that string.  (Compile with -DNO_DLERROR if
+dlerror() is buggy, as it is, e.g., in at least one older version
+of Linux).
+  makefile.wat: compile funcadd1.c with -DFUNCADD="funcadd_ASL_" .
+If you use non-default calling conventions, you may have to adjust
+this detail.
+
+Tue May 12 19:00:35 EDT 1998
+  dtoa.c: fix a glitch introduced with the scaling of 19970212
+that caused one-bit rounding errors in certain denormal numbers, such
+as 8.44291197326099e-309, which was read as 8.442911973260987e-309.
+  funcadd1.c: tweak to prevent undesired complaint of missing
+amplfunc.dll with -DWIN32.
+  arithchk.c and makefiles: determine whether long long is available.
+
+Fri May 15 16:46:18 EDT 1998
+  dtoa.c: tweak to round 2.2250738585072012e-308 correctly.
+  f_read.c fg_read.c: tweak so f_read does not pull in r_ops_ASL.
+
+Tue May 26 13:16:50 EDT 1998
+  objconst.c: correct glitch in use with pfg_read and pfgh_read.
+Note that objconst(n) returns 0 if objective n is not affine.
+
+Wed May 27 16:48:25 EDT 1998
+  objconst.c: add a missing #undef f_OPNUM; asldate.c not changed.
+
+Thu Jun 18 01:13:10 EDT 1998
+  Fix possible fault in, e.g., sphes(), with certain uses of defined
+variables.  The fix involves a data structure change, so it is best
+to recompile all of amplsolver.a and any objects that include the
+solver interface header files.
+  Adjust xectim.c to use getrusage() on Unix systems (for CPU time
+resolution of 1 microsecond).
+
+Fri Jun 19 18:52:08 EDT 1998
+  Fix typo in comments in funcadd.h (about where to store partials).
+  arithchk.c: add logic for detecting IEEE-like arithmetic that
+flushes underflows to 0 (a bad thing).
+
+Wed Jun 24 16:33:55 EDT 1998
+  funcadd.h: type of Errmsg changed from Char to char.
+  rops.c, rops2.c: explicitly check for sqrt(negative number) rather
+than relying on errno being set to indicate this.  There exists at
+least one systems where this matters.
+
+Fri Jun 26 08:55:38 EDT 1998
+  funcadd1.c: minor tweak for compilation under SunOS 4.1x; asldate.c
+not changed.
+
+Tue Jul 14 14:43:13 EDT 1998
+  pfg_read.c pfghread.c: discard linear terms that end up with a
+coefficient of 0.  This is mostly invisible, but can avoid a division
+by 0 (in pfg_read or pfgh_read) in certain complicated examples.
+
+Thu Aug 27 07:51:38 EDT 1998
+  conpval.c pfg_read.c pfghread.c: fix bug in handling two or more
+constraints (or objectives) involving a sum of monadic functions of
+the same linear combinations of variables.  This only affected
+problems read with pfg_read() and pfgh_read().  Example:
+	var x;
+	s.t. zap{i in 1..2}: sqrt((x - i)^2 + 1) >= 0;
+(In this example, zap[2] was miscomputed.)  Also, fix faults in some
+contexts in handling "constant" arguments of the form (e.g.) x-x for
+some variable x.
+
+Mon Aug 31 17:52:08 EDT 1998
+  pfg_read.c pfghread.c: "invisible" tweak to eliminate complaints of
+"cast to pointer from integer of different size" on some machines.
+
+Thu Sep  3 09:27:57 EDT 1998
+  Add comments about -DNANCHECK and -DNO_ERRNO to README.
+
+Wed Oct 14 00:30:21 EDT 1998
+  getstub.[ch]: new bit ASL_OI_never_echo for Option_Info.option_echo
+suppresses echoing of options (should it be desirable to scan them
+twice).
+  New bits ASL_find_c_class, ASL_find_o_class, and their union
+ASL_find_co_class in the flags argument to pfg_read() and pfgh_read()
+instructs them to compute four new fields of ((ASL_pfg*)asl)->I
+and ((ASL_pfgh*)asl)->I classifying objectives and constraints
+as constant (0), linear (1), quadratic (2), or general nonlinear 3
+(fields c_class and o_class) and giving the maximum values of these
+arrays (max_c_class and max_o_class).
+  New field nlvog of struct Edaginfo; objgrd(np,x,g,ne) sets g[i] = 0
+if the objective does not depend on x[i] and i < nlvog (or
+i < max(c_vars, o_vars) if nlvog is left at 0); nlvog must be set
+before the .nl reader is called.  This matters to minos and snopt,
+whose drivers have been updated to specify asl->i.nlvog = nlvo.
+
+Fri Oct 30 01:50:47 EST 1998
+  Fix botch in handling first derivatives of user-defined functions
+having some numeric constant arguments and some arguments involving
+variables: if the total number of numerical arguments was more than 8,
+unpredictable behavior was possible.
+  Fix bug in dtoa.c's handling of non-IEEE arithmetic machines,
+such as SGI machines executing -n32 and -64 (but not -o32) binaries,
+that flush underflows to zero instead of underflowing gradually.
+
+Fri Nov  6 14:49:37 EST 1998
+  dtoa.c: tweak to remove LL suffixes from numeric constants (for
+compilers that offer a 64-bit long long type but do not recognize the
+LL constants prescribed by C9x, the proposed update to the ANSI/ISO C
+standard).  Thanks to Earl Chew for pointing out the existence of such
+compilers.  This change should be invisible on most systems.
+
+Thu Nov 19 10:41:10 EST 1998
+  xectim.c: adjust so compilation with -DNO_RUSAGE will use CLK_TCK
+if available (on Unix systems, in limits.h).
+
+Tue Nov 24 23:32:33 EST 1998
+  names.c: fix glitch in obj_name(): when no .row file was present,
+obj_name(n) overwrote con_name(n).
+
+Wed Dec  9 10:11:12 EST 1998
+  README.SGI added describing how to restore IEEE arithmetic under
+SGI's -n32 and -64 compilation modes.
+
+Tue Dec 15 19:29:17 EST 1998
+  conpval.c: with readers pfg_read and pfgh_read, objgrd(nprob,x,g,ne)
+was treated as objgrd(0,x,g,ne).
+  conpval.c, obj2val.c, objval.c: calls on objgrd(nprob,x,g,ne) for
+several nprob values and the same x might have given wrong gradients
+after the first call for that x.
+  pshvprod.c: fix rarely seen bug in Hessian computations involving
+defined variables; a couple of operators that should have been +=
+were simply = in defined variables whose value was the product of
+two or more variables, at most one of which was fixed by presolve.
+Example:
+	var w := 3;  var x = 1;
+	var y = w*x; var z = w*y;
+	minimize zot: z; # w^2
+  sphes.c: fix possible fault when sphsetup() is called a second time.
+
+Wed Jan 13 11:32:45 EST 1999
+  README: add new final paragraph about make invocations.
+  Update xsum0.out (missed copying this file on 19981215).
+
+Tue Jan 19 01:08:35 EST 1999
+  New source file suf_sos.c helps use SOS suffixes (to be documented).
+Changes to asl.h (and several other source files) require all of
+amplsolver.a (or amplsolv.lib) to be recompiled.
+
+Tue Jan 19 11:28:11 EST 1999
+  suf_sos.c: add missing #ifdef KR_header stuff; asldate.c not changed.
+
+Mon Feb  1 17:50:46 EST 1999
+  suf_sos.c: fix botch in adjusting incoming integer-valued suffixes.
+  amplsolv.lbc, amplsolv.sy: add suf_sos.obj.
+
+Sat Feb  6 17:55:09 EST 1999
+  asl.h: SufDesc: union u changed to struct u to facilitate debugging;
+amplsolver.a must be recompiled.
+  suf_sos.c: enhanced to process suffixes .sosno and .ref (which can
+be set explicitly with let commands) as well as the .sos and .sosref
+suffixes supplied implicitly by AMPL (e.g., when it linearizes
+piecewise-linear terms).  Each distinct nonzero .sosno value
+designates an SOS set, of type 1 for positive .sosno values and
+of type 2 for negative values.  The .ref suffix contains corresponding
+reference values.  Solvers calling suf_sos() must now declare all of
+the above mentioned suffixes.  See, e.g., suftab and the suf_sos()
+invocation in solvers/cplex/cplex.c.
+
+Fri Feb 12 16:53:49 EST 1999
+  misc.c: zero SufDesc field u.i in suf_declare (required by changes of
+19990206).
+  writesol.c: under "g" (ASCII) format, cope with empty lines in the
+solution message.  (Sensible solver drivers do not have such lines.)
+
+Fri Mar 19 08:42:14 EST 1999
+  asl.h: comments about ASL_reader_flag_bits added.
+  suf_sos.c: trivial change; asldate.c not updated.
+
+Fri Apr  9 00:44:19 EDT 1999
+  pfg_read.c pfghread.c: fix a bug (fault or worse) that bit under
+complicated conditions.
+  readsol.c: fix a bug in handling some incomplete .sol files.
+  funcadd.h: new entry Qsortv in AmplExports, plus declarations for
+handling AMPL tables (a forthcoming extension).
+  func_add.c: add dummy Add_table_handler and Crypto routines (for
+funcadd() routines that do not check that ae->asl is nonzero before
+calling these routines, which are meaningful only to AMPL).
+  New routine fpinit(), called by jac0dim, to initialize the floating-
+point arithmetic if necessary (e.g., on Intel and SGI systems).
+  asl.h, dtoa1.c: rather than redefining strtod (which causes some
+systems to complain), #define strtod strtod_ASL.
+  Readers: call qsortv rather than qsort (so just one efficient qsort
+need be loaded).
+  qp_read.c: "invisible" tweak to banish a compiler warning.
+
+Mon Apr 12 15:38:16 EDT 1999
+  writesol.c: fix a bug introduced in the changes of 19990206 that
+could erroneously cause a "sos" suffix to be written to the .sol
+file (when, e.g., nonconvex piecewise-linear terms are present) and
+might have caused some other suffixes not to be returned.
+
+Thu Apr 15 15:56:04 EDT 1999
+  qp_read.c: the change on 19990409 was not invisible on machines with
+64-bit pointers.  Today's change should correct this mistake.
+
+Mon Apr 19 16:49:19 EDT 1999
+ asl.h, jac0dim.c, sjac0dim.c, makefile*, amplsolv.*, studchk0.c: new
+routine student_check_ASL(ASL *asl) (whose default version, in
+studchk0.c, does nothing and whose "standard" alternative, in
+sjac0dim.c, is equivalent to the old sjac0dim.c and limits problems
+to 300 variables and 300 constraints), is a routine one can modify
+to impose restrictions on "student" binaries.
+
+Tue Apr 20 17:48:40 EDT 1999
+  mip_pri.c: account for adjustments by suf_sos().  Note that we now
+recommend use of the .priority suffix rather than mip_pri().
+  printf.c: "invisible" tweak (introduction of stdout_fileno_ASL).
+
+Wed Apr 28 10:44:10 EDT 1999
+  pfg_read.c, pfghread.c: fix bug reading problems with defined
+variables that can be split into sums of terms.  Incorrect gradients
+or a fault during reading were possible.  Example:
+	var x{i in 1..4} := i;
+	var y{i in 1..2} = sum{j in 2*i-1..2*i} j*x[j];
+	var z = y[1] / y[2];
+	var w = sum{i in 1..3} x[i]*x[i+1];	# splits
+	s.t. zot: z^2 <= 3;	# gradient was miscomputed
+	s.t. zap: w >= x[3] + 1;
+  suf_sos.c: honor Fortran: take asl->i.Fortran_ into account when
+adjusting A_colstarts and A_rownos, and add Fortran = asl->i.Fortran_
+to each number in sosbeg and sosind (in analogy with A_colstarts and
+A_rownos).
+  names.c, writesol.c: take variables and constraints eliminated by
+suf_sos() into account (in the case of writesol, when wantsol bits 2
+and/or 4 are one: the eliminated entities were already accounted for
+in the .sol file).
+
+Thu Apr 29 11:52:14 EDT 1999
+  makefile.wat: add a backslash (missed in the changes of 19990415).
+
+Fri Apr 30 13:59:40 EDT 1999
+  nqpcheck.c: fix possible fault.  (Absent a fault, the bug was
+harmless).
+  New sigcatch_ASL() will catch various Unix signals and call
+mainexit_ASL() and permit routines registered with atexit() to
+be called when the solver is terminated by SIGABRT, SIGQUIT, SIGTERM,
+or SIGHUP (unless SIGHUP is being ignored when sigcatch_ASL() is
+called).
+
+Fri May 21 17:20:01 EDT 1999
+  qp_read.c: fix bug in qp_opify's handling of imported functions.
+  readsol.c, rops.c, rops2.c: add some fflush(Stderr) calls.
+  makefile: renamed makefile.u, so one can copy the appropriate
+makefile.* to makefile, then edit makefile.
+  printf.c, mainexit.c: for use by GUIs, compilation with -DPF_BUF of
+amplsolver.a (or amplsolv.lib) and of solver interfaces causes
+fprintf(stderr_ASL,...) to be accumulated in pfbuf_ASL (which is
+allocated at the first relevant fprintf call and extended if necessary)
+and, if pfbuf_print_ASL is not null, fflush(stderr_ASL) causes
+pfbuf_print_ASL(pfbuf_ASL) to be called and pfbuf_ASL then to be freed.
+
+Tue Jun  1 23:46:49 EDT 1999
+  Tweaks for -DKR_headers; have equ_adjust() operate independently
+of the presolve setting.
+
+Thu Jun  3 14:19:03 EDT 1999
+  makefile.u: correct comment about AIX to "for AIX versions < 4.3".
+
+Sat Jun  5 16:24:52 EDT 1999
+  pfg_read.c, pfghread.c: fix possible fault or worse during gradient
+computations of an objective or constraint that makes nonlinear use
+of a linear defined variable that depends on other (necessarily
+linear) defined variables that do not otherwise appear in the
+objective or constraint.  Example:
+	var x{i in 1..2} := i + 1;
+	var y = 1 - x[1];	# linear defined variable
+	var z = y + 5;		# linear def. var., depending on y
+	s.t. c: z*x[2]*(3 + 4*x[2]) = 0;	# nonlin. use of z
+  conpval.c: fix bug in Jacobian computations after pfgh_read():
+if a common expression appeared in two terms, one involving more
+variables than the other, then the common expression's contribution
+to first derivatives was counted twice.  Example: (x[1] + x[2] + 1) in
+	var x{i in 1..4} := i + 1;
+	s.t. c: (x[1] + x[2] + 1)*x[2] == (x[1] + x[2] + 1)*x[3]*x[4];
+
+Thu Jun 17 11:42:59 EDT 1999
+  func_add.c: minor cosmetic changes that only matter to pure C++
+compilers; asldate.c not changed.
+
+Thu Jun 17 18:41:38 EDT 1999
+  rops.c, rops2.c: fix botch in "and" and "or" expressions (appearing
+in the condition expression of nonlinear "if" expressions): the first
+argument was passed as argument to the second operator.
+
+Fri Jun 25 17:50:51 EDT 1999
+  funcadd1.c: fix a (previously harmless) type error.
+  names.c: fix a bug in obj_name().
+  printf.c: add #ifdef USE_ULDIV logic for use on DEC Alpha machines
+running some versions of OSF1.
+  readsol.c: capture solve_result_num.
+
+Wed Jun 30 16:12:12 EDT 1999
+  pfghread.c: fix more bugs with linear defined variables.
+Very simple ones were sometimes mishandled.  Example:
+	# Jacobian matrix was miscomputed after pfgh_read()
+	var x := 1; var a = x; var b = 1 - a;
+	s.t. c: b*(x/x) - 3*b = 1;
+Another example (different bug) with simple defined variables
+in which the Jacobian matrix was miscomputed after pfgh_read():
+	var x := 1; var y := 2; var z := 1;
+	# variant: fix z;
+	var v2 = z*y;
+	var v3 = 1 - y;
+	var v4 = v3;
+	var v5 = x + v2;
+	var v6 = (x + v2) / v5;
+	var v7 = v4 / (v3+5);
+	s.t. c: v6 + v7 = 1;
+  readsol.c: "invisible" tweak (banish harmless warnings).
+
+Fri Jul  9 08:34:57 EDT 1999
+  xp2known.c: Fix a bug in computing constraint and objective values
+after pfgh_read() with certain uses of very simple defined variables.
+The bug is related to the one illustrated in the second example of
+19990630, but not revealed by that example (but by a more complex one).
+
+Wed Aug  4 09:02:13 EDT 1999
+  xp1known.c: make changes analogous to those to xp2known.c on 19990709.
+(This is for completeness; we know of no solver using this routine.)
+  obj2val.c: omit an unnecessary "extern int errno;"; errno.h should
+provide this (or the equivalent).
+  func_add.c, funcadd1.c: unless there is a command-line -i option,
+look first in $ampl_funclibs for imported functions; if $ampl_funclibs
+is not available, look (as before) in $AMPLFUNC.  Starting with version
+19990804, AMPL sets $ampl_funclibs to the full pathnames of the
+libraries from which functions in the current problem instance were
+imported.  Now -i, $ampl_funclibs, or $AMPLFUNC may contain a newline-
+separated list of directories and file names, and the names may contain
+internal spaces.
+  funcadd.h: new fields in struct TableInfo have no affect on the
+solver interface library.
+
+Thu Aug  5 17:42:21 EDT 1999
+  funcadd1.c, func_add.c: modify -i? output to tell about $ampl_funclibs
+(and change some calling sequences).
+
+Thu Aug 12 21:12:29 EDT 1999
+  Minor tweaks...
+  funcadd1.c: remove an unused variable.
+  asl.h, jac0dim.c, stderr.c: provide for ill-advised systems (e.g.,
+Red Hat Linux 6.0 for the DEC Alpha) in which static initializations
+for the form "FILE *foo = stderr;" do not work: compiling the solver
+interface library with -DNON_STDIO omits this sort of initialization,
+which is replaced by a call on Stderr_init_ASL() in jac0dim().  Of
+course, solvers that wish to do something with Stderr before
+jac0dim has been called will have to first manually invoke (or do the
+equivalent of) Stderr_init_ASL() when used on such inconvenient
+systems.
+  fpinit.c: tweak to compile under Red Hat Linux 6.0 for the DEC Alpha.
+For older DEC Alpha versions of Linux, it may be necessary now to
+compile fpinit.c with -DUSE_setfpucw .
+
+Mon Sep 27 17:13:14 EDT 1999
+  func_add.c, funcadd1.c: remember imported libraries and recall them
+at any .nl-reader calls after the first (unless compiled with
+-DCLOSE_AT_RESET).  This became necessary after the changes of 19990804.
+  getstub.c, misc.c: add more calls on Stderr_init_ASL (cf the previous
+changes).
+
+Fri Oct  1 11:00:21 EDT 1999
+ con[12]ival.c, objval.c: remove redundant #include "errno.h".
+ rops.c, rops2.c, errchk.h: when errno is nonzero, add its
+interpretation to error messages for library functions whose
+evaluations fail.  (This may help detect spurious setting of errno.)

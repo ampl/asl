@@ -1,0 +1,29 @@
+# Makefile for DEC Alpha systems under OSF1
+
+.SUFFIXES: .c .o
+
+# $S = ampl/solvers directory
+S = ..
+CC = cc
+CFLAGS = -ieee_with_no_inexact -I$S
+
+.c.o:
+	$(CC) -c $(CFLAGS) $*.c
+
+amplfunc.so: funcadd.o
+	ld -shared -o amplfunc.so -soname amplfunc.so -rpath '.:/usr/local/lib' -expect_unresolved '__exc_*' funcadd.o -lm -lc
+
+## Catch: LD_LIBRARY_PATH is not honored; the -rpath argument to ld
+## when a .so file is created specifies the search path for finding
+## libraries referenced by the .so file.
+
+## Sample solver creation...
+
+# $(myobjects) = list of .o files
+myobjects = ....
+LL = /usr/local/lib
+
+# assume $(LL)/amplfunc.so is a dummy that provides no user-defined functions.
+
+mysolver: $(myobjects) $S/amplfunc.so
+	$(CC) -o mysolver $(myobjects) $(LL)/amplfunc.so -lm

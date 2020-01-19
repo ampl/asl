@@ -1,0 +1,28 @@
+## Makefile for Microsoft Visual C++ 4.2 (Windows 95, NT)
+## amplfunc.dll provides user-defined functions.
+
+# $S = ampl/solvers directory
+S = ..
+CC = cl
+CFLAGS = -I$S -Ot1
+# For DEC Alpha processors, use
+# CFLAGS = -QAieee -I$S -Ot1
+
+.c.obj:
+	$(CC) -c $(CFLAGS) $*.c
+
+## Sample amplfunc.dll (which also creates amplfunc.lib):
+amplfunc.dll amplfunc.lib: funcadd.obj amplfunc.def
+	link -dll -def:amplfunc.def -out:amplfunc.dll funcadd.obj
+	del amplfunc.exp
+
+## The current PATH is among the places searched for shared
+## libraries (DLLs).
+
+## Sample solver creation...
+
+# $(myobjects) = list of .obj files
+myobjects = ....
+
+mysolver.exe: $(myobjects)
+	$(CC) -o mysolver.exe $(myobjects) $S\amplfunc.lib $S\amplsolv.lib

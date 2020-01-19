@@ -1,0 +1,75 @@
+Sometimes it is convenient to use user-defined functions (usually
+written in C, C++, or Fortran 77) within an AMPL session or in the
+optimization problems that AMPL sends to solvers.  On most systesm
+(including Windows 95 and Windows NT, but excluding MS-DOS), it is
+convenient to provide user-defined functions in a shared library (also
+known, on some systems, as a dynamic-link library or DLL).  This
+directory provides system-dependent details on creating suitable
+shared libraries.
+
+The student versions of AMPL do not have facilities for getting
+user-defined functions from shared libraries.  Commercial versions of
+AMPL may offer these facilities -- to make them available, the AMPL
+vendor must link the AMPL binary appropriately.  Similarly, solvers
+must be appropriately linked to import functions from shared
+libraries.  The makefiles in this directory provide system-dependent
+details on linking solvers this way.
+
+The same shared library can make user-defined functions available both
+to AMPL and to solvers.  Solvers currently can only use deterministic
+functions that return numeric values.  Within AMPL, user-defined
+functions can also be "symbolic", i.e., return strings, and be
+"random", i.e., can return different values when given the same
+arguments.  When a shared library that provides some deterministic
+numeric-valued functions and some symbolic or random functions is used
+with a solver, the symbolic or random functions are automatically
+ignored -- the solver does not see them.
+
+File funcadd.c contains sample user-defined functions, both
+deterministic numeric functions (which can be used by both AMPL and
+solvers), and symbolic or random functions (which only AMPL can use).
+
+File funcaddk.c is a K&R version of funcadd.c.  Source files in the
+AMPL/solver interface library normally contain "#ifdef KR_headers"
+lines to permit compilation by a K&R compiler (when compiled with
+-DKR_headers); for readability, funcadd.c and funcaddk.c depart from
+this practice and are separate files.
+
+To use user-defined functions written in Fortran, it is necessary
+to call them from a C (or C++) "wrapper".
+
+The makefile.* files are makefile variants for various systems;
+see the comments in them.  The "S =" lines in the makefiles assume
+this directory is a subdirectory of ampl/solvers.
+
+If appropriately linked versions of AMPL and solvers are invoked
+in a directory that has a suitable library of user-defined functions,
+they use that library.  Otherwise they use an installation-dependent
+default library that on many systems makes no user-defined functions
+available.  Source file funcadd0.c (in ampl/solvers) may be used in
+creating this dummy libarary.  The policy of looking in the current
+directory for a shared library seems convenient, but could be viewed
+as a security risk; feel free to make other arrangements.  Many
+systems have a shell variable that controls where the system looks
+for shared libraries; comments in the makefiles give the details.
+
+For use with appropriately linked AMPL processors, silly.x is an AMPL
+input script that invokes the functions in funcadd.c .
+
+See the comments in funcadd.c, $S/funcadd.h, and silly.x.
+
+After you have issued the appropriate make command to create a
+library of the sample user-defined functions linked in,
+
+invoking
+
+	ampl silly.x >silly.out 2>silly.2
+
+in this directory should give sample output files silly.out and silly.2 .
+
+File htest.x illustrates using the user-defined function hypot (in the
+sample funcadd.c) with solver "minosu" (a minos variant that obtains
+imported functions from a shared library).  File htest.out is from
+
+	ampl htest.x >htest.out
+

@@ -1,0 +1,29 @@
+# Makefile for HP systems under HP-UX.
+
+.SUFFIXES: .c .o
+
+# $S = ampl/solvers directory
+S = ..
+CC = cc
+CFLAGS = -Aa -I$S -O
+.c.o:
+	$(CC) -c $(CFLAGS) $*.c
+
+libampl.sl: funcadd.c
+	$(CC) -c $(CFLAGS) +z funcadd.c
+	ld -b -o libampl.sl funcadd.o -lm
+
+## Shell variable SHLIB_PATH can specify a colon-separated
+## sequence of directories in which to look for shared objects.
+
+## Sample solver creation...
+
+# $(myobjects) = list of .o files
+myobjects = ....
+# $S = ampl/solvers directory
+S = ..
+# $(LL) = directory with empty libampl.sl
+LL = /usr/local/lib
+
+mysolver: $(myobjects)
+	$(CC) -o mysolver -Wl,+s -Wl,+b,.:$(LL) -L$(LL) $(myobjects) -lampl $S/amplsolver.a -lm
