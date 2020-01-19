@@ -48,13 +48,7 @@ typedef int Pf ANSI((FILE*, const char*, ...));
 #include "r_opn.hd"
 
  static int
-aprintf
-#ifdef KR_headers
-	(va_alist)
- va_dcl
-#else
-	(FILE *fd, const char *fmt, ...)
-#endif
+aprintf(FILE *fd, const char *fmt, ...)
 {
 	char *s;
 	char buf[32];
@@ -63,15 +57,7 @@ aprintf
 	double x;
 	int rc = 0;
 
-#ifdef KR_headers
-	FILE *fd;
-	char *fmt;
-	va_start(ap);
-	fd = va_arg(ap, FILE*);
-	fmt = va_arg(ap, char*);
-#else
 	va_start(ap, fmt);
-#endif
 	if (*fmt != '%')
 		rc++;
 	for(;;) {
@@ -101,7 +87,7 @@ aprintf
 					j = i / 10;
 					*s++ = i - 10*j + '0';
 					}
-					while(i = j);
+					while((i = j));
 				do {
 					i = *--s;
 					putc(i,fd);
@@ -117,7 +103,7 @@ aprintf
 			case 's':
 				s = va_arg(ap, char*);
  have_s:
-				while(i = *s++)
+				while((i = *s++))
 					putc(i,fd);
 				continue;
 			default:
@@ -136,31 +122,18 @@ aprintf
 #endif
 
  static int
-bprintf
-#ifdef KR_headers
-	(va_alist)
- va_dcl
-#else
-	(FILE *fd, const char *fmt, ...)
-#endif
+bprintf(FILE *fd, const char *fmt, ...)
 {
-	union U { double x; short sh; Long L; Int i; char c; } u;
-	size_t len;
 	char *s;
+	int i, rc;
+	size_t len;
+	union U { double x; short sh; Long L; Int i; char c; } u;
 	va_list ap;
-	int i;
-	int rc = 0;
 
-#ifdef KR_headers
-	FILE *fd;
-	char *fmt;
-	va_start(ap);
-	fd = va_arg(ap, FILE*);
-	fmt = va_arg(ap, char*);
-#else
 	va_start(ap, fmt);
-#endif
 
+	rc = 0;
+	len = 0; /* silence buggy "not-initialized" warning */
 	if ((i = *fmt) != '%') {
 		fmt++;
 #ifdef DMG
@@ -227,11 +200,7 @@ bprintf
 #define nl S->nl_
 
  static void
-#ifdef KR_headers
-eput(S, e) Staticfgw *S; expr *e;
-#else
 eput(Staticfgw *S, expr *e)
-#endif
 {
 	arglist *al;
 	de *d, *dee;
@@ -335,14 +304,8 @@ eput(Staticfgw *S, expr *e)
 #define offset_of(t,c) ((size_t)(char *)&((t*)0)->c)
 
  static void
-#ifdef KR_headers
-coput(S, c, de, n, cexp1st, ot, voff, nn, oc, Not)
-	Staticfgw *S; cde *de; char *ot, *Not;
-	int c, n, *cexp1st, voff, nn; real *oc;
-#else
 coput(Staticfgw *S, int c, cde *de, int n, int *cexp1st, char *ot, int voff,
 	int nn, real *oc, char *Not)
-#endif
 {
 	cexp1 *ce;
 	expr_v *v, *v0;
@@ -355,6 +318,9 @@ coput(Staticfgw *S, int c, cde *de, int n, int *cexp1st, char *ot, int voff,
 		ce = S->cexps1_ + j;
 		v0 = S->v;
 		}
+	else /* silence buggy "not-initialized" warnings */
+		{ ce = 0; v0 = 0; j = 0; }
+
 	for(i = 0; i < n; i++) {
 		if (cexp1st) {
 			je = cexp1st[i1 = i + 1];
@@ -396,18 +362,14 @@ coput(Staticfgw *S, int c, cde *de, int n, int *cexp1st, char *ot, int voff,
 #undef nl
 
  static void
-#ifdef KR_headers
-iguess(pf, nl, c, x, havex, n, nn, y) Pf *pf; FILE *nl; int c; real *x; char *havex; int n; int nn; real *y;
-#else
 iguess(Pf *pf, FILE *nl, int c, real *x, char *havex, int n, int nn, real *y)
-#endif
 {
 	int i, k;
 
 	if (n + nn <= 0)
 		return;
 	i = k = 0;
-	if (x)
+	if (x) {
 		if (havex) {
 			while(i < n)
 				if (havex[i++])
@@ -418,6 +380,7 @@ iguess(Pf *pf, FILE *nl, int c, real *x, char *havex, int n, int nn, real *y)
 				if (x[i++])
 					k++;
 			}
+		}
 	if (y)
 		for(i = 0; i < nn; i++)
 			if (y[i])
@@ -425,7 +388,7 @@ iguess(Pf *pf, FILE *nl, int c, real *x, char *havex, int n, int nn, real *y)
 	if (!k)
 		return;
 	(*pf)(nl, "%c%d\n", c, k);
-	if (x)
+	if (x) {
 		if (havex) {
 			for(i = 0; i < n; i++)
 				if (havex[i])
@@ -436,6 +399,7 @@ iguess(Pf *pf, FILE *nl, int c, real *x, char *havex, int n, int nn, real *y)
 				if (x[i])
 					(*pf)(nl, "%d %g\n", i, x[i]);
 			}
+		}
 	if (y) {
 		for(i = 0; i < nn; i++)
 			if (y[i])
@@ -444,11 +408,7 @@ iguess(Pf *pf, FILE *nl, int c, real *x, char *havex, int n, int nn, real *y)
 	}
 
  static void
-#ifdef KR_headers
-br(pf, nl, c, Lb, Ub, n) Pf *pf; FILE *nl; int c; real *Lb; real *Ub; int n;
-#else
 br(Pf *pf, FILE *nl, int c, real *Lb, real *Ub, int n)
-#endif
 {
 	int i;
 	real L, U;
@@ -471,11 +431,7 @@ br(Pf *pf, FILE *nl, int c, real *Lb, real *Ub, int n)
 	}
 
  static void
-#ifdef KR_headers
-Gput(pf, nl, c, i, n, ogp) Pf *pf; FILE *nl; int c; int i; int n; ograd **ogp;
-#else
 Gput(Pf *pf, FILE *nl, int c, int i, int n, ograd **ogp)
-#endif
 {
 	ograd *og;
 	int k;
@@ -487,7 +443,7 @@ Gput(Pf *pf, FILE *nl, int c, int i, int n, ograd **ogp)
 			continue;
 		k = 0;
 		do k++;
-			while(og = og->next);
+			while((og = og->next));
 		(*pf)(nl, "%c%d %d\n", c, i, k);
 		for(og = *ogp; og; og = og->next)
 			(*pf)(nl, "%d %g\n", og->varno, og->coef);
@@ -495,13 +451,8 @@ Gput(Pf *pf, FILE *nl, int c, int i, int n, ograd **ogp)
 	}
 
  static void
-#ifdef KR_headers
-k2put(pf, nl, cgp, nc, n, k, nnv, nnc, ogp) Pf *pf; FILE *nl; cgrad **cgp;
-	int nc, n, k,nnv, nnc; ograd **ogp;
-#else
 k2put(Pf *pf, FILE *nl, cgrad **cgp, int nc, int n, int k, int nnv,
 	int nnc, ograd **ogp)
-#endif
 {
 	cgrad *cg;
 	ograd *og;
@@ -527,7 +478,7 @@ k2put(Pf *pf, FILE *nl, cgrad **cgp, int nc, int n, int k, int nnv,
 			continue;
 		k = 0;
 		do k++;
-			while(cg = cg->next);
+			while((cg = cg->next));
 		(*pf)(nl, "J%d %d\n", i, k);
 		for(cg = cgp[i]; cg; cg = cg->next)
 			(*pf)(nl, "%d %g\n", cg->varno, cg->coef);
@@ -536,13 +487,8 @@ k2put(Pf *pf, FILE *nl, cgrad **cgp, int nc, int n, int k, int nnv,
 	}
 
  static void
-#ifdef KR_headers
-k1put(pf, nl, cs, a, rn, nc, n, nnv, nnc, ogp) Pf *pf; FILE *nl; int *cs;
-	real *a; int *rn, nc, n, nnv, nnc; ograd **ogp;
-#else
 k1put(Pf *pf, FILE *nl, int *cs, real *a, int *rn, int nc, int n,
 	int nnv, int nnc, ograd **ogp)
-#endif
 {
 	int *cs1, i, j, j1, k, ftn, nz;
 	cgrad *cg, *cg0, *cg1, **cgp, **cgq;
@@ -594,11 +540,7 @@ k1put(Pf *pf, FILE *nl, int *cs, real *a, int *rn, int nc, int n,
 	}
 
  static int
-#ifdef KR_headers
-LUcheck(n, LU, u, nnep, nnrp) int n; real *LU; real *u; int *nnep; int *nnrp;
-#else
 LUcheck(int n, real *LU, real *u, int *nnep, int *nnrp)
-#endif
 {
 	int i, nne, nnr;
 	real L, U;
@@ -630,11 +572,7 @@ LUcheck(int n, real *LU, real *u, int *nnep, int *nnrp)
 	}
 
  static int
-#ifdef KR_headers
-ogcheck(n, nn, ogp, nzp) int n; int nn; ograd **ogp; int *nzp;
-#else
 ogcheck(int n, int nn, ograd **ogp, int *nzp)
-#endif
 {
 	int nz;
 	ograd *og;
@@ -658,11 +596,7 @@ ogcheck(int n, int nn, ograd **ogp, int *nzp)
 	}
 
  static SufDesc*
-#ifdef KR_headers
-reverse(sd) SufDesc *sd;
-#else
 reverse(SufDesc *sd)
-#endif
 {
 	SufDesc *sn, *sp;
 	sp = 0;
@@ -676,19 +610,16 @@ reverse(SufDesc *sd)
 	}
 
  int
-#ifdef KR_headers
-fg_write_ASL(a, stub, nu, flags) ASL *a; char *stub; NewVCO *nu; int flags;
-#else
-fg_write_ASL(ASL *a, char *stub, NewVCO *nu, int flags)
-#endif
+fg_write_ASL(ASL *a, const char *stub, NewVCO *nu, int flags)
 {
 	ASL_fg *asl = (ASL_fg*)a;
 	FILE *nl;
-	Staticfgw S;
 	Pf *pf;
+	Staticfgw S;
 	SufDesc *sd, *sd0;
 	cexp *ce, *cee;
-	char buf[256], *eol, *name, *nbuf, *obase, *s;
+	char buf[256], *nbuf, *ts;
+	const char *eol, *name, *obase, *s;
 	efunc *rops[N_OPS];
 	expr_v *v;
 	func_info *fi;
@@ -699,20 +630,20 @@ fg_write_ASL(ASL *a, char *stub, NewVCO *nu, int flags)
 	static NewVCO nu0;
 
 	ASL_CHECK(a, ASL_read_fg, "fg_write");
-	if (comc1 && !c_cexp1st || como1 && !o_cexp1st)
+	if ((comc1 && !c_cexp1st) || (como1 && !o_cexp1st))
 		return ASL_writeerr_badcexp1st;
 	nnc = nne = nno = nnr = nnv = nnzc = nnzo = 0;
-	if (!nu || nu->nnv == 0 && nu->nnc == 0 && nu->nno == 0)
+	if (!nu || (nu->nnv == 0 && nu->nnc == 0 && nu->nno == 0))
 		nu = &nu0;
 	else {
 		nnc = nu->nnc;
 		nno = nu->nno;
 		nnv = nu->nnv;
-		if (nnv <= 0
-		 || nnc < 0
-		 || nno < 0
-		 || nnc + nno <= 0
-		 || nnc > 0 && !nu->LUnc)
+		if ((nnv <= 0
+		  || nnc < 0
+		  || nno < 0
+		  || nnc + nno <= 0
+		  || nnc > 0) && !nu->LUnc)
 			return ASL_writeerr_badNewVCO;
 		if (LUcheck(nnv, nu->LUnv, nu->Unv, 0, 0))
 			return ASL_writeerr_badNewVCO;
@@ -726,11 +657,11 @@ fg_write_ASL(ASL *a, char *stub, NewVCO *nu, int flags)
 		if (nno) {
 			if (ogcheck(n, nno, nu->newo, &nnzo))
 				return ASL_writeerr_badNewVCO;
-			if (s = nu->ot)
+			if ((s = nu->ot))
 			    for(i = 0; i < nno; i++)
 				if (s[i] & ~1)
 					return ASL_writeerr_badNewVCO;
-			if (r = nu->oc)
+			if ((r = nu->oc))
 			    for(re = r + nno; r < re; r++) {
 				if ((t = *r) <= negInfinity
 				 || t >= Infinity
@@ -755,11 +686,12 @@ fg_write_ASL(ASL *a, char *stub, NewVCO *nu, int flags)
 	nbuf = 0;
 	oblen = s - obase;
 	if (c <= 3 || strcmp(s - 3, ".nl")) {
-		name = buf;
+		ts = buf;
 		if (c + 4 > sizeof(buf))
-			name = nbuf = (char*)Malloc(c+4);
-		memcpy(name, stub, c);
-		strcpy(name+c, ".nl");
+			ts = nbuf = (char*)Malloc(c+4);
+		memcpy(ts, stub, c);
+		strcpy(ts+c, ".nl");
+		name = ts;
 		}
 	else
 		oblen -= 3;
@@ -910,11 +842,7 @@ fg_write_ASL(ASL *a, char *stub, NewVCO *nu, int flags)
 	}
 
  int
-#ifdef KR_headers
-fg_wread_ASL(asl, f, flags) ASL *asl; FILE *f; int flags;
-#else
 fg_wread_ASL(ASL *asl, FILE *f, int flags)
-#endif
 {
 	want_xpi0 = 7;
 	if (comc1)

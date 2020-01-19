@@ -25,11 +25,7 @@ THIS SOFTWARE.
 #include "jacpdim.h"
 
  static real
-#ifdef KR_headers
-copeval(f K_ASL) ps_func *f; D_ASL
-#else
 copeval(ps_func *f A_ASL)
-#endif
 {
 	psb_elem *b, *be;
 	expr *e;
@@ -43,11 +39,7 @@ copeval(ps_func *f A_ASL)
 	}
 
  static real
-#ifdef KR_headers
-cogeval(asl, f) ASL_pfgh *asl; ps_func *f;
-#else
 cogeval(ASL_pfgh *asl, ps_func *f)
-#endif
 {
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
@@ -80,11 +72,7 @@ cogeval(ASL_pfgh *asl, ps_func *f)
 	}
 
  static void
-#ifdef KR_headers
-psderprop(asl, f) ASL_pfgh *asl; ps_func *f;
-#else
 psderprop(ASL_pfgh *asl, ps_func *f)
-#endif
 {
 	int L;
 	psb_elem *b, *be;
@@ -94,7 +82,7 @@ psderprop(ASL_pfgh *asl, ps_func *f)
 	ograd *og;
 
 	for(b = f->b, be = b + f->nb; b < be; b++)
-		if (L = b->D.zaplen) {
+		if ((L = b->D.zaplen)) {
 			memset(adjoints_nv1, 0, L);
 			derprop(b->D.d);
 			}
@@ -152,11 +140,7 @@ psderprop(ASL_pfgh *asl, ps_func *f)
 	}
 
  static void
-#ifdef KR_headers
-psgcomp(asl, f) ASL_pfgh *asl; ps_func *f;
-#else
 psgcomp(ASL_pfgh *asl, ps_func *f)
-#endif
 {
 	int n;
 	ograd *og;
@@ -197,16 +181,16 @@ psgcomp(ASL_pfgh *asl, ps_func *f)
 					}
 				}
 			for(b = g->E; b < be; b++)
-				if (n = b->D.zaplen) {
+				if ((n = b->D.zaplen)) {
 					memset(adjoints_nv1, 0, n);
 					derprop(b->D.d);
 					}
 			while(tl) {
 				tl->termno = 0;
-				if (t = A[tl->v->a]){
+				if ((t = A[tl->v->a])){
 					og = tl->nz;
 					do A[og->varno] += t*og->coef;
-						while(og = og->next);
+						while((og = og->next));
 					}
 				tl = tl->tnext;
 				}
@@ -217,27 +201,23 @@ psgcomp(ASL_pfgh *asl, ps_func *f)
 	}
 
  void
-#ifdef KR_headers
-conpval_ASL(a, X, F, nerror) ASL *a; real *X; real *F; fint *nerror;
-#else
 conpval_ASL(ASL *a, real *X, real *F, fint *nerror)
-#endif
 {
-	real *cscale, f, *vscale;
-	int i, j, je;
+	ASL_pfgh *asl;
+	Jmp_buf err_jmp0;
 	cgrad *gr, **gr0;
-	ps_func *p;
 	expr_n *en;
 	expr_v *V;
-	Jmp_buf err_jmp0;
-	ASL_pfgh *asl;
+	int *cm, i, j, je, *ncxval, nx, useV;
+	ps_func *p, *p0;
+	real *cscale, f;
 
 	ASL_CHECK(a, ASL_read_pfgh, "conpval");
 	asl = (ASL_pfgh*)a;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
-		if (*nerror = i)
+		if ((*nerror = i))
 			return;
 		}
 	want_deriv = want_derivs;
@@ -247,59 +227,65 @@ conpval_ASL(ASL *a, real *X, real *F, fint *nerror)
 	x0kind |= ASL_have_conval;
 	je = n_conjac[1];
 	j = n_conjac[0];
-	gr0 = Cgrad + j;
-	p = asl->P.cps + j;
-	if (cscale = asl->i.cscale)
-		cscale += j;
-	vscale = asl->i.vscale;
+	if (!(gr0 = asl->i.Cgrad0))
+		asl->i.Cgrad0 = gr0 = asl->i.Cgrad_;
+	p0 = asl->P.cps;
+	cscale = asl->i.cscale;
+	useV = asl->i.vscale || asl->i.vmap;
 	V = var_e;
-	for(; j < je; j++, p++) {
+	cm = asl->i.cmap;
+	nx = a->i.nxval;
+	ncxval = asl->i.ncxval;
+	for(; j < je; j++) {
+		i = j;
+		if (cm)
+			i = cm[i];
+		p = p0 + i;
 		if (p->nb) {
-			co_index = j;
+			co_index = i;
 			f = copeval(p C_ASL);
 			if (p->ng)
 				f += cogeval(asl, p);
 			}
 		else if (p->ng) {
-			co_index = j;
+			co_index = i;
 			f = cogeval(asl, p);
 			}
 		else {
-			en = (expr_n*)con_de[j].e;
+			en = (expr_n*)con_de[i].e;
 			f = en->v;
 			}
-		gr = *gr0++;
-		if (vscale)
+		gr = gr0[i];
+		if (useV)
 			for(; gr; gr = gr->next)
 				f += V[gr->varno].v * gr->coef;
 		else
 			for(; gr; gr = gr->next)
 				f += X[gr->varno] * gr->coef;
-		if (F)
-			*F++ = cscale ? *cscale++ * f : f;
+		if (F) {
+			if (cscale)
+				f *= cscale[j];
+			*F++ = f;
+			}
+		ncxval[i] = nx;
 		}
 	err_jmp = 0;
 	}
 
  void
-#ifdef KR_headers
-jacpval_ASL(a, X, G, nerror) ASL *a; real *X, *G; fint *nerror;
-#else
 jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
-#endif
 {
-	cgrad **gr0, **gre;
-	cgrad *gr;
-	real *Adjoints, *cscale, t, *vscale;
-	ps_func *p;
-	range *U;
-	psb_elem *b, *be;
+	ASL_pfgh *asl;
+	Jmp_buf err_jmp0;
+	cgrad *gr, **gr0, *gr1;
+	fint ne0;
+	int *cm, i, i1, j, k, nx, *vmi, xksave;
 	linarg *la, **lap, **lape;
 	ograd *og;
-	int i, nx, xksave;
-	fint ne0;
-	Jmp_buf err_jmp0;
-	ASL_pfgh *asl;
+	ps_func *p, *p0;
+	psb_elem *b, *be;
+	range *U;
+	real *Adjoints, *cscale, t, *vscale;
 	static char who[] = "jacpval";
 
 	ASL_CHECK(a, ASL_read_pfgh, who);
@@ -310,11 +296,11 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
-		if (*nerror = i)
+		if ((*nerror = i))
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
-	if (!asl->i.x_known && xp_check_ASL(asl,X)
+	if ((!asl->i.x_known && xp_check_ASL(asl,X))
 	 || !(x0kind & ASL_have_conval)) {
 		xksave = asl->i.x_known;
 		conpval_ASL(a,X,0,nerror);
@@ -324,17 +310,27 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 		}
 	nx = asl->i.nxval;
 	Adjoints = adjoints;
-	gr0 = Cgrad;
-	gre = gr0 + n_conjac[1];
-	gr0 += i = n_conjac[0];
-	if (cscale = asl->i.cscale)
-		cscale += i;
+	gr0 = asl->i.Cgrad0;
+	cscale = asl->i.cscale;
 	vscale = asl->i.vscale;
-	for(p = asl->P.cps + i; gr0 < gre; gr0++) {
+	cm = asl->i.cmap;
+	vmi = 0;
+	if (asl->i.vmap)
+		vmi = get_vminv_ASL(a);
+	j = n_conjac[0];
+	k = n_conjac[1];
+	if (asl->i.Derrs)
+		deriv_errchk_ASL(a, nerror, j, k-j);
+	p0 = asl->P.cps;
+	for(; j < k; ++j) {
+		i = j;
+		if (cm)
+			i = cm[i];
+		p = p0 + i;
 		p->nxval = nx;
 		if (p->ng)
 			psgcomp(asl, p);
-		for(gr = *gr0; gr; gr = gr->next)
+		for(gr = gr1 = gr0[i]; gr; gr = gr->next)
 			Adjoints[gr->varno] = gr->coef;
 		b = p->b;
 		for(be = b + p->nb; b < be; b++)
@@ -345,28 +341,36 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 					while(lap < lape);
 				}
 		b = p->b;
-		psderprop(asl, p++);
+		psderprop(asl, p);
 		while(b < be)
 			if ((U = (b++)->U) && (i = U->nintv)) {
 				lap = U->lap;
 				lape = lap + i;
 				while(lap < lape)
-					if (t = Adjoints[(la = *lap++)->v->a]){
+					if ((t = Adjoints[(la = *lap++)->v->a])){
 						Adjoints[la->v->a] = 0;
 						og = la->nz;
 						do Adjoints[og->varno] +=
 								t*og->coef;
-							while(og = og->next);
+							while((og = og->next));
 						}
 				}
-		if (vscale)
-			for(gr = *gr0; gr; gr = gr->next) {
-				i = gr->varno;
-				Adjoints[i] *= vscale[i];
-				}
-		gr = *gr0;
+		if (vscale) {
+			gr = gr1;
+			if (vmi)
+				for(; gr; gr = gr->next) {
+					i1 = gr->varno;
+					Adjoints[i1] *= vscale[vmi[i1]];
+					}
+			else
+				for(; gr; gr = gr->next) {
+					i1 = gr->varno;
+					Adjoints[i1] *= vscale[i1];
+					}
+			}
+		gr = gr1;
 		if (cscale)
-			for(t = *cscale++; gr; gr = gr->next)
+			for(t = cscale[j]; gr; gr = gr->next)
 				G[gr->goff] = t*Adjoints[gr->varno];
 		else
 			for(; gr; gr = gr->next)
@@ -376,15 +380,8 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 	}
 
  int
-#ifdef KR_headers
-jacpdim_ASL(asl, stub, M, N, NO, NZ, MXROW, MXCOL, stub_len)
-	ASL *asl; char *stub;
-	fint *M, *N, *NO, *NZ, *MXROW, *MXCOL;
-	ftnlen stub_len;
-#else
 jacpdim_ASL(ASL *asl, char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 	fint *MXROW, fint *MXCOL, ftnlen stub_len)
-#endif
 {
 	FILE *nl;
 
@@ -398,11 +395,7 @@ jacpdim_ASL(ASL *asl, char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 /******** objpval, objpgrd ********/
 
  static void
-#ifdef KR_headers
-NNOBJ_chk(asl, i, who) ASL *asl; int i; char *who;
-#else
-NNOBJ_chk(ASL *asl, int i, char *who)
-#endif
+NNOBJ_chk(ASL *asl, int i, const char *who)
 {
 	ASL_CHECK(asl, ASL_read_pfgh, who);
 	if (i < 0 || i >= n_obj) {
@@ -414,27 +407,23 @@ NNOBJ_chk(ASL *asl, int i, char *who)
 	}
 
  real
-#ifdef KR_headers
-objpval_ASL(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
-#else
 objpval_ASL(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
-	real f;
+	ASL_pfgh *asl;
+	Jmp_buf err_jmp0;
+	expr_n *en;
+	expr_v *V;
 	int ij;
 	ograd *gr;
 	ps_func *p;
-	expr_n *en;
-	expr_v *V;
-	Jmp_buf err_jmp0;
-	ASL_pfgh *asl;
+	real f;
 
 	NNOBJ_chk(a, i, "objpval");
 	asl = (ASL_pfgh*)a;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
+		if ((*nerror = ij))
 			return 0.;
 		}
 	want_deriv = want_derivs;
@@ -456,7 +445,7 @@ objpval_ASL(ASL *a, int i, real *X, fint *nerror)
 		}
 	asl->i.noxval[i] = asl->i.nxval;
 	gr = Ograd[i];
-	if (asl->i.vscale)
+	if (asl->i.vmap || asl->i.vscale)
 		for(V = var_e; gr; gr = gr->next)
 			f += gr->coef * V[gr->varno].v;
 	else
@@ -467,22 +456,17 @@ objpval_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  void
-#ifdef KR_headers
-objpgrd_ASL(a, i, X, G, nerror)
-	ASL *a; int i; fint *nerror; real *X, *G;
-#else
 objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
-#endif
 {
-	ograd *gr, *gr0;
-	real *Adjoints;
-	Jmp_buf err_jmp0;
-	int ij, xksave, *z;
-	ps_func *p;
-	linarg *la;
-	real t, *vscale;
-	fint ne0;
 	ASL_pfgh *asl;
+	Jmp_buf err_jmp0;
+	fint ne0;
+	int ij, j, *vmi, xksave, *z;
+	linarg *la;
+	ograd *gr, *gr0;
+	ps_func *p;
+	real *Adjoints;
+	real t, *vscale;
 	static char who[] = "objpgrd";
 
 	NNOBJ_chk(a, i, who);
@@ -494,7 +478,7 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
+		if ((*nerror = ij))
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
@@ -508,6 +492,8 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
+	if (asl->i.Derrs)
+		deriv_errchk_ASL(a, nerror, -(i+1), 1);
 	Adjoints = adjoints;
 	p->nxval = asl->i.nxval;
 	if (p->ng)
@@ -521,21 +507,36 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	if (!G)
 		return;
 	for(la = asl->P.lalist; la; la = la->lnext)
-		if (t = Adjoints[la->v->a]) {
+		if ((t = Adjoints[la->v->a])) {
 			gr = la->nz;
 			do Adjoints[gr->varno] += t*gr->coef;
-				while(gr = gr->next);
+				while((gr = gr->next));
 			}
 	if (zerograds) {	/* sparse gradients */
 		z = zerograds[i];
-		while((i = *z++) >= 0)
-			G[i] = 0;
+		while((j = *z++) >= 0)
+			G[j] = 0;
 		}
 	gr = gr0;
-	if (vscale = asl->i.vscale)
+	vmi = 0;
+	if (asl->i.vmap)
+		vmi = get_vminv_ASL(a);
+	if ((vscale = asl->i.vscale)) {
+		if (vmi)
+			for(; gr; gr = gr->next) {
+				j = vmi[i = gr->varno];
+				G[j] = Adjoints[i] * vscale[j];
+				}
+		else
+			for(; gr; gr = gr->next) {
+				i = gr->varno;
+				G[i] = Adjoints[i] * vscale[i];
+				}
+		}
+	else if (vmi)
 		for(; gr; gr = gr->next) {
 			i = gr->varno;
-			G[i] = vscale[i] * Adjoints[i];
+			G[vmi[i]] = Adjoints[i];
 			}
 	else
 		for(; gr; gr = gr->next) {
@@ -546,11 +547,7 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-INchk(asl, who, i, ix) ASL *asl; char *who; int i, ix;
-#else
-INchk(ASL *asl, char *who, int i, int ix)
-#endif
+INchk(ASL *asl, const char *who, int i, int ix)
 {
 	ASL_CHECK(asl, ASL_read_pfgh, who);
 	if (i < 0 || i >= ix) {
@@ -561,14 +558,9 @@ INchk(ASL *asl, char *who, int i, int ix)
 	}
 
  static real
-#ifdef KR_headers
-cpval(asl, i, X, nerror) ASL_pfgh *asl; int i; fint *nerror; real *X;
-#else
 cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
-#endif
 {
 	Jmp_buf err_jmp0;
-	expr *e;
 	expr_n *en;
 	int L;
 	ps_func *p;
@@ -577,19 +569,18 @@ cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
-		if (*nerror = L)
+		if ((*nerror = L))
 			return 0.;
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		xp_check_ASL(asl, X);
-	co_index = i;
-	if (i >= n_con) {
-		e = con_de[i].e;
-		f = (*e->op)(e C_ASL);
+	if (i >= asl->i.n_con0) {
+		f = 0.;
 		goto done;
 		}
+	co_index = i;
 	asl->i.ncxval[i] = asl->i.nxval;
 	p = asl->P.cps + i;
 	if (p->nb) {
@@ -609,37 +600,28 @@ cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
 	}
 
  real
-#ifdef KR_headers
-conpival_ASL(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
-#else
 conpival_ASL(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
 	ASL_pfgh *asl;
 	cgrad *gr;
 	expr_v *V;
 	real f;
-	real scale;
 
-	INchk(a, "conpival", i, a->i.n_con_);
-	f = cpval(asl = (ASL_pfgh*)a, i, X, nerror);
-	scale = asl->i.cscale ? asl->i.cscale[i] : 1.;
-	gr = Cgrad[i];
-	if (asl->i.vscale)
+	INchk(a, "conpival", i, a->i.n_con0);
+	asl = (ASL_pfgh*)a;
+	f = cpval(asl, i, X, nerror);
+	gr = asl->i.Cgrad0[i];
+	if (asl->i.vmap || asl->i.vscale)
 		for(V = var_e; gr; gr = gr->next)
 			f += V[gr->varno].v * gr->coef;
 	else
 		for(; gr; gr = gr->next)
 			f += X[gr->varno] * gr->coef;
-	return scale * f;
+	return f;
 	}
 
  int
-#ifdef KR_headers
-lconpval(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
-#else
 lconpval(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
 	real f;
 
@@ -649,29 +631,22 @@ lconpval(ASL *a, int i, real *X, fint *nerror)
 	}
 
  void
-#ifdef KR_headers
-conpgrd_ASL(a, i, X, G, nerror)
-	ASL *a; int i; fint *nerror; real *X, *G;
-#else
 conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
-#endif
 {
+	ASL_pfgh *asl;
+	Jmp_buf err_jmp0;
 	cgrad *gr, *gr0;
-	real *Adjoints;
-	ps_func *p;
-	range *U;
-	psb_elem *b, *be;
+	fint ne0;
+	int i0, j, *vmi, xksave;
 	linarg *la, **lap, **lape;
 	ograd *og;
-	int i0, xksave;
-	fint ne0;
-	real t, *vscale;
-	Jmp_buf err_jmp0;
-	ASL_pfgh *asl;
-	real scale;
+	ps_func *p;
+	psb_elem *b, *be;
+	range *U;
+	real *Adjoints, t, *vscale;
 	static char who[] = "conpgrd";
 
-	INchk(a, who, i, a->i.n_con_);
+	INchk(a, who, i, a->i.n_con0);
 	asl = (ASL_pfgh*)a;
 	if (!want_derivs)
 		No_derivs_ASL(who);
@@ -679,7 +654,7 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		i0 = setjmp(err_jmp0.jb);
-		if (*nerror = i0)
+		if ((*nerror = i0))
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
@@ -695,11 +670,12 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
+	if (asl->i.Derrs)
+		deriv_errchk_ASL(a, nerror, i, 1);
 	Adjoints = adjoints;
 	p = asl->P.cps + i;
 	p->nxval = asl->i.nxval;
-	gr0 = Cgrad[i];
-	scale = asl->i.cscale ? asl->i.cscale[i] : 1.;
+	gr0 = asl->i.Cgrad0[i];
 	if (p->ng)
 		psgcomp(asl, p);
 	for(gr = gr0; gr; gr = gr->next)
@@ -721,39 +697,60 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			lap = U->lap;
 			lape = lap + i;
 			while(lap < lape)
-				if (t = Adjoints[(la = *lap++)->v->a]){
+				if ((t = Adjoints[(la = *lap++)->v->a])){
 					Adjoints[la->v->a] = 0;
 					og = la->nz;
 					do Adjoints[og->varno] +=
 							t*og->coef;
-						while(og = og->next);
+						while((og = og->next));
 					}
 			}
 
-	if (vscale = asl->i.vscale)
-		for(gr = gr0; gr; gr = gr->next) {
-			i = gr->varno;
-			Adjoints[i] *= vscale[i];
-			}
+	vmi = 0;
+	if (asl->i.vmap)
+		vmi = get_vminv_ASL(a);
+	if ((vscale = asl->i.vscale)) {
+		gr = gr0;
+		if (vmi)
+			for(; gr; gr = gr->next) {
+				i0 = gr->varno;
+				Adjoints[i0] *= vscale[vmi[i0]];
+				}
+		else
+			for(; gr; gr = gr->next) {
+				i0 = gr->varno;
+				Adjoints[i0] *= vscale[i0];
+				}
+		}
 	gr = gr0;
 	i0 = 0;
 	switch(asl->i.congrd_mode) {
 	  case 1:
 		for(; gr; gr = gr->next)
-			G[i0++] = scale * Adjoints[gr->varno];
+			G[i0++] = Adjoints[gr->varno];
 		break;
 	  case 2:
 		for(; gr; gr = gr->next)
-			G[gr->goff] = scale * Adjoints[gr->varno];
+			G[gr->goff] = Adjoints[gr->varno];
 		break;
 	  default:
-		for(; gr; gr = gr->next) {
-			i = gr->varno;
-			while(i0 < i)
-				G[i0++] = 0;
-			G[i] = scale * Adjoints[i];
-			i0 = i + 1;
+		if (vmi) {
+			for(; gr; gr = gr->next) {
+				i = vmi[j = gr->varno];
+				while(i0 < i)
+					G[i0++] = 0;
+				G[i] = Adjoints[j];
+				i0 = i + 1;
+				}
 			}
+		else
+			for(; gr; gr = gr->next) {
+				i = gr->varno;
+				while(i0 < i)
+					G[i0++] = 0;
+				G[i] = Adjoints[i];
+				i0 = i + 1;
+				}
 		i = n_var;
 		while(i0 < i)
 			G[i0++] = 0;
@@ -762,36 +759,42 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-xpsgchk(asl, f0, xv, n, nx, ev, gv, y)
-	ASL_pfgh *asl; ps_func *f0; int *xv, n, nx;
-	real (*ev)(); void (*gv)(); real *y;
-#else
 xpsgchk(ASL_pfgh *asl, ps_func *f0, int *xv, int n, int nx,
 	real (*ev)(ASL *a, int i, real *X, fint *nerror),
 	void (*gv)(ASL *a, int i, real *X, real *G, fint *nerror),
-	real *y)
-#endif
+	real *y, int oxk)
 {
-	int i;
+	int i, i1, i2;
 	ps_func *f;
 
+	i1 = i2 = -1;
 	for(i = 0; i < n; i++)
 		if (y[i] != 0.) {
+			if (i1 < 0)
+				i1 = i;
+			i2 = i;
 			if (xv[i] != nx)
 				(*ev)((ASL*)asl, i, Lastx, 0);
 			f = f0 + i;
 			if (f->ng && f->nxval != nx)
 				(*gv)((ASL*)asl, i, Lastx, 0, 0);
 			}
+	if (i1 >= 0 && asl->i.Derrs) {
+		asl->i.x_known = oxk;
+		for(i = i1; i <= i2; i = i1) {
+			i1 = i + 1;
+			if (y[i]) {
+				while(i1 <= i2 && y[i1])
+					++i1;
+				deriv_errchk_ASL((ASL*)asl, 0, i, i1-i);
+				}
+			}
+		asl->i.x_known = 1;
+		}
 	}
 
  void
-#ifdef KR_headers
-xpsg_check_ASL(asl, nobj, ow, y) ASL_pfgh *asl; int nobj; real *ow, *y;
-#else
 xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
-#endif
 {
 	int nx, oxk, *xv;
 	ps_func *f;
@@ -807,7 +810,7 @@ xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
 	asl->i.x_known = 1;
 	if (y)
 		xpsgchk(asl, asl->P.cps, asl->i.ncxval, nlc,
-			nx, conpival_ASL, conpgrd_ASL, y);
+			nx, conpival_ASL, conpgrd_ASL, y, oxk);
 	f = asl->P.ops;
 	xv = asl->i.noxval;
 	if (nobj >= 0 && nobj < n_obj) {
@@ -828,7 +831,7 @@ xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
 		}
 	else if (ow && nlo)
 		xpsgchk(asl, f, xv, nlo,
-			nx, objpval_ASL, objpgrd_ASL, ow);
+			nx, objpval_ASL, objpgrd_ASL, ow, oxk);
  done:
 	asl->i.x_known = oxk;
 	}

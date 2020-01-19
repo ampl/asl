@@ -1,11 +1,7 @@
 #include "asl.h"
 
  static real *
-#ifdef KR_headers
-ones(asl, n) ASL *asl; int n;
-#else
 ones(ASL *asl, int n)
-#endif
 {
 	real *x, *x0, *xe;
 
@@ -17,25 +13,25 @@ ones(ASL *asl, int n)
 	}
 
  static int
-#ifdef KR_headers
-zcheck(asl, i, s, n, ierror, who) ASL *asl; real s; int i, n; fint *ierror; char *who;
-#else
 zcheck(ASL *asl, int i, real s, int n, fint *ierror, char *who)
-#endif
 {
-#undef Word0
+#undef W0
 #ifdef IEEE_MC68k
-#define Word0(x) ((Long*)&(x))[0]
+#define W0 0
 #endif
 #ifdef IEEE_8087
-#define Word0(x) ((Long*)&(x))[1]
+#define W0 1
 #endif
-#ifdef Word0
-#define Inftest(z) ((Word0(z)&0x7ff00000) == 0x7ff00000)
+#ifdef W0
+	union { real r; unsigned int ui[2]; } u;
+#define Inftest(z) (u.r = z, (u.ui[W0] & 0x7ff00000) == 0x7ff00000)
 #else
 #define Inftest(z) (z <= negInfinity || z >= Infinity)
 #endif
-	if (n >= 0 && (i < 0 || i >= n)
+	int rt;
+	static const char *RN[6] = { "???", "f", "fg", "fgh", "pfg", "pfgh" };
+
+	if ((n >= 0 && (i < 0 || i >= n))
 	 || s == 0.
 	 || Inftest(s)) {
 			if (ierror && *ierror >= 0) {
@@ -46,23 +42,29 @@ zcheck(ASL *asl, int i, real s, int n, fint *ierror, char *who)
 			if (n >= 0)
 				fprintf(Stderr, "%d, ", i);
 			fprintf(Stderr, "%.g, nerror): bad argument\n", s);
+ byebye:
 			fflush(Stderr);
 			if (err_jmp1)
 				longjmp(err_jmp1->jb, 1);
 			exit(1);
 			}
+	if (!Ograd) {
+		if (ierror && *ierror >= 0) {
+			*ierror = 1;
+			return 1;
+			}
+		if ((rt = asl->i.ASLtype) < 1 || rt > 5)
+			rt = 0;
+		fprintf(Stderr, "%s called before %s_read().\n", who, RN[rt]);
+		goto byebye;
+		}
 	if (ierror && *ierror >= 0)
 		*ierror = 0;
-	cur_ASL = asl;
 	return 0;
 	}
 
  static void
-#ifdef KR_headers
-scaleadj(s, i, m, scale, L, U, x) int i, m; real s, *scale, *L, *U, *x;
-#else
 scaleadj(real s, int i, int m, real *scale, real *L, real *U, real *x)
-#endif
 {
 	real u, v;
 
@@ -77,41 +79,41 @@ scaleadj(real s, int i, int m, real *scale, real *L, real *U, real *x)
 	U += i;
 	*scale *= s;
 	if (s > 0.) {
-		if (*L > negInfinity)
+		if (*L > negInfinity) {
 			if (m)
 				*L *= s;
 			else
 				*L /= s;
-		if (*U < Infinity)
+			}
+		if (*U < Infinity) {
 			if (m)
 				*U *= s;
 			else
 				*U /= s;
+			}
 		}
 	else {
 		u = -*L;
 		v = -*U;
-		if (u < Infinity)
+		if (u < Infinity) {
 			if (m)
 				u = *L * s;
 			else
 				u = *L / s;
-		if (v > negInfinity)
+			}
+		if (v > negInfinity) {
 			if (m)
 				v = *U * s;
 			else
 				v = *U / s;
+			}
 		*L = v;
 		*U = u;
 		}
 	}
 
  void
-#ifdef KR_headers
-conscale_ASL(asl, i, s, ierror) ASL *asl; int i; real s; fint *ierror;
-#else
 conscale_ASL(ASL *asl, int i, real s, fint *ierror)
-#endif
 {
 	static char who[] = "conscale";
 
@@ -121,19 +123,19 @@ conscale_ASL(ASL *asl, int i, real s, fint *ierror)
 		badasl_ASL(asl, ASL_read_fg, who);
 	if (zcheck(asl, i, s, n_con, ierror, who))
 		return;
+	if (s == 1.)
+		return;
 	if (!asl->i.cscale)
-		asl->i.lscale = asl->i.cscale = ones(asl, n_con);
+		asl->i.cscale = ones(asl, n_con);
+	if (!asl->i.lscale)
+		asl->i.lscale = asl->i.cscale;
 	scaleadj(s, i, 1, asl->i.cscale, LUrhs, Urhsx, pi0);
 	if (asl->i.lscale != asl->i.cscale)
 		asl->i.lscale[i] *= s;
 	}
 
  void
-#ifdef KR_headers
-varscale_ASL(asl, i, s, ierror) ASL *asl; int i; real s; fint *ierror;
-#else
 varscale_ASL(ASL *asl, int i, real s, fint *ierror)
-#endif
 {
 	static char who[] = "varscale";
 
@@ -149,30 +151,39 @@ varscale_ASL(ASL *asl, int i, real s, fint *ierror)
 	}
 
  void
-#ifdef KR_headers
-lagscale_ASL(asl, s, ierror) ASL *asl; real s; fint *ierror;
-#else
 lagscale_ASL(ASL *asl, real s, fint *ierror)
-#endif
 {
 	static char who[] = "lagscale";
-	real *c, *ce, *l;
+	real *c, *l, *le;
+	size_t L;
 
 	if (!asl
-	 || asl->i.ASLtype != ASL_read_pfgh
-	 && asl->i.ASLtype != ASL_read_fgh)
+	 || (asl->i.ASLtype != ASL_read_pfgh
+	  && asl->i.ASLtype != ASL_read_fgh))
 		badasl_ASL(asl, ASL_read_pfgh, who);
 	if (zcheck(asl, 0, s, -1, ierror, who))
 		return;
-	if (s == 1. && asl->i.lscale == asl->i.cscale)
+	if (s == 1.)
 		return;
-	if (!asl->i.cscale)
-		asl->i.lscale = asl->i.cscale = ones(asl, n_con);
-	if (asl->i.lscale == asl->i.cscale)
-		asl->i.lscale = (real*)mem_ASL(asl, n_con*sizeof(real));
+	if (!asl->i.lscale)
+		asl->i.lscale = ones(asl, n_con);
+	else if (asl->i.lscale == asl->i.cscale) {
+		L = n_con*sizeof(real);
+		memcpy(asl->i.lscale = (real*)mem_ASL(asl,L), asl->i.cscale, L);
+		}
 	l = asl->i.lscale;
-	c = asl->i.cscale;
-	ce = c + n_con;
-	while(c < ce)
-		*l++ = s * *c++;
+	le = l + n_con;
+	if ((c = asl->i.cscale)) {
+		while(l < le)
+			*l++ = s * *c++;
+		}
+	else
+		while(l < le)
+			*l++ *= s;
+	if ((c = pi0)) {
+		le = c + n_con;
+		s = 1. / s;
+		while(c < le)
+			*c++ *= s;
+		}
 	}

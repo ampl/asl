@@ -29,15 +29,30 @@ extern "C" {
 #endif
 extern ASLhead ASLhead_ASL;
 
-char *i_option_ASL;
+const char *i_option_ASL;
+unsigned long randseed_ASL;
 static int n_added;
 
+ void
+addrandinit_ASL(AmplExports *ae, RandSeedSetter rss, void *v)
+{
+	char *s, *se;
+	unsigned long x;
+
+	/* Something more elaborate will be needed if we add a "reset" facility to ASL. */
+
+	if (!randseed_ASL) {
+		randseed_ASL = 1;
+		if ((s = getenv("randseed"))
+		 && (x = (unsigned long)strtol(s,&se,10))
+		 && !se)
+			randseed_ASL = x;
+		}
+	(*rss)(v, randseed_ASL);
+	}
+
  func_info *
-#ifdef KR_headers
-func_lookup(asl, s, add) ASL *asl; register char *s; int add;
-#else
 func_lookup(ASL *asl, register const char *s, int add)
-#endif
 {
 	register unsigned x = 0;
 	func_info *fi, **finext;
@@ -65,12 +80,7 @@ func_lookup(ASL *asl, register const char *s, int add)
 	}
 
  void
-#ifdef KR_headers
-addfunc_ASL(fname, f, ftype, nargs, funcinfo, ae)
-	char *fname, *funcinfo; ufunc *f; AmplExports *ae;
-#else
 addfunc_ASL(const char *fname, ufunc *f, int ftype, int nargs, void *funcinfo, AmplExports *ae)
-#endif
 {
 	register func_info *fi;
 	ASL *asl = (ASL*)ae->asl;
@@ -87,7 +97,7 @@ addfunc_ASL(const char *fname, ufunc *f, int ftype, int nargs, void *funcinfo, A
 		return;
 #endif
 		}
-	if (fi = func_lookup(asl, fname, 1)) {
+	if ((fi = func_lookup(asl, fname, 1))) {
 		n_added++;
 		fi->funcp = f;
 		fi->ftype = ftype;
@@ -113,12 +123,7 @@ enum { NEFB = 5, NEFB0 = 2 };
 ExitCallInfo { Exitcall *cur, **curp, *last, **lastp; } ExitCallInfo;
 
  static void
-#ifdef KR_headers
-AtReset1(ae, ef, v, eci) AmplExports *ae; Exitfunc *ef; char *v;
-			 ExitCallInfo *eci;
-#else
 AtReset1(AmplExports *ae, Exitfunc *ef, void *v, ExitCallInfo *eci)
-#endif
 {
 	Exitcall *ec;
 	ASL *asl = (ASL*)ae->asl;
@@ -139,20 +144,12 @@ AtReset1(AmplExports *ae, Exitfunc *ef, void *v, ExitCallInfo *eci)
 	}
 
  static void
-#ifdef KR_headers
-AtReset(ae, ef, v) AmplExports *ae; Exitfunc *ef; char *v;
-#else
 AtReset(AmplExports *ae, Exitfunc *ef, void *v)
-#endif
 { AtReset1(ae, ef, v, 0); }
 
 
  void
-#ifdef KR_headers
-at_end_ASL(ec) Exitcall *ec;
-#else
 at_end_ASL(Exitcall *ec)
-#endif
 {
 	while(ec) {
 		(*ec->ef)(ec->v);
@@ -170,21 +167,16 @@ at_exit_ASL(VOID)
 	h = ASLhead_ASL.next;
 	h0->next = h0->prev = h0;
 	for(; h != h0; h = h->next)
-		if (ec = ((ASL*)h)->i.arprev)
+		if ((ec = ((ASL*)h)->i.arprev))
 			at_end_ASL(ec);
-	if (ec = a_e_prev) {
+	if ((ec = a_e_prev)) {
 		a_e_prev = 0;
 		at_end_ASL(ec);
 		}
 	}
 
  static void
-#ifdef KR_headers
-AtExit1(ae, ef, v, eci) AmplExports *ae; Exitfunc *ef; char *v;
-			ExitCallInfo *eci;
-#else
 AtExit1(AmplExports *ae, Exitfunc *ef, void *v, ExitCallInfo *eci)
-#endif
 {
 	Exitcall *ec;
 	Not_Used(ae);
@@ -209,27 +201,11 @@ AtExit1(AmplExports *ae, Exitfunc *ef, void *v, ExitCallInfo *eci)
 	}
 
  static void
-#ifdef KR_headers
-AtExit(ae, ef, v) AmplExports *ae; Exitfunc *ef; char *v;
-#else
 AtExit(AmplExports *ae, Exitfunc *ef, void *v)
-#endif
 { AtExit1(ae, ef, v, 0); }
 
- struct
-TMInfo {
-	union {
-		TMInfo *prev;
-		double align;
-		} u;
-	};
-
  static Char *
-#ifdef KR_headers
-Tempmem(T, L) TMInfo *T; size_t L;
-#else
 Tempmem(TMInfo *T, size_t L)
-#endif
 {
 	TMInfo *T1 = (TMInfo *)mymalloc(L + sizeof(TMInfo));
 	T1->u.prev = T->u.prev;
@@ -237,16 +213,6 @@ Tempmem(TMInfo *T, size_t L)
 	return (Char*)(T1+1);
 	}
 
-#ifdef KR_headers
- static void
-No_table_handler(Dbread, Dbwrite, hname, flags, vinfo)
-	int (*Dbread)(), (*Dbwrite)(), flags;
-	char *hname; Char *vinfo;
-{}
-
- static cryptblock*
-No_crypto(key, scrbytes) char *key; size_t scrbytes;
-#else
  static void
 No_table_handler(
 	int (*Dbread)(AmplExports*, TableInfo*),
@@ -258,7 +224,6 @@ No_table_handler(
 
  static cryptblock*
 No_crypto(char *key, size_t scrbytes)
-#endif
 { return 0; }
 
 typedef void Funcadd ANSI((AmplExports*));
@@ -315,11 +280,7 @@ no_popen(const char*cmd, const char*type) { return 0; }
 
 #ifdef clearerr
  static void
-#ifdef KR_headers
-myclearerr(f) FILE *f;
-#else
 myclearerr(FILE *f)
-#endif
 { clearerr(f); }
 #undef clearerr
 #define clearerr myclearerr
@@ -327,11 +288,7 @@ myclearerr(FILE *f)
 
 #ifdef feof
  static int
-#ifdef KR_headers
-myfeof(f) FILE *f;
-#else
 myfeof(FILE *f)
-#endif
 { return feof(f); }
 #undef feof
 #define feof myfeof
@@ -339,11 +296,7 @@ myfeof(FILE *f)
 
 #ifdef ferror
  static int
-#ifdef KR_headers
-myferror(f) FILE *f;
-#else
 myferror(FILE *f)
-#endif
 { return ferror(f); }
 #undef ferror
 #define ferror myferror
@@ -356,11 +309,7 @@ myferror(FILE *f)
 
 #ifdef fileno
  static int
-#ifdef KR_headers
-myfileno(f) FILE *f;
-#else
 myfileno(FILE *f)
-#endif
 { return fileno(f); }
 #undef fileno
 #define fileno myfileno
@@ -404,13 +353,13 @@ my_tempnam(const char *dir, const char *pfx, char *s)
 	Ld = strlen(dir);
 	Lp = strlen(pfx);
 	if (!s)
-		s = Malloc(Ld + Lp + 8);
+		s = (char*)Malloc(Ld + Lp + 8);
 	strcpy(s, dir);
 	if (s[Ld-1] != '/')
 		s[Ld++] = '/';
 	strcpy(s+Ld, pfx);
 	strcpy(s + Ld + Lp, "XXXXXX");
-	if (i = mkstemp(s))
+	if ((i = mkstemp(s)))
 		close(i);
 	else {
 		free(s);
@@ -442,11 +391,7 @@ Tmpnam(char *s)
  void (*breakfunc_ASL) ANSI((int,void*)), *breakarg_ASL;
 
  void
-#ifdef KR_headers
-func_add(asl) ASL *asl;
-#else
 func_add(ASL *asl)
-#endif
 {
 	AmplExports *ae;
 
@@ -508,6 +453,7 @@ func_add(ASL *asl)
 			AE.Getenv = getenv_ASL;
 			AE.Breakfunc = breakfunc_ASL;
 			AE.Breakarg = breakarg_ASL;
+			AE.Addrandinit = addrandinit_ASL;
 			}
 		if (AE.asl)
 			memcpy(ae = (AmplExports*)M1alloc(sizeof(AmplExports)),
@@ -532,15 +478,11 @@ func_add(ASL *asl)
 	}
 
  void
-#ifdef KR_headers
-show_funcs_ASL(asl) ASL *asl;
-#else
 show_funcs_ASL(ASL *asl)
-#endif
 {
 	func_info *fi;
 	int nargs;
-	char *atleast;
+	const char *atleast;
 
 	func_add(asl);
 	fprintf(Stderr, "Available nonstandard functions:%s\n",
@@ -559,21 +501,18 @@ show_funcs_ASL(ASL *asl)
 	fflush(Stderr);
 	}
 
+ void
+note_libuse_ASL(void)
+{ ++n_added; }
+
  int
-#ifdef KR_headers
-aflibname_ASL(ae, fullname, name, nlen, fa, save_fa, dl_close, h)
-	AmplExports *ae; char *fullname; char *name; int nlen; Funcadd *fa;
-	int save_fa; void (*dl_close)(), *h;
-#else
-aflibname_ASL(AmplExports *ae, char *fullname, char *name, int nlen,
+aflibname_ASL(AmplExports *ae, const char *fullname, const char *name, int nlen,
 	Funcadd *fa, int save_fa, void (*dl_close)(void*), void *h)
-#endif
 {
 	Exitcall *ec;
 	ExitCallInfo eci;
-	Not_Used(fullname);
-	Not_Used(name);
-	Not_Used(nlen);
+
+	af_libnamesave_ASL(ae, fullname, name, nlen);
 	n_added = 0;
 	if (save_fa)
 		AtExit1( ae, dl_close, h, &eci);

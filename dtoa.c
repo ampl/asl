@@ -32,6 +32,7 @@
  */
 
 /* strtod for IEEE-, VAX-, and IBM-arithmetic machines.
+ * (Note that IEEE arithmetic is disabled by gcc's -ffast-math flag.)
  *
  * This strtod returns a nearest machine number to the input decimal
  * string (or sets errno to ERANGE).  With IEEE arithmetic, ties are
@@ -669,7 +670,7 @@ s2b
 #ifdef KR_headers
 	(s, nd0, nd, y9, dplen) CONST char *s; int nd0, nd, dplen; ULong y9;
 #else
-	(CONST char *s, int nd0, int nd, ULong y9, int dplen)
+	(const char *s, int nd0, int nd, ULong y9, int dplen)
 #endif
 {
 	Bigint *b;
@@ -1495,14 +1496,11 @@ static CONST double tinytens[] = { 1e-16, 1e-32 };
 #endif
 
 #ifdef Need_Hexdig /*{*/
+#if 0
 static unsigned char hexdig[256];
 
  static void
-#ifdef KR_headers
-htinit(h, s, inc) unsigned char *h; unsigned char *s; int inc;
-#else
 htinit(unsigned char *h, unsigned char *s, int inc)
-#endif
 {
 	int i, j;
 	for(i = 0; (j = s[i]) !=0; i++)
@@ -1510,17 +1508,34 @@ htinit(unsigned char *h, unsigned char *s, int inc)
 	}
 
  static void
-#ifdef KR_headers
-hexdig_init()
-#else
-hexdig_init(void)
-#endif
+hexdig_init(void)	/* Use of hexdig_init omitted 20121220 to avoid a */
+			/* race condition when multiple threads are used. */
 {
 #define USC (unsigned char *)
 	htinit(hexdig, USC "0123456789", 0x10);
 	htinit(hexdig, USC "abcdef", 0x10 + 10);
 	htinit(hexdig, USC "ABCDEF", 0x10 + 10);
 	}
+#else
+static unsigned char hexdig[256] = {
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	16,17,18,19,20,21,22,23,24,25,0,0,0,0,0,0,
+	0,26,27,28,29,30,31,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,26,27,28,29,30,31,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	};
+#endif
 #endif /* } Need_Hexdig */
 
 #ifdef INFNAN_CHECK
@@ -1538,7 +1553,7 @@ match
 #ifdef KR_headers
 	(sp, t) char **sp, *t;
 #else
-	(CONST char **sp, char *t)
+	(const char **sp, const char *t)
 #endif
 {
 	int c, d;
@@ -1560,15 +1575,14 @@ hexnan
 #ifdef KR_headers
 	(rvp, sp) U *rvp; CONST char **sp;
 #else
-	(U *rvp, CONST char **sp)
+	(U *rvp, const char **sp)
 #endif
 {
 	ULong c, x[2];
 	CONST char *s;
 	int c1, havedig, udx0, xshift;
 
-	if (!hexdig['0'])
-		hexdig_init();
+	/**** if (!hexdig['0']) hexdig_init(); ****/
 	x[0] = x[1] = 0;
 	havedig = xshift = 0;
 	udx0 = 1;
@@ -1790,8 +1804,7 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 #endif
 #endif
 
-	if (!hexdig['0'])
-		hexdig_init();
+	/**** if (!hexdig['0']) hexdig_init(); ****/
 	havedig = 0;
 	s0 = *(CONST unsigned char **)sp + 2;
 	while(s0[havedig] == '0')
@@ -1891,6 +1904,8 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 #endif
 			goto retz;
 #ifdef IEEE_Arith
+ ret_tinyf:
+			Bfree(b);
  ret_tiny:
 #ifndef NO_ERRNO
 			errno = ERANGE;
@@ -1991,15 +2006,15 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 			switch (rounding) {
 			  case Round_near:
 				if (n == nbits && (n < 2 || any_on(b,n-1)))
-					goto ret_tiny;
+					goto ret_tinyf;
 				break;
 			  case Round_up:
 				if (!sign)
-					goto ret_tiny;
+					goto ret_tinyf;
 				break;
 			  case Round_down:
 				if (sign)
-					goto ret_tiny;
+					goto ret_tinyf;
 			  }
 #endif /* } IEEE_Arith */
 			Bfree(b);
@@ -2267,7 +2282,7 @@ bigcomp
 	(rv, s0, bc)
 	U *rv; CONST char *s0; BCinfo *bc;
 #else
-	(U *rv, CONST char *s0, BCinfo *bc)
+	(U *rv, const char *s0, BCinfo *bc)
 #endif
 {
 	Bigint *b, *d;
@@ -2396,7 +2411,7 @@ bigcomp
 		b = multadd(b, 10, 0);
 		dig = quorem(b,d);
 		}
-	if (b->x[0] || b->wds > 1)
+	if (dig > 0 || b->x[0] || b->wds > 1)
 		dd = -1;
  ret:
 	Bfree(b);
@@ -2475,7 +2490,7 @@ strtod
 #ifdef KR_headers
 	(s00, se) CONST char *s00; char **se;
 #else
-	(CONST char *s00, char **se)
+	(const char *s00, char **se)
 #endif
 {
 	int bb2, bb5, bbe, bd2, bd5, bbbits, bs2, c, e, e1;
@@ -2558,7 +2573,7 @@ strtod
 	for(nd = nf = 0; (c = *s) >= '0' && c <= '9'; nd++, s++)
 		if (nd < 9)
 			y = 10*y + c - '0';
-		else if (nd < 16)
+		else if (nd < DBL_DIG + 2)
 			z = 10*z + c - '0';
 	nd0 = nd;
 	bc.dp0 = bc.dp1 = s - s0;
@@ -2608,11 +2623,11 @@ strtod
 				for(i = 1; i < nz; i++)
 					if (nd++ < 9)
 						y *= 10;
-					else if (nd <= DBL_DIG + 1)
+					else if (nd <= DBL_DIG + 2)
 						z *= 10;
 				if (nd++ < 9)
 					y = 10*y + c;
-				else if (nd <= DBL_DIG + 1)
+				else if (nd <= DBL_DIG + 2)
 					z = 10*z + c;
 				nz = nz1 = 0;
 				}
@@ -2701,7 +2716,7 @@ strtod
 
 	if (!nd0)
 		nd0 = nd;
-	k = nd < DBL_DIG + 1 ? nd : DBL_DIG + 1;
+	k = nd < DBL_DIG + 2 ? nd : DBL_DIG + 2;
 	dval(&rv) = y;
 	if (k > 9) {
 #ifdef SET_INEXACT
@@ -3400,8 +3415,7 @@ strtod
 					goto undfl;
 #else
 					{
-					if (bc.nd > nd)
-						bc.dsign = 1;
+					req_bigcomp = 1;
 					break;
 					}
 #endif
@@ -3574,7 +3588,7 @@ rv_alloc(int i)
 #ifdef KR_headers
 nrv_alloc(s, rve, n) char *s, **rve; int n;
 #else
-nrv_alloc(char *s, char **rve, int n)
+nrv_alloc(const char *s, char **rve, int n)
 #endif
 {
 	char *rv, *t;
@@ -3697,8 +3711,10 @@ dtoa
 	U d2, eps, u;
 	double ds;
 	char *s, *s0;
+#ifndef No_leftright
 #ifdef IEEE_Arith
 	U eps1;
+#endif
 #endif
 #ifdef SET_INEXACT
 	int inexact, oldinexact;

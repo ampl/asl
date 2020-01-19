@@ -188,7 +188,7 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			f = mxGetPr(plhs[0] = mxCreateDoubleMatrix(1, 1, mxREAL));
 			c = mxGetPr(plhs[1] = mxCreateDoubleMatrix(nc, 1, mxREAL));
 			what = "f";
-			*f = objval(0, x, &nerror);
+			*f = n_obj > 0 ? objval(0, x, &nerror) : 0.;
 			what = "c";
 			conval(x, c, &nerror);
 			return;
@@ -196,7 +196,10 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		g = mxGetPr(plhs[0] = mxCreateDoubleMatrix(n, 1, mxREAL));
 		J1 = mxGetPr(plhs[1] = mxCreateDoubleMatrix(nc, n, mxREAL));
 		what = "g";
-		objgrd(0, x, g, &nerror);
+		if (n_obj > 0)
+			objgrd(0, x, g, &nerror);
+		else
+			memset(g, 0, n*sizeof(real));
 		if (nc) {
 			memset(J1, 0, Jsize);
 			what = "J";

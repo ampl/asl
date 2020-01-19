@@ -47,12 +47,6 @@ extern "C" {
 #endif
 
 
-#ifdef KR_headers
-#define Void /* void */
-#else
-#define Void void
-#endif
-
 #ifdef Use_tolower
 #include "ctype.h"
 #define Tolower(x) tolower(x)
@@ -60,30 +54,25 @@ extern "C" {
 static unsigned char lc[256];
 
  static void
-lc_init(Void)
+lc_init(void)
 {
-	register int i;
-	register char *s;
+	int i;
+	const char *s;
 	for(i = 0; i < 256; i++)
 		lc[i] = i;
 	for(s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; *s; s++)
-		lc[*s] = *s + 'a' - 'A';
+		lc[(int)*s] = *s + 'a' - 'A';
 	}
 #define Tolower(x) lc[x]
 #endif
 
-#ifdef KR_headers
- char *
-b_search_ASL(ow, owsize, n, sp, peq)
- char *ow; int owsize, n; char **sp, **peq;
-#else
  void *
-b_search_ASL(char *ow, int owsize, int n, char **sp, char **peq)
-#endif
+b_search_ASL(void *ow, int owsize, int n, char **sp, char **peq)
 {
 	int c, c1, c2, n1;
 	char *s, *s1, *s2;
-	char *ow1;
+	void *ow1;
+	static char Blank[] = " ", Eq[] = "=";
 #ifndef Use_tolower
 	static int first = 1;
 	if (first) {
@@ -99,7 +88,7 @@ b_search_ASL(char *ow, int owsize, int n, char **sp, char **peq)
 	/* binary search */
 
 	while(n > 0) {
-		ow1 = ow + (n1 = n >> 1)*owsize;
+		ow1 = (char*)ow + (n1 = n >> 1)*owsize;
 		s2 = *(char **)ow1;
 		for(s1 = s;; s1++) {
 			c1 = Tolower(*(unsigned char *)s1);
@@ -115,15 +104,15 @@ b_search_ASL(char *ow, int owsize, int n, char **sp, char **peq)
 			n = n1;
 		else {
 			n -= n1 + 1;
-			ow = ow1 + owsize;
+			ow = (char*)ow1 + owsize;
 			}
 		continue;
  found:
-		*peq = " ";
+		*peq = Blank;
 		while(*s1 && *s1 <= ' ')
 			s1++;
 		if (*s1 == '=') {
-			*peq = "=";
+			*peq = Eq;
 			while(*++s1 && *s1 <= ' ');
 			}
 		*sp = s1;

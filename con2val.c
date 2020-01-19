@@ -25,27 +25,23 @@ THIS SOFTWARE.
 #include "jac2dim.h"
 
  void
-#ifdef KR_headers
-con2val_ASL(a, X, F, nerror) ASL *a; real *X; real *F; fint *nerror;
-#else
 con2val_ASL(ASL *a, real *X, real *F, fint *nerror)
-#endif
 {
-	cde *d, *dend;
+	ASL_fgh *asl;
+	Jmp_buf err_jmp0;
+	cde *d, *d0;
+	cgrad *gr, **gr0;
 	expr *e1;
 	expr_v *V;
+	int *cm, i, j, k, useV;
 	real *cscale, f;
-	int i;
-	cgrad *gr, **gr0;
-	Jmp_buf err_jmp0;
-	ASL_fgh *asl;
 
 	ASL_CHECK(a, ASL_read_fgh, "con2val");
 	asl = (ASL_fgh*)a;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
-		if (*nerror = i)
+		if ((*nerror = i))
 			goto done;
 		}
 	want_deriv = want_derivs;
@@ -60,44 +56,51 @@ con2val_ASL(ASL *a, real *X, real *F, fint *nerror)
 		x0kind |= ASL_have_concom;
 		}
 	x0kind |= ASL_have_conval;
-	d = con_de;
-	dend = d + n_conjac[1];
-	co_index = i = n_conjac[0];
-	d += i;
-	if (cscale = asl->i.cscale)
-		cscale += i;
-	for(gr0 = Cgrad + i; d < dend; d++, gr0++, co_index++) {
+	d0 = con_de;
+	j = n_conjac[0];
+	k = n_conjac[1];
+	cscale = asl->i.cscale;
+	cm = asl->i.cmap;
+	V = var_e;
+	useV = asl->i.vscale || asl->i.vmap;
+	if (!(gr0 = asl->i.Cgrad0))
+		asl->i.Cgrad0 = gr0 = asl->i.Cgrad_;
+	for(; j < k; ++j) {
+		i = j;
+		if (cm)
+			i = cm[j];
+		co_index = i;
+		d = d0 + i;
 		e1 = d->e;
 		f = (*e1->op)(e1 C_ASL);
-		gr = *gr0;
-		if (asl->i.vscale)
+		gr = gr0[i];
+		if (useV)
 			for(V = var_e; gr; gr = gr->next)
 				f += V[gr->varno].v * gr->coef;
 		else
 			for(; gr; gr = gr->next)
 				f += X[gr->varno] * gr->coef;
-		if (F)
-			*F++ = cscale ? *cscale++ * f : f;
+		if (F) {
+			if (cscale)
+				f *= cscale[j];
+			*F++ = f;
+			}
 		}
  done:
 	err_jmp = 0;
 	}
 
  void
-#ifdef KR_headers
-jac2val_ASL(a, X, G, nerror) ASL *a; real *X; real *G; fint *nerror;
-#else
 jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
-#endif
 {
-	cde *d, *dend;
-	cgrad **gr0;
-	cgrad *gr;
-	real *Adjoints, *cscale, t, *vscale;
-	Jmp_buf err_jmp0;
-	int L, xksave;
-	fint ne0;
 	ASL_fgh *asl;
+	Jmp_buf err_jmp0;
+	cde *d, *d0;
+	cgrad *gr, **gr0, *gr1;
+	fint ne0;
+	int *cm, i, i1, j, k, xksave, *vmi;
+	real *Adjoints, *cscale, t, *vscale;
+	size_t L;
 	static char who[] = "jac2val";
 
 	ASL_CHECK(a, ASL_read_fgh, who);
@@ -108,11 +111,11 @@ jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
-		if (*nerror = L)
+		if ((*nerror = L))
 			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
-	if (!asl->i.x_known && x2_check_ASL(asl,X)
+	if ((!asl->i.x_known && x2_check_ASL(asl,X))
 	|| !(x0kind & ASL_have_conval)) {
 		xksave = asl->i.x_known;
 		asl->i.x_known = 1;
@@ -121,32 +124,50 @@ jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			goto done;
 		}
+	j = n_conjac[0];
+	k = n_conjac[1];
+	if (asl->i.Derrs)
+		deriv_errchk_ASL(a, nerror, j, k-j);
 	Adjoints = adjoints;
-	d = con_de;
-	dend = d + n_conjac[1];
-	d += L = n_conjac[0];
-	if (cscale = asl->i.cscale)
-		cscale += n_conjac[0];
+	d0 = con_de;
+	cscale = asl->i.cscale;
+	vscale = asl->i.vscale;
+	cm = asl->i.cmap;
+	vmi = 0;
+	if (asl->i.vmap)
+		vmi = get_vminv_ASL(a);
 	if (f_b)
 		fun2set_ASL(asl, f_b);
 	if (f_c)
 		fun2set_ASL(asl, f_c);
-	vscale = asl->i.vscale;
-	for(gr0 = Cgrad + L; d < dend; d++, gr0++) {
-		for(gr = *gr0; gr; gr = gr->next)
+	gr0 = asl->i.Cgrad0;
+	for(; j < k; ++j) {
+		i = j;
+		if (cm)
+			i = cm[j];
+		d = d0 + i;
+		for(gr = gr1 = gr0[i]; gr; gr = gr->next)
 			Adjoints[gr->varno] = gr->coef;
-		if (L = d->zaplen) {
+		if ((L = d->zaplen)) {
 			memset(adjoints_nv1, 0, L);
 			derprop(d->d);
 			}
-		if (vscale)
-			for(gr = *gr0; gr; gr = gr->next) {
-				L = gr->varno;
-				Adjoints[L] *= vscale[L];
-				}
-		gr = *gr0;
+		if (vscale) {
+			gr = gr1;
+			if (vmi)
+				for(; gr; gr = gr->next) {
+					i1 = gr->varno;
+					Adjoints[i1] *= vscale[vmi[i1]];
+					}
+			else
+				for(; gr; gr = gr->next) {
+					i1 = gr->varno;
+					Adjoints[i1] *= vscale[i1];
+					}
+			}
+		gr = gr1;
 		if (cscale)
-			for(t = *cscale++; gr; gr = gr->next)
+			for(t = cscale[j]; gr; gr = gr->next)
 				G[gr->goff] = t*Adjoints[gr->varno];
 		else
 			for(; gr; gr = gr->next)
@@ -157,15 +178,8 @@ jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
 	}
 
  int
-#ifdef KR_headers
-jac2dim_ASL(asl, stub, M, N, NO, NZ, MXROW, MXCOL, stub_len)
-	ASL *asl; char *stub;
-	fint *M, *N, *NO, *NZ, *MXROW, *MXCOL;
-	ftnlen stub_len;
-#else
 jac2dim_ASL(ASL *asl, char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 	fint *MXROW, fint *MXCOL, ftnlen stub_len)
-#endif
 {
 	FILE *nl;
 

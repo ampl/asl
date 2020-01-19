@@ -60,11 +60,7 @@ extern "C" {
  static ASL_fgh *asl;
 
  static void
-#ifdef KR_headers
-ed_reset(a) ASL *a;
-#else
 ed_reset(ASL *a)
-#endif
 {
 
 	a->i.memLast = a->i.memNext = 0;
@@ -83,11 +79,7 @@ ed_reset(ASL *a)
 	}
 
  static void
-#ifdef KR_headers
-fscream(R, name, nargs, kind) EdRead *R; char *name; int nargs; char *kind;
-#else
-fscream(EdRead *R, const char *name, int nargs, char *kind)
-#endif
+fscream(EdRead *R, const char *name, int nargs, const char *kind)
 {
 	scream(R, ASL_readerr_argerr,
 		"line %ld: attempt to call %s with %d %sargs\n",
@@ -95,11 +87,7 @@ fscream(EdRead *R, const char *name, int nargs, char *kind)
 	}
 
  static void
-#ifdef KR_headers
-sorry_CLP(R, what) EdRead *R; char *what;
-#else
-sorry_CLP(EdRead *R, char *what)
-#endif
+sorry_CLP(EdRead *R, const char *what)
 {
 	fprintf(Stderr,
 		"Sorry, %s cannot handle %s.\n",
@@ -117,11 +105,7 @@ sorry_CLP(EdRead *R, char *what)
  extern sfunc f_OPIFSYM;
 
  static void
-#ifdef KR_headers
-new_derp(a, b, c) int a; int b; real *c;
-#else
 new_derp(int a, int b, real *c)
-#endif
 {
 	derp *d;
 	if (a == nv1)
@@ -136,11 +120,7 @@ new_derp(int a, int b, real *c)
 	}
 
  static derp *
-#ifdef KR_headers
-new_relo(e, Dnext, ap) expr *e; derp *Dnext; int *ap;
-#else
 new_relo(expr *e, derp *Dnext, int *ap)
-#endif
 {
 	relo *r;
 	derp *d;
@@ -166,11 +146,7 @@ new_relo(expr *e, derp *Dnext, int *ap)
 	}
 
  static relo *
-#ifdef KR_headers
-new_relo1(Dnext) derp *Dnext;
-#else
 new_relo1(derp *Dnext)
-#endif
 {
 	relo *r;
 
@@ -183,11 +159,7 @@ new_relo1(derp *Dnext)
 	}
 
  static expr *
-#ifdef KR_headers
-new_expr(opcode, L, R, deriv) int opcode; expr *L; expr *R; int deriv;
-#else
 new_expr(int opcode, expr *L, expr *R, int deriv)
-#endif
 {
 	expr *rv;
 	extern efunc f_OP1POW, f_OP2POW, f_OPPOW;
@@ -195,7 +167,7 @@ new_expr(int opcode, expr *L, expr *R, int deriv)
 	int L1, R1, i;
 
 	o = r_ops[opcode];
-	if (o == f_OPPOW)
+	if (o == f_OPPOW) {
 		if (R->op == f_OPNUM)
 			if (((expr_n *)R)->v == 2.) {
 				o = f_OP2POW;
@@ -205,6 +177,7 @@ new_expr(int opcode, expr *L, expr *R, int deriv)
 				o = f_OP1POW;
 		else if (L->op == f_OPNUM)
 			o = f_OPCPOW;
+		}
 	rv = (expr *)mem(sizeof(expr));
 	rv->op = o;
 	rv->L.e = L;
@@ -259,39 +232,36 @@ new_expr(int opcode, expr *L, expr *R, int deriv)
 	};
 
  static expr *
-#ifdef KR_headers
-eread(R, deriv) EdRead *R; int deriv;
-#else
 eread(EdRead *R, int deriv)
-#endif
 {
+	arglist *al;
+	argpair *ap, *da, *sap;
 	char **sa;
-	int a0, a1, i, i1, j, j1, k, kd, kd2, ks, numargs, symargs;
-	int *at, *nn, *nn0;
-	real *b, **fh, *hes, r, *ra;
-	expr *L, *arg, **args, **args1, **argse, *rv;
-	expr_n *rvn;
-	expr_va *rva;
-	plterm *p;
+	char *dig;
 	de *d;
 	derp *dsave;
 	efunc *op;
-	expr_if *rvif;
+	expr *L, *arg, **args, **args1, **argse, *rv;
 	expr_f *rvf;
+	expr_if *rvif;
+	expr_n *rvn;
+	expr_va *rva;
 	func_info *fi;
-	arglist *al;
-	argpair *ap, *da, *sap;
-	char *dig;
-	short sh;
-	unsigned int Ls;
+	int *at, *nn, *nn0;
+	int a0, a1, i, i1, j, j1, k, kd, kd2, ks, numargs, symargs;
+	int (*Xscanf)(EdRead*, const char*, ...);
 	long L1;
+	plterm *p;
+	real *b, **fh, *hes, r, *ra;
+	unsigned int Ls;
 	static real dvalue[] = {
 #include "dvalue.hd"
 		};
 
+	Xscanf = xscanf;
 	switch(edag_peek(R)) {
 		case 'f':
-			if (xscanf(R, "%d %d", &i, &j) != 2)
+			if (Xscanf(R, "%d %d", &i, &j) != 2)
 				badline(R);
 			fi = funcs[i];
 			if (fi->nargs >= 0) {
@@ -427,19 +397,19 @@ eread(EdRead *R, int deriv)
 			return holread(R);
 
 		case 's':
-			if (xscanf(R, "%hd", &sh) != 1)
+			if (Xscanf(R, "%hd", &L1) != 1)
 				badline(R);
-			r = sh;
+			r = L1;
 			goto have_r;
 
 		case 'l':
-			if (xscanf(R, "%ld", &L1) != 1)
+			if (Xscanf(R, "%ld", &L1) != 1)
 				badline(R);
 			r = L1;
 			goto have_r;
 
 		case 'n':
-			if (xscanf(R, "%lf", &r) != 1)
+			if (Xscanf(R, "%lf", &r) != 1)
 				badline(R);
  have_r:
 			rvn = (expr_n *)mem(sizeof(expr_n));
@@ -451,7 +421,7 @@ eread(EdRead *R, int deriv)
 			break;
 
 		case 'v':
-			if (xscanf(R,"%d",&k) != 1 || k < 0)
+			if (Xscanf(R,"%d",&k) != 1 || k < 0)
 				badline(R);
 			if (k >= nvar0)
 				k += nvinc;
@@ -465,7 +435,7 @@ eread(EdRead *R, int deriv)
 			badline(R);
 		}
 
-	if (xscanf(R, "%d", &k) != 1 || k < 0 || k >= sizeof(op_type))
+	if (Xscanf(R, asl->i.opfmt, &k) != 1 || k < 0 || k >= sizeof(op_type))
 		badline(R);
 	switch(op_type[k]) {
 
@@ -485,7 +455,7 @@ eread(EdRead *R, int deriv)
 
 		case 3:	/* vararg (min, max) */
 			i = -1;
-			xscanf(R, "%d", &i);
+			Xscanf(R, "%d", &i);
 			if (i <= 0)
 				badline(R);
 			rva = (expr_va *)mem(sizeof(expr_va));
@@ -538,7 +508,7 @@ eread(EdRead *R, int deriv)
 
 		case 4: /* piece-wise linear */
 			i = -1;
-			xscanf(R, "%d", &i);
+			Xscanf(R, "%d", &i);
 			if (i <= 1)
 				badline(R);
 			j = 2*i - 1;
@@ -548,17 +518,17 @@ eread(EdRead *R, int deriv)
 			do {
 				switch(edag_peek(R)) {
 					case 's':
-						if (xscanf(R,"%hd",&sh) != 1)
+						if (Xscanf(R,"%hd",&L1) != 1)
 							badline(R);
-						r = sh;
+						r = L1;
 						break;
 					case 'l':
-						if (xscanf(R,"%ld",&L1) != 1)
+						if (Xscanf(R,"%ld",&L1) != 1)
 							badline(R);
 						r = L1;
 						break;
 					case 'n':
-						if (xscanf(R,"%lf",&r) == 1)
+						if (Xscanf(R,"%lf",&r) == 1)
 							break;
 					default:
 						badline(R);
@@ -567,7 +537,7 @@ eread(EdRead *R, int deriv)
 				}
 				while(--j > 0);
 			if (edag_peek(R) != 'v'
-			 || xscanf(R, "%d", &k) != 1
+			 || Xscanf(R, "%d", &k) != 1
 			 || k < 0 || k >= max_var)
 				badline(R);
 			if (k >= nvar0)
@@ -605,7 +575,7 @@ eread(EdRead *R, int deriv)
 				rvif->dT = dsave;
 				rvif->Tv.i = nv1;
 				}
-			else if (j = deriv)
+			else if ((j = deriv))
 				rvif->dT = new_relo(L, dsave, &rvif->Tv.i);
 			a1 = lasta;
 			lasta = a0;
@@ -617,7 +587,7 @@ eread(EdRead *R, int deriv)
 				rvif->dF = dsave;
 				rvif->Fv.i = nv1;
 				}
-			else if (j = deriv)
+			else if (j)
 				rvif->dF = new_relo(L, dsave, &rvif->Fv.i);
 			if (lasta < a1)
 				lasta = a1;
@@ -641,7 +611,7 @@ eread(EdRead *R, int deriv)
 			/* no break */
 		case 6: /* sumlist */
 			i = 0;
-			xscanf(R, "%d", &i);
+			Xscanf(R, "%d", &i);
 			if (i <= 2 && (op_type[k] == 6 || i < 1))
 				badline(R);
 			rv = (expr *)mem(sizeof(expr) - sizeof(real)
@@ -684,11 +654,7 @@ eread(EdRead *R, int deriv)
 	}
 
  static list *
-#ifdef KR_headers
-new_list(nxt) list *nxt;
-#else
 new_list(list *nxt)
-#endif
 {
 	list *rv = (list *)mem(sizeof(list));
 	rv->next = nxt;
@@ -696,7 +662,7 @@ new_list(list *nxt)
 	}
 
  static list *
-crefs(VOID)
+crefs(void)
 {
 	int i;
 	list *rv = 0;
@@ -712,11 +678,7 @@ crefs(VOID)
 	}
 
  static funnel *
-#ifdef KR_headers
-funnelfix(f) funnel *f;
-#else
 funnelfix(funnel *f)
-#endif
 {
 	cexp *ce;
 	funnel *fnext, *fprev;
@@ -732,11 +694,7 @@ funnelfix(funnel *f)
 	}
 
  static derp *
-#ifdef KR_headers
-derpadjust(d0, a, dnext) derp *d0; int a; derp *dnext;
-#else
 derpadjust(derp *d0, int a, derp *dnext)
-#endif
 {
 	derp *d, *d1;
 	int *r, *re;
@@ -761,7 +719,7 @@ derpadjust(derp *d0, int a, derp *dnext)
 			break;
 		}
 	d->next = dnext;
-	if (rl = relo2list) {
+	if ((rl = relo2list)) {
 		relo2list = 0;
 		do {
 			d = rl->Dcond;
@@ -769,9 +727,9 @@ derpadjust(derp *d0, int a, derp *dnext)
 				d->a.i = r[d->a.i];
 				d->b.i = r[d->b.i];
 				}
-				while(d = d->next);
+				while((d = d->next));
 			}
-			while(rl = rl->next2);
+			while((rl = rl->next2));
 		}
 	if (if2list != if2list_end) {
 		ile = if2list_end;
@@ -795,11 +753,7 @@ derpadjust(derp *d0, int a, derp *dnext)
 	}
 
  static derp *
-#ifdef KR_headers
-derpcopy(ce, dnext) cexp *ce; derp *dnext;
-#else
 derpcopy(cexp *ce, derp *dnext)
-#endif
 {
 	derp	*d, *dprev;
 	int	*map;
@@ -817,7 +771,7 @@ derpcopy(cexp *ce, derp *dnext)
 	}
 
  static void
-imap_alloc(VOID)
+imap_alloc(void)
 {
 	int i, *r, *re;
 
@@ -834,22 +788,14 @@ imap_alloc(VOID)
 	}
 
  static int
-#ifdef KR_headers
-compar(a, b, v) char *a, *b, *v;
-#else
 compar(const void *a, const void *b, void *v)
-#endif
 {
 	Not_Used(v);
 	return *(int*)a - *(int*)b;
 	}
 
  static void
-#ifdef KR_headers
-comsubs(alen, d) int alen; cde *d;
-#else
 comsubs(int alen, cde *d)
-#endif
 {
 	list *L;
 	int a, i, j, k;
@@ -867,17 +813,18 @@ comsubs(int alen, cde *d)
 			zci[j++] = k;
 		else
 			zc[k] = 0;
-	if (nzc = j) {
+	if ((nzc = j)) {
 		for(i = 0; i < nzc; i++)
 			for(L = cexps[zci[i]-nv0].cref; L; L = L->next)
 				if (!zc[L->item.i]++)
 					zci[nzc++] = L->item.i;
-		if (nzc > 1)
+		if (nzc > 1) {
 			if (nzc < nzclim)
 				qsortv(zci, nzc, sizeof(int), compar, NULL);
 			else for(i = nv0, j = 0; i < max_var; i++)
 				if (zc[i])
 					zci[j++] = i;
+			}
 		if (nzc > 0) {
 			R = new_relo1(dnext);
 			i = 0;
@@ -914,11 +861,7 @@ comsubs(int alen, cde *d)
 	}
 
  static void
-#ifdef KR_headers
-co_read(R, d, wd) EdRead *R; cde *d; int wd;
-#else
 co_read(EdRead *R, cde *d, int wd)
-#endif
 {
 	int alen;
 
@@ -952,19 +895,17 @@ co_read(EdRead *R, cde *d, int wd)
 	}
 
  static linpart *
-#ifdef KR_headers
-linpt_read(R, nlin) EdRead *R; int nlin;
-#else
 linpt_read(EdRead *R, int nlin)
-#endif
 {
+	int (*Xscanf)(EdRead*, const char*, ...);
 	linpart *L, *rv;
 
 	if (nlin <= 0)
 		return 0;
+	Xscanf = xscanf;
 	L = rv = (linpart *)mem(nlin*sizeof(linpart));
 	do {
-		if (xscanf(R, "%d %lf", &L->v.i, &L->fac) != 2)
+		if (Xscanf(R, "%d %lf", &L->v.i, &L->fac) != 2)
 			badline(R);
 		L++;
 		}
@@ -973,11 +914,7 @@ linpt_read(EdRead *R, int nlin)
 	}
 
  static int
-#ifdef KR_headers
-funnelkind(ce, ip) cexp *ce; int *ip;
-#else
 funnelkind(cexp *ce, int *ip)
-#endif
 {
 	int i, j, k, nzc0, rv;
 	int *vr, *vre;
@@ -1025,11 +962,7 @@ funnelkind(cexp *ce, int *ip)
 	}
 
  static void
-#ifdef KR_headers
-cexp_read(R, k, nlin) EdRead *R; int k; int nlin;
-#else
 cexp_read(EdRead *R, int k, int nlin)
-#endif
 {
 	int a, fk, i, j, la0, na;
 	funnel *f, **fp;
@@ -1061,7 +994,8 @@ cexp_read(EdRead *R, int k, int nlin)
 		if (!zc[i]++)
 			zci[nzc++] = i;
 		}
-	if (fk = funnelkind(ce, &i)) {
+	i = 0; /* only needed to shut up an erroneous warning */
+	if ((fk = funnelkind(ce, &i))) {
 		/* arrange to funnel */
 		fp = k < nv0b ? &f_b : k < nv0c ? &f_c : &f_o;
 		ce->funneled = f = (funnel *)mem(sizeof(funnel));
@@ -1112,11 +1046,7 @@ cexp_read(EdRead *R, int k, int nlin)
 	}
 
  static void
-#ifdef KR_headers
-cexp1_read(R, j, k, nlin) EdRead *R; int j; int k; int nlin;
-#else
 cexp1_read(EdRead *R, int j, int k, int nlin)
-#endif
 {
 	linpart *L, *Le;
 	cexp1 *ce = cexps1 + (k - nv01);
@@ -1153,11 +1083,7 @@ cexp1_read(EdRead *R, int j, int k, int nlin)
 	}
 
  static expr *
-#ifdef KR_headers
-hvadjust(e) expr *e;
-#else
 hvadjust(expr *e)
-#endif
 {
 	expr *e0;
 
@@ -1170,11 +1096,7 @@ hvadjust(expr *e)
 	}
 
  static void
-#ifdef KR_headers
-co_adjust(d, n) cde *d; int n;
-#else
 co_adjust(cde *d, int n)
-#endif
 {
 	cde *de1;
 
@@ -1183,11 +1105,7 @@ co_adjust(cde *d, int n)
 	}
 
  static void
-#ifdef KR_headers
-ifadjust(e) expr_if *e;
-#else
 ifadjust(expr_if *e)
-#endif
 {
 	for(; e; e = e->next) {
 		e->Tv.rp = &adjoints[e->Tv.i];
@@ -1198,11 +1116,7 @@ ifadjust(expr_if *e)
 	}
 
  static void
-#ifdef KR_headers
-vargadjust(e) expr_va *e;
-#else
 vargadjust(expr_va *e)
-#endif
 {
 	de *d;
 
@@ -1215,24 +1129,20 @@ vargadjust(expr_va *e)
 	}
 
  static void
-#ifdef KR_headers
-funneladj1(f) funnel *f;
-#else
 funneladj1(funnel *f)
-#endif
 {
 	real	*a	= adjoints;
 	derp	*d;
 	cplist	*cl;
 
 	for(a = adjoints; f; f = f->next) {
-		if (d = f->fulld) {
+		if ((d = f->fulld)) {
 			f->fcde.d = d;
 			do {
 				d->a.rp = &a[d->a.i];
 				d->b.rp = &a[d->b.i];
 				}
-				while(d = d->next);
+				while((d = d->next));
 			}
 		for(cl = f->cl; cl; cl = cl->next)
 			cl->ca.rp = &a[cl->ca.i];
@@ -1246,7 +1156,7 @@ funneladjust(VOID)
 	linpart *L, *Le;
 	c = cexps;
 	for(ce = c + ncom0; c < ce; c++) {
-		if (L = c->L)
+		if ((L = c->L))
 			for(Le = L + c->nlin; L < Le; L++)
 				L->v.vp = (Char*)&var_e[L->v.i];
 		c->ef = hvadjust(c->ee);
@@ -1271,85 +1181,15 @@ com1adjust(VOID)
 	}
 
  static void
-goff_comp(VOID)
-{
-	int *ka = A_colstarts + 1;
-	cgrad **cgx, **cgxe;
-	cgrad *cg;
-
-	cgx = Cgrad;
-	cgxe = cgx + asl->i.n_con0;
-	while(cgx < cgxe)
-		for(cg = *cgx++; cg; cg = cg->next)
-			cg->goff = ka[cg->varno]++;
-	}
-
- static void
-colstart_inc(VOID)
-{
-	int *ka, *kae;
-	ka = A_colstarts;
-	kae = ka + asl->i.n_var0;
-	while(ka <= kae)
-		++*ka++;
-	}
-
- static void
-zerograd_chk(VOID)
-{
-	int j, n, nv, *z, **zg;
-	ograd *og, **ogp, **ogpe;
-
-	if (!(nv = asl->i.nlvog))
-		nv = nv0;
-	zerograds = 0;
-	ogp = Ograd;
-	ogpe = ogp + (j = n_obj);
-	while(ogp < ogpe) {
-		og = *ogp++;
-		n = 0;
-		while(og) {
-			j += og->varno - n;
-			n = og->varno + 1;
-			if (n >= nv)
-				break;
-			og = og->next;
-			}
-		if (n < nv)
-			j += nv - n;
-		}
-	if (j == n_obj)
-		return;
-	zerograds = zg = (int **)mem(n_obj*sizeof(int*)+j*sizeof(int));
-	z = (int*)(zg + n_obj);
-	ogp = Ograd;
-	while(ogp < ogpe) {
-		*zg++ = z;
-		og = *ogp++;
-		n = 0;
-		while(og) {
-			while(n < og->varno)
-				*z++ = n++;
-			og = og->next;
-			if (++n >= nv)
-				break;
-			}
-		while(n < nv)
-			*z++ = n++;
-		*z++ = -1;
-		}
-	}
-
- static void
 adjust_compl_rhs(VOID)
 {
 	cde *C;
 	expr *e;
 	int *Cvar, i, j, nc, stride;
-	real *L, *U, t;
+	real *L, *U, t, t1;
 
 	L = LUrhs;
-	if (U = Urhsx)
+	if ((U = Urhsx))
 		stride = 1;
 	else {
 		U = L + 1;
@@ -1361,20 +1201,21 @@ adjust_compl_rhs(VOID)
 	for(i = nlc; i < nc; i++)
 		if (Cvar[i] && (e = C[i].e) && e->op == f_OPNUM
 		&& (t = ((expr_n*)e)->v) != 0.) {
-			((expr_n*)e)->v = 0.;
-			if (L[j = stride*i] > negInfinity)
+			t1 = t;
+			if (L[j = stride*i] > negInfinity) {
 				L[j] -= t;
-			if (U[j] < Infinity)
+				t1 = 0.;
+				}
+			if (U[j] < Infinity) {
 				U[j] -= t;
+				t1 = 0.;
+				}
+			((expr_n*)e)->v = t1;
 			}
 	}
 
  static void
-#ifdef KR_headers
-adjust(flags) int flags;
-#else
-adjust(int flags)
-#endif
+adjust(ASL *a0, int flags)
 {
 	derp *d, **dp;
 	real *a = adjoints;
@@ -1382,7 +1223,7 @@ adjust(int flags)
 
 	for(r = relolist; r; r = r->next) {
 		dp = &r->D;
-		while(d = *dp) {
+		while((d = *dp)) {
 			d->a.rp = &a[d->a.i];
 			d->b.rp = &a[d->b.i];
 			dp = &d->next;
@@ -1396,71 +1237,63 @@ adjust(int flags)
 	com1adjust();
 	co_adjust(con_de, n_con);
 	co_adjust(obj_de, n_obj);
-	if (n_obj)
-		zerograd_chk();
-	if (k_seen)
+	if (k_seen) {
 		if (!A_vals)
-			goff_comp();
+			goff_comp_ASL(a0);
 		else if (Fortran)
-			colstart_inc();
+			colstart_inc_ASL(a0);
+		}
 	if (n_cc > nlcc && nlc < n_con
 	 && !(flags & ASL_no_linear_cc_rhs_adjust))
 		adjust_compl_rhs();
 	}
 
  static void
-#ifdef KR_headers
-br_read(R, nc, nc1, Lp, U, Cvar, nv)
-	EdRead *R; real **Lp, *U; int nc, nc1, *Cvar, nv;
-#else
-br_read(EdRead *R, int nc, int nc1, real **Lp, real *U, int *Cvar, int nv)
-#endif
+br_read(EdRead *R, int nc, real *L, real *U, int *Cvar, int nv)
 {
+	ASL *asl;
 	int i, inc, j, k;
-	real *L;
-	ASL *asl = R->asl;
+	int (*Xscanf)(EdRead*, const char*, ...);
 
-	if (!(L = *Lp)) {
-		if (nc1 < nc)
-			nc1 = nc;
-		L = *Lp = (real *)M1alloc(2*sizeof(real)*nc1);
-		}
+	asl = R->asl;
+
 	if (U)
 		inc = 1;
 	else {
 		U = L + 1;
 		inc = 2;
 		}
-	xscanf(R, ""); /* purge line */
+	Xscanf = xscanf;
+	Xscanf(R, ""); /* purge line */
 	for(i = 0; i < nc; i++, L += inc, U += inc) {
 		switch(edag_peek(R) - '0') {
 		  case 0:
-			if (xscanf(R,"%lf %lf",L,U)!= 2)
+			if (Xscanf(R,"%lf %lf",L,U)!= 2)
 				badline(R);
 			break;
 		  case 1:
-			if (xscanf(R, "%lf", U) != 1)
+			if (Xscanf(R, "%lf", U) != 1)
 				badline(R);
 			*L = negInfinity;
 			break;
 		  case 2:
-			if (xscanf(R, "%lf", L) != 1)
+			if (Xscanf(R, "%lf", L) != 1)
 				badline(R);
 			*U = Infinity;
 			break;
 		  case 3:
 			*L = negInfinity;
 			*U = Infinity;
-			xscanf(R, ""); /* purge line */
+			Xscanf(R, ""); /* purge line */
 			break;
 		  case 4:
-			if (xscanf(R, "%lf", L) != 1)
+			if (Xscanf(R, "%lf", L) != 1)
 				badline(R);
 			*U = *L;
 			break;
 		  case 5:
 			if (Cvar) {
-				if (xscanf(R, "%d %d", &k, &j) == 2
+				if (Xscanf(R, "%d %d", &k, &j) == 2
 				 && j > 0 && j <= nv) {
 					Cvar[i] = j;
 					*L = k & 2 ? negInfinity : 0.;
@@ -1475,15 +1308,11 @@ br_read(EdRead *R, int nc, int nc1, real **Lp, real *U, int *Cvar, int nv)
 	}
 
  static expr *
-#ifdef KR_headers
-aholread(R) EdRead *R;
-#else
 aholread(EdRead *R)
-#endif
 {
 	int i, k;
 	expr_h *rvh;
-	char *s, *s1;
+	char *s1;
 	FILE *nl = R->nl;
 
 	k = getc(nl);
@@ -1519,11 +1348,7 @@ aholread(EdRead *R)
 	}
 
  static expr *
-#ifdef KR_headers
-bholread(R) EdRead *R;
-#else
 bholread(EdRead *R)
-#endif
 {
 	int i;
 	expr_h *rvh;
@@ -1547,25 +1372,24 @@ bholread(EdRead *R)
 	}
 
  int
-#ifdef KR_headers
-fgh_read_ASL(a, nl, flags) ASL *a; FILE *nl; int flags;
-#else
 fgh_read_ASL(ASL *a, FILE *nl, int flags)
-#endif
 {
-	int i, j, k, maxfwd1, nc, nco, ncom, nlcon, nlin, no, nv, nvc, nvo, nz;
-	int *ka, readall;
-	unsigned x;
-	expr_v *e;
-	cgrad *cg, **cgp;
-	ograd *og, **ogp;
-	char fname[128];
-	func_info *fi;
-	real t;
 	EdRead ER, *R;
 	Jmp_buf JB;
+	cgrad *cg, **cgp;
+	char fname[128];
+	expr_v *e;
+	func_info *fi;
+	int i, j, k, *ka, maxfwd1, nc, nc0, nc1, nco, ncom, nlcon, nlin;
+	int no, nv, nvc, nvo, nvr, nxv, readall;
+	int (*Xscanf)(EdRead*, const char*, ...);
+	ograd *og, **ogp;
+	real t;
+	size_t *kaz, nz;
+	unsigned x;
 
 	ASL_CHECK(a, ASL_read_fgh, "fgh_read");
+	flagsave_ASL(a, flags); /* includes allocation of LUv, LUrhs, A_vals or Cgrad, etc. */
 	asl = (ASL_fgh*)a;
 #define asl ((ASL_fgh*)a)
 
@@ -1579,7 +1403,6 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			return i;
 			}
 		}
-
 	nlcon = a->i.n_lcon_;
 	if (nlcon && !(flags & ASL_allow_CLP)) {
 		if (a->i.err_jmp_)
@@ -1587,43 +1410,42 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		sorry_CLP(R, "logical constraints");
 		}
 
-	if ((readall = flags & ASL_keep_all_suffixes)
-	 && a->i.nsuffixes)
-		readall |= 1;
+	readall = flags & ASL_keep_all_suffixes;
 	if (nfunc)
 		func_add(a);
-	if (binary_nl) {
+	if (binary_nl)
 		holread = bholread;
-		xscanf = bscanf;
-		}
-	else {
+	else
 		holread = aholread;
-		xscanf = ascanf;
-		}
 
 	ncom = comb + comc + como + comc1 + como1;
-	nc = n_con;
+	nc0 = n_con;
+	nc = nc1 = nc0 + a->i.nsufext[ASL_Sufkind_con];
 	no = n_obj;
 	nvc = c_vars;
 	nvo = o_vars;
-	if (no < 0 || (nco = nc + no + nlcon) <= 0)
+	nco = nc + no + nlcon;
+	if (no < 0 || nco <= 0)
 		scream(R, ASL_readerr_corrupt,
 			"ed2read: nc = %d, no = %d, nlcon = %d\n",
-			nc, no, nlcon);
-	nv1 = nv0 = nvc > nvo ? nvc : nvo;
-	max_var = nv = nv0 + ncom;
+			nc0, no, nlcon);
+	nxv = a->i.nsufext[ASL_Sufkind_var];
+	nvr = n_var; /* nv for reading */
+	nv0 = nv1 = nvr + nxv;
+	max_var = nv = nv1 + ncom;
 	combc = comb + comc;
 	ncom0 = ncom_togo = combc + como;
 	nzclim = ncom0 >> 3;
 	ncom1 = comc1 + como1;
-	nv0b = nv0 + comb;
+	nv0b = nv1 + comb;
 	nv0c = nv0b + comc;
-	nv01 = nv0 + ncom0;
+	nv01 = nv1 + ncom0;
 	amax = lasta = lasta0 = lasta00 = nv1 + 1;
 	ka = 0;
+	kaz = 0;
 	if ((maxfwd1 = maxfwd + 1) > 1)
 		nvref = maxfwd1*((ncom0 < vrefGulp ? ncom0 : vrefGulp) + 1);
-	x = nco*sizeof(cde) + nc*sizeof(cgrad *) + no*sizeof(ograd *)
+	x = nco*sizeof(cde) + no*sizeof(ograd *)
 		+ nv*(sizeof(expr_v) + 2*sizeof(int))
 		+ ncom0*sizeof(cexp)
 		+ ncom1*sizeof(cexp1)
@@ -1631,7 +1453,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		+ nvref*sizeof(int)
 		+ no;
 	nvar0 = a->i.n_var0;
-	if (!(nvinc = a->i.n_var_ - nvar0))
+	if (!(nvinc = a->i.n_var_ - nvar0 + nxv))
 		nvar0 += ncom0 + ncom1;
 	if (pi0) {
 		memset(pi0, 0, nc*sizeof(real));
@@ -1652,8 +1474,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		e->a = k++;
 		}
 	obj_de = lcon_de + nlcon;
-	Cgrad = (cgrad **)(obj_de + no);
-	Ograd = (ograd **)(Cgrad + nc);
+	Ograd = (ograd **)(obj_de + no);
 	cexps = (cexp *)(Ograd + no);
 	cexpsc = cexps + comb;
 	cexpso = cexpsc + comc;
@@ -1673,6 +1494,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		memset(cvar, 0, nc*sizeof(int));
 	last_d = 0;
 	nz = 0;
+	Xscanf = xscanf;
 	for(;;) {
 		ER.can_end = 1;
 		i = edag_peek(R);
@@ -1680,39 +1502,39 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			free(imap);
 			adjoints = (real *)M1zapalloc(amax*Sizeof(real));
 			adjoints_nv1 = &adjoints[nv1];
-			adjust(flags);
+			adjust(a, flags);
 			nzjac = nz;
 			if (!Lastx)
 				Lastx = (real *)M1alloc(nv0*sizeof(real));
 			fclose(nl);
 			nderps += nderp;
-			a->p.Objval = obj2val_ASL;
-			a->p.Objgrd = obj2grd_ASL;
-			a->p.Conval = con2val_ASL;
-			a->p.Jacval = jac2val_ASL;
-			a->p.Hvcomp = hv2comp_ASL;
-			a->p.Conival = con2ival_ASL;
-			a->p.Congrd = con2grd_ASL;
+			a->p.Objval  = a->p.Objval_nomap  = obj2val_ASL;
+			a->p.Objgrd  = a->p.Objgrd_nomap  = obj2grd_ASL;
+			a->p.Conval  = con2val_ASL;
+			a->p.Jacval  = jac2val_ASL;
+			a->p.Hvcomp  = hv2comp_ASL;
+			a->p.Conival = a->p.Conival_nomap = con2ival_ASL;
+			a->p.Congrd  = a->p.Congrd_nomap  = con2grd_ASL;
 			a->p.Lconval = lcon2val_ASL;
-			a->p.Xknown = x2known_ASL;
+			a->p.Xknown  = x2known_ASL;
 			a->i.err_jmp_ = 0;
-			return 0;
+			return prob_adj_ASL(a);
 			}
 		ER.can_end = 0;
 		k = -1;
 		switch(i) {
 			case 'C':
-				xscanf(R, "%d", &k);
-				if (k < 0 || k >= nc)
+				Xscanf(R, "%d", &k);
+				if (k < 0 || k >= nc0)
 					badline(R);
 				co_read(R, con_de + k, 1);
 				break;
 			case 'F':
-				if (xscanf(R, "%d %d %d %127s",
+				if (Xscanf(R, "%d %d %d %127s",
 						&i, &j, &k, fname) != 4
 				|| i < 0 || i >= nfunc)
 					badline(R);
-				if (fi = func_lookup(a, fname,0)) {
+				if ((fi = func_lookup(a, fname,0))) {
 					if (fi->nargs != k && fi->nargs >= 0
 					 && (k >= 0 || fi->nargs < -(k+1)))
 						scream(R, ASL_readerr_argerr,
@@ -1735,74 +1557,81 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 				funcs[i] = fi;
 				break;
 			case 'G':
-				if (xscanf(R, "%d %d", &j, &k) != 2
+				if (Xscanf(R, "%d %d", &j, &k) != 2
 				|| j < 0 || j >= no || k <= 0 || k > nvo)
 					badline(R);
 				ogp = Ograd + j;
 				while(k--) {
 					*ogp = og = (ograd *)mem(sizeof(ograd));
 					ogp = &og->next;
-					if (xscanf(R, "%d %lf", &og->varno,
-							&og->coef) != 2)
+					if (Xscanf(R, "%d %lf", &i, &og->coef) != 2)
 						badline(R);
+					og->varno = i;
 					}
 				*ogp = 0;
 				break;
 			case 'J':
-				if (xscanf(R, "%d %d", &j, &k) != 2
-				|| j < 0 || j >= nc || k <= 0 || k > nvc)
+				if (Xscanf(R, "%d %d", &j, &k) != 2
+				|| j < 0 || j >= nc0 || k <= 0 || k > nvc)
 					badline(R);
 				nz += k;
-				if (ka) {
-					if (!A_vals)
-						goto cg_read;
+				if (A_vals) {
 					j += Fortran;
-					while(k--) {
-						if (xscanf(R, "%d %lf",
-							&i, &t) != 2)
-							badline(R);
-						i = ka[i]++;
-						A_vals[i] = t;
-						A_rownos[i] = j;
+					if (ka) {
+						while(k--) {
+							if (Xscanf(R, "%d %lf",
+								&i, &t) != 2)
+								badline(R);
+							i = ka[i]++;
+							A_vals[i] = t;
+							A_rownos[i] = j;
+							}
+						}
+					else {
+						while(k--) {
+							if (Xscanf(R, "%d %lf",
+								&i, &t) != 2)
+								badline(R);
+							i = kaz[i]++;
+							A_vals[i] = t;
+							A_rownos[i] = j;
+							}
 						}
 					break;
 					}
- cg_read:
 				cgp = Cgrad + j;
 				j = 0;
 				while(k--) {
 					*cgp = cg = (cgrad *)mem(sizeof(cgrad));
 					cgp = &cg->next;
-					if (ka) {
-						if (xscanf(R, "%d %lf",
-								&cg->varno,
-					    			&cg->coef) != 2)
+					if (k_seen) {
+						if (Xscanf(R, "%d %lf", &i, &cg->coef) != 2)
 							badline(R);
 						}
 					else
-						if (xscanf(R, "%d %d %lf",
-							    &cg->varno, &j,
+						if (Xscanf(R, "%d %d %lf", &i, &j,
 					    		    &cg->coef) != 3)
 							badline(R);
+					cg->varno = i;
 					cg->goff = j;
 					}
 				*cgp = 0;
 				break;
 			case 'L':
-				xscanf(R, "%d", &k);
+				Xscanf(R, "%d", &k);
 				if (k < 0 || k >= nlcon)
 					badline(R);
 				co_read(R, lcon_de + k, 0);
 				break;
 			case 'O':
-				if (xscanf(R, "%d %d", &k, &j) != 2
+				if (Xscanf(R, "%d %d", &k, &j) != 2
 				 || k < 0 || k >= no)
 					badline(R);
 				objtype[k] = j;
 				co_read(R, obj_de + k, 1);
 				break;
 			case 'V':
-				if (xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
+				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
 				if (k >= nvar0)
 					k += nvinc;
@@ -1817,45 +1646,31 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 				Suf_read_ASL(R, readall);
 				break;
 			case 'r':
-				br_read(R, asl->i.n_con0, nc, &LUrhs,
-					Urhsx, cvar, nv0);
+				br_read(R, asl->i.n_con0, LUrhs, Urhsx, cvar, nv0);
 				break;
 			case 'b':
-				br_read(R, asl->i.n_var0, nv0, &LUv,
-					Uvx, 0, 0);
+				br_read(R, asl->i.n_var0, LUv, Uvx, 0, 0);
 				break;
+			case 'K':
 			case 'k':
 				k_seen++;
-				k = asl->i.n_var0;
-				if (!xscanf(R,"%d",&j) || j != k - 1)
+				if (ka_read_ASL(a, R, i, &ka, &kaz))
 					badline(R);
-				if (!(ka = A_colstarts)) {
-					if ((i = k) < n_var)
-						i = n_var;
-					ka = A_colstarts = (int *)
-						M1alloc((i+1)*Sizeof(int));
-					}
-				*ka++ = 0;
-				*ka++ = 0;	/* sic */
-				while(--k > 0)
-					if (!xscanf(R, "%d", ka++))
-						badline(R);
-				ka = A_colstarts + 1;
 				break;
 			case 'x':
-				if (!xscanf(R,"%d",&k)
-				|| k < 0 || k > nv)
+				if (!Xscanf(R,"%d",&k)
+				|| k < 0 || k > nvr)
 					badline(R);
 				if (!X0 && want_xpi0 & 1) {
-					x = nv0*sizeof(real);
+					x = nv1*sizeof(real);
 					if (want_xpi0 & 4)
-						x += nv0;
+						x += nv1;
 					X0 = (real *)M1zapalloc(x);
 					if (want_xpi0 & 4)
-						havex0 = (char*)(X0 + nv0);
+						havex0 = (char*)(X0 + nv1);
 					}
 				while(k--) {
-					if (xscanf(R, "%d %lf", &j, &t) != 2)
+					if (Xscanf(R, "%d %lf", &j, &t) != 2)
 						badline(R);
 					if (X0) {
 						X0[j] = t;
@@ -1865,8 +1680,8 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 					}
 				break;
 			case 'd':
-				if (!xscanf(R,"%d",&k)
-				|| k < 0 || k > nc)
+				if (!Xscanf(R,"%d",&k)
+				|| k < 0 || k > nc0)
 					badline(R);
 				if (!pi0 && want_xpi0 & 2) {
 					x = nc*sizeof(real);
@@ -1877,8 +1692,8 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 						havepi0 = (char*)(pi0 + nc);
 					}
 				while(k--) {
-					if (xscanf(R, "%d %lf", &j, &t) != 2
-					 || j < 0 || j >= nc)
+					if (Xscanf(R, "%d %lf", &j, &t) != 2
+					 || j < 0 || j >= nc0)
 						badline(R);
 					if (pi0) {
 						pi0[j] = t;

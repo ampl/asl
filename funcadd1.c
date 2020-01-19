@@ -25,14 +25,10 @@ THIS SOFTWARE.
 #ifdef NO_FUNCADD
 #include "funcadd.h"
 
-char *ix_details_ASL[] = {0};
+const char *ix_details_ASL[] = {0};
 
  void
-#ifdef KR_headers
-funcadd(ae) AmplExports *ae;
-#else
 funcadd(AmplExports *ae)
-#endif
 { ae = ae; /* shut up non-use warning */ }
 
 #else
@@ -44,13 +40,20 @@ funcadd(AmplExports *ae)
 
 #ifdef WIN32
 #include "windows.h"
-#undef Char
+#undef void
 #endif
 
 #define _POSIX_SOURCE	/* for HP-UX */
 
-#include "funcadd.h"
+#include "stdlib.h"	/* for free() */
 #include "string.h"
+#include "funcadd.h"
+#include "arith.h"	/* for X64_bit_pointers */
+#ifdef X64_bit_pointers
+static char Bits[] = "64", BitsAlt[] = "32";
+#else
+static char Bits[] = "32", BitsAlt[] = "64";
+#endif
 
 #ifdef Old_APPLE	/* formerly __APPLE__, for earlier versions of Mac OS X */
 #define FUNCADD "_funcadd_ASL"
@@ -61,23 +64,24 @@ funcadd(AmplExports *ae)
 
 #ifdef __cplusplus
 extern "C" {
-extern int libload_ASL(AmplExports *ae, char *s, int ns, int warn);
+extern int libload_ASL(AmplExports *ae, const char *s, int ns, int warn);
 #endif
 
 typedef void Funcadd ANSI((AmplExports*));
 
-extern Char *mymalloc_ASL ANSI((size_t));
+extern void *mymalloc_ASL ANSI((size_t));
 #undef mymalloc
 #define mymalloc(x) mymalloc_ASL((size_t)(x))
-#ifndef KR_headers
-extern void free(void*);
-#endif
 
-char *ix_details_ASL[] = {
+const char *ix_details_ASL[] = {
 	"? {show -i options}",
 	"- {do not import functions: do not access amplfunc.dll}",
 	"dir {look for amplfunc.dll in directory dir}",
 	"file {import functions from file rather than amplfunc.dll}",
+	"",
+	"When the x of -ix is suitably quoted, multiple files may appear on",
+	"separate lines or may appear on the same line if each is enclosed",
+	"by single or double quotes.",
 	"",
 	"If no -i option appears but $ampl_funclibs is set, assume",
 	"-i $ampl_funclibs.  Otherwise, if $AMPLFUNC is set, assume",
@@ -87,8 +91,8 @@ char *ix_details_ASL[] = {
 	"-ix and -i x are treated alike.",
 	0 };
 #define afdll afdll_ASL
-extern int aflibname_ASL ANSI((AmplExports*, char*, char*, int, Funcadd*, int, void(*)(void*), void*));
-extern char *i_option_ASL;
+extern int aflibname_ASL ANSI((AmplExports*, const char*, const char*, int, Funcadd*, int, void(*)(void*), void*));
+extern const char *i_option_ASL;
 
 #ifdef __cplusplus
 	}
@@ -108,7 +112,7 @@ typedef HINSTANCE shl_t;
 #define reg_file(x) 1
 
  static int
-Abspath(char *s)
+Abspath(const char *s)
 {
 	int c = *s;
 	if ((c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z')
@@ -126,22 +130,14 @@ char afdll[] = "/amplfunc.dll";
 
 #define Abspath(s) (*(s) == '/')
 
-#ifdef KR_headers
-extern char *getcwd();
-#else
 #include "unistd.h"	/* for getcwd */
-#endif
 #define GetCurrentDirectory(a,b) getcwd(b,(int)(a))
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
  static int
-#ifdef KR_headers
-reg_file(name) char *name;
-#else
-reg_file(char *name)
-#endif
+reg_file(const char *name)
 {
 	struct stat sb;
 	return stat(name,&sb) ? 0 : S_ISREG(sb.st_mode);
@@ -200,22 +196,83 @@ typedef void *shl_t;
 extern "C" {
 #endif
 
- static shl_t
-#ifdef KR_headers
-dl_open(ae, name, warned) AmplExports *ae; char *name; int *warned;
-#else
-dl_open(AmplExports *ae, char *name, int *warned)
-#endif
+#ifdef WIN32
+ static int
+wrong_bits(AmplExports *ae, char *name)
 {
-	shl_t h;
 	FILE *f;
-#ifndef KR_headers
-	const
+	IMAGE_DOS_HEADER dh;
+	int rc;
+	union { WORD w[2]; DWORD dw; } u;
+	struct {
+		IMAGE_FILE_HEADER ifh;
+		IMAGE_OPTIONAL_HEADER ioh;
+		} h;
+#ifdef X64_bit_pointers
+#define Bits_MAGIC 0x20b
+#else
+#define Bits_MAGIC 0x10b
 #endif
-	      char *s;
+	if (!(f = fopen(name, "rb")))
+		return 1;
+	rc = 0;
+	 if (fread(&dh, sizeof(IMAGE_DOS_HEADER), 1, f) != 1
+	 || dh.e_magic != IMAGE_DOS_SIGNATURE
+	 || fseek(f, dh.e_lfanew, SEEK_SET)
+	 || fread(&u, sizeof(u), 1, f) != 1
+	 || u.dw != IMAGE_NT_SIGNATURE
+	 || fread(&h, sizeof(h), 1, f) != 1
+	 || h.ioh.Magic != Bits_MAGIC)
+		rc = 1;
+	fclose(f);
+	return rc;
+	}
+#undef Bits_MAGIC
+#endif
 
+ static shl_t
+dl_open(AmplExports *ae, char *name, int *warned, int *pns)
+{
+	FILE *f;
+	char *d, *d0, *dz, *s;
+	const char *cs;
+	int ns;
+	shl_t h;
 #ifdef Old_APPLE
 	NS_pair p;
+#endif
+	d = d0 = 0;
+	for(s = name; *s; ++s)
+		switch(*s) {
+		 case '.':
+			d = s;
+			break;
+		 case '/':
+#ifdef WIN32
+		 case '\\':
+#endif
+			d = 0;
+		 }
+	ns = s - name;
+	dz = 0;
+	if (d
+	 && d - name > 3
+	 && d[-3] == '_') {
+		if (d[-2] == BitsAlt[0]
+		 && d[-1] == BitsAlt[1]) {
+			d[-2] = Bits[0];
+			d[-1] = Bits[1];
+			dz = d;
+			d = 0;
+			}
+		else if (d[-2] == Bits[0]
+		 && d[-1] == Bits[1]) {
+			dz = d;
+			d = 0;
+			}
+		}
+ tryagain:
+#ifdef Old_APPLE
 	NSObjectFileImageReturnCode irc;
 	irc = NSCreateObjectFileImageFromFile(name,&p.ofi);
 	h = 0;
@@ -237,30 +294,51 @@ dl_open(AmplExports *ae, char *name, int *warned)
 			"return %d from NSCreateObjectFileImageFromFile(\"%s\")\n",
 			irc, name);
 #else
+#ifdef WIN32 /*{*/ /* make sure name is for the right number of bits */
+	if (wrong_bits(ae, name))
+		h = 0;
+	else
+#endif /*}*/
 	h = dlopen(name, RTLD_NOW);
 #endif
-	if (!h && warned && (f = fopen(name,"rb"))) {
-		fclose(f);
-		if (reg_file(name)) {
-			*warned = 1;
+	if (!h) {
+		if (d) {
+			do s[3] = s[0]; while(--s >= d);
+			d[0] = '_';
+			d[1] = Bits[0];
+			d[2] = Bits[1];
+			d0 = d;
+			d = 0;
+			ns += 3;
+			goto tryagain;
+			}
+		if (dz) {
+			for(d = dz-3; (*d = *dz); ++d, ++dz);
+			d = dz = 0;
+			goto tryagain;
+			}
+		if (!warned && (f = fopen(name,"rb"))) {
+			fclose(f);
+			if (reg_file(name)) {
+				*warned = 1;
+				if (d0)
+					for(s = d0; (s[0] = s[3]); ++s);
 #ifdef NO_DLERROR
-			fprintf(Stderr, "Cannot load library %s.\n", name);
+				fprintf(Stderr, "Cannot load library %s.\n", name);
 #else
-			fprintf(Stderr, "Cannot load library %s", name);
-			s = dlerror();
-			fprintf(Stderr, s ? ":\n%s\n" : ".\n", s);
+				fprintf(Stderr, "Cannot load library %s", name);
+				cs = dlerror();
+				fprintf(Stderr, cs ? ":\n%s\n" : ".\n", cs);
 #endif
+				}
 			}
 		}
+	*pns = ns;
 	return h;
 	}
 
  static void
-#ifdef KR_headers
-dl_close(h) void *h;
-#else
 dl_close(void *h)
-#endif
 {
 #ifdef CLOSE_AT_RESET
 	first = 1;
@@ -270,17 +348,13 @@ dl_close(void *h)
 	}
 
  int
-#ifdef KR_headers
-libload_ASL(ae, s, ns, warn) AmplExports *ae; char *s; int ns; int warn;
-#else
-libload_ASL(AmplExports *ae, char *s, int ns, int warn)
-#endif
+libload_ASL(AmplExports *ae, const char *s, int ns, int warn)
 {
 	Funcadd *fa;
 	char buf0[2048], *buf;
-	int rc, warned;
+	int ns1, rc, rcnf, warned;
 	shl_t h;
-	unsigned int n, nx;
+	size_t n, nx;
 
 	nx = 0;
 	buf = buf0;
@@ -289,7 +363,7 @@ libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 			return 2;
 		nx = strlen(buf0);
 		}
-	n = ns + sizeof(afdll) + nx;
+	n = ns + sizeof(afdll) + nx + 3; /* +3 for inserting _32 or _64 */
 	if (n > sizeof(buf0)) {
 		buf = (char*)mymalloc(n);
 		if (nx)
@@ -299,20 +373,21 @@ libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 		buf[nx++] = SLASH;
 	strncpy(buf+nx, s, ns);
 	buf[nx+ns] = 0;
-	warned = 0;
-	if (h = dl_open(ae, buf, &warned)) {
+	rc = warned = 0;
+	rcnf = warn >> 1;
+	warn &= 1;
+	if ((h = dl_open(ae, buf, &warned, &ns1))) {
  found:
 		if (find_dlsym(fa, h, FUNCADD)
 		 || find_dlsym(fa, h, "funcadd")) {
-			rc = 0;
 #ifdef CLOSE_AT_RESET
-			aflibname_ASL(ae,buf,s,ns,fa,0,dl_close,h);
+			aflibname_ASL(ae,buf,buf+nx,ns1-nx,fa,0,dl_close,h);
 				/* -DCLOSE_AT_RESET is for use in shared */
 				/* libraries, such as MATLAB mex functions, */
 				/* that may be loaded and unloaded several */
 				/* times during execution of the program. */
 #else
-			aflibname_ASL(ae,buf,s,ns,fa,1,dl_close,h);
+			aflibname_ASL(ae,buf,buf+nx,ns1-nx,fa,1,dl_close,h);
 #endif
 			}
 		else {
@@ -324,7 +399,7 @@ libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 	else if (warn) {
 		if (!warned) {
 			strcpy(buf+nx+ns, afdll);
-			if (h = dl_open(ae, buf, &warned))
+			if ((h = dl_open(ae, buf, &warned, &ns1)))
 				goto found;
 			}
 		if (warned)
@@ -334,58 +409,68 @@ libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 		}
 	else {
  notfound:
+		rc = rcnf;
 		if (warn)
 			fprintf(Stderr, "Cannot find library %.*s\nor %.*s%s\n",
 				ns, s, ns, s, afdll);
-		rc = 1;
 		}
 	if (buf != buf0)
 		free(buf);
 	return rc;
 	}
 
- static void
-#ifdef KR_headers
-libloop(ae, s) AmplExports *ae; char *s;
-#else
-libloop(AmplExports *ae, char *s)
-#endif
+ static int
+libloop(AmplExports *ae, const char *s)
 {
-	char *s1;
-	int ns;
+	const char *s1, *s2;
+	int c, ns, rc;
 
-	for(;; s = s1) {
+	for(rc = 0;; s = s1) {
 		while(*s <= ' ')
 			if (!*s++)
-				return;
-		for(s1 = s; *++s1 >= ' '; );
-		while(s1[-1] == ' ')
-			--s1;
-		ns = s1 - s;
-		libload_ASL(ae, s, ns, 1);
+				goto ret;
+		if (*s == '"' || *s == '\'') {
+			c = *s++;
+			for(s1 = s; *s1 != c; ++s1)
+				if (!*s1)
+					goto ret;
+			if (s1 == s)
+				goto ret;
+			s2 = s1++;
+			}
+		else {
+			for(s1 = s; *++s1 >= ' '; );
+			for(s2 = s1; s2[-1] == ' '; --s2);
+			}
+		ns = s2 - s;
+		if (libload_ASL(ae, s, ns, 1))
+			++rc;
 		}
+ ret:
+	return rc;
 	}
 
+int n_badlibs_ASL;
+
  void
-#ifdef KR_headers
-funcadd(ae) AmplExports *ae;
-#else
 funcadd(AmplExports *ae)
-#endif
 {
-	char *s;
+	const char *s;
+	int nb = 0;
 
 	if (first) {
 		first = 0;
-		if (s = i_option_ASL) {
-			if (!*s || *s == '-' && !s[1])
+		if ((s = i_option_ASL)) {
+			if (!*s || (*s == '-' && !s[1]))
 				return;
-			libloop(ae, s);
+			nb += libloop(ae, s);
 			}
 		else
-			libload_ASL(ae, afdll+1, (int)sizeof(afdll)-2, 0);
+			nb = libload_ASL(ae, afdll+1, (int)sizeof(afdll)-2, 0);
 		}
+	n_badlibs_ASL = nb;
 	}
+
 #ifdef __cplusplus
 }
 #endif

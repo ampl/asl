@@ -64,7 +64,7 @@ new_mblk_ASL(ASL *a, int k)
 		FREE_DTOA_LOCK(MBLK_LOCK);
 		}
 	else {
-		FREE_DTOA_LOCK(NEW_MBLK_LOCK);
+		FREE_DTOA_LOCK(MBLK_LOCK);
 		rv = mem_ASL(a, sizeof(char*)<<k);
 		}
 	return rv;

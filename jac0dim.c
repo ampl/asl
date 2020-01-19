@@ -112,6 +112,9 @@ read2(EdRead *R, int *x, int *y)
 		badints(R, k, 2);
 	}
 
+#define ndcc asl->i.ndcc_
+#define nzlb asl->i.nzlb_
+
  FILE *
 #ifdef KR_headers
 jac0dim_ASL(asl, stub, stub_len) ASL *asl; char *stub; ftnlen stub_len;
@@ -122,6 +125,7 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 	FILE *nl;
 	int i, k, nlv;
 	char *s, *se;
+	const char *opfmt;
 	EdRead ER, *R;
 
 	if (!asl)
@@ -154,6 +158,7 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 	R->Line = 0;
 	s = read_line(R);
 	binary_nl = 0;
+	opfmt = "%d";
 	switch(*s) {
 #ifdef DEPRECATED
 		case 'E':	/* deprecated "-oe" format */
@@ -179,10 +184,25 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 			}
 			break;
 #endif
+		case 'z':
+		case 'Z':
+			opfmt = "%hd";
+		case 'B':
 		case 'b':
 			binary_nl = 1;
+			xscanf = bscanf;
+			goto have_xscanf;
+		case 'h':
+		case 'H':
+			opfmt = "%hd";
+			binary_nl = 1;
+			xscanf = hscanf;
+			goto have_xscanf;
+		case 'G':
 		case 'g':
-			if (k = ampl_options[0] = strtol(++s, &se, 10)) {
+			xscanf = ascanf;
+ have_xscanf:
+			if ((k = ampl_options[0] = strtol(++s, &se, 10))) {
 				if (k > 9) {
 					fprintf(Stderr,
 					"ampl_options = %d is too large\n", k);
@@ -203,11 +223,13 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 
 			/* formerly read2(R, &nlc, &nlo); */
 			s = read_line(R);
-			n_cc = nlcc = 0;
-			k = Sscanf(s, " %d %d %d %d", &nlc, &nlo, &n_cc, &nlcc);
+			n_cc = nlcc = ndcc = nzlb = 0;
+			k = Sscanf(s, " %d %d %d %d %d %d", &nlc, &nlo, &n_cc, &nlcc,
+					&ndcc, &nzlb);
 			if (k < 2)
 				badints(R,k,2);
-			n_cc += nlcc;
+			if ((n_cc += nlcc) > 0 && k < 6)
+				ndcc = -1; /* indicate unknown */
 
 			read2(R, &nlnc, &lnc);
 			nlvb = -1;
@@ -243,7 +265,13 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 				if (k != 5)
 					badints(R,k,5);
 				}
-			read2(R, &nzc, &nzo);
+			/* formerly read2(R, &nzc, &nzo); */
+			s = read_line(R);
+			k = Sscanf(s, " %D %D", &nZc, &nZo);
+			if (k != 2)
+				badints(R, k, 2);
+			nzc = nZc;
+			nzo = nZo;
 			read2(R, &maxrownamelen, &maxcolnamelen);
 			s = read_line(R);
 			k = Sscanf(s, " %d %d %d %d %d", &comb, &comc, &como,
@@ -258,8 +286,9 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 		"jacdim: got M = %d, N = %d, NO = %d\n", n_con, n_var, n_obj);
 		exit(1);
 		}
-	asl->i.n_var0 = n_var;
-	asl->i.n_con0 = n_con;
+	asl->i.opfmt = opfmt;
+	asl->i.n_var0 = asl->i.n_var1 = n_var;
+	asl->i.n_con0 = asl->i.n_con1 = n_con;
 	if ((nlv = nlvc) < nlvo)
 		nlv = nlvo;
 	if (nlv <= 0)
@@ -285,7 +314,7 @@ jac_dim_ASL(ASL *asl, char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 {
 	FILE *nl;
 
-	if (nl = jac0dim_ASL(asl, stub, stub_len)) {
+	if ((nl = jac0dim_ASL(asl, stub, stub_len))) {
 		*M = n_con;
 		*N = n_var;
 		*NO = n_obj;

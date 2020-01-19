@@ -28,16 +28,14 @@ THIS SOFTWARE.
 extern int _8087;
 #endif
 
-char *Lic_info_ASL = "", *Lic_info_add_ASL;
+static char EmptyString[] = {0};
+
+char *Lic_info_ASL = EmptyString, *Lic_info_add_ASL;
 
  static int
-#ifdef KR_headers
-kw_width(kw, n, pkwe) keyword *kw, **pkwe; int n;
-#else
 kw_width(keyword *kw, int n, keyword **pkwe)
-#endif
 {
-	char *s;
+	const char *s;
 	int L = 1, m;
 	keyword *kwe = kw;
 
@@ -57,20 +55,59 @@ kw_width(keyword *kw, int n, keyword **pkwe)
 	}
 
  static void
-#ifdef KR_headers
-shownames(oi) Option_Info *oi;
-#else
-shownames(Option_Info *oi)
-#endif
+tabexpand(int L, const char *name, const char *s)
 {
-	char *s;
+	const char *t;
+	int k, n;
+
+	for(t = s;; ++t) {
+		if (!*t) {
+			printf("%-*s%s\n", L, name, s);
+			return;
+			}
+		if (*t == '\n')
+			break;
+		}
+	n = t - s;
+	printf("%-*s%.*s\n", L, name, n, s);
+	while(*(s = ++t)) {
+		while(*t == '\t')
+			++t;
+		if ((n = t - s)) {
+			n *= 8;
+			if (n < L)
+				n = L;
+			for(k = 0; k < n; ++k)
+				putchar(' ');
+			s = t;
+			}
+		else if (*s > ' ')
+			for(k = 0; k < L; ++k)
+				putchar(' ');
+		while(*t != '\n') {
+			if (!*t++) {
+				printf("%s\n", s);
+				return;
+				}
+			}
+		n = t - s;
+		printf("%.*s\n", n, s);
+		}
+	}
+
+ static void
+shownames(Option_Info *oi)
+{
+	const char *s;
 	keyword *v, *ve;
-	int L, L1, L2;
+	int L, L1, L2, anl, te;
 
 	if (oi) {
+		te = oi->option_echo & ASL_OI_tabexpand;
+		anl = oi->option_echo & ASL_OI_addnewline;
 		L = kw_width(oi->keywds, oi->n_keywds, &ve);
-		for(v = oi->keywds; v < ve; v++)
-			if (s = v->desc) {
+		for(v = oi->keywds; v < ve; v++) {
+			if ((s = v->desc)) {
 				if (*s == '=') {
 					while(*++s > ' ');
 					L1 = s - v->desc;
@@ -80,21 +117,22 @@ shownames(Option_Info *oi)
 					printf("%s%-*.*s%s\n", v->name, L2,
 						L1, v->desc, s);
 					}
+				else if (te)
+					tabexpand(L, v->name, s);
 				else
 					printf("%-*s%s\n", L, v->name, s);
 				}
 			else
 				printf("%s\n", v->name);
+			if (anl)
+				putchar('\n');
+			}
 		}
 	exit(0);
 	}
 
  static void
-#ifdef KR_headers
-ofix(o, k) char **o; int k;
-#else
 ofix(char **o, int k)
-#endif
 {
 	/* get rid of "ix" and possibly "u" */
 	while(*o)
@@ -102,17 +140,13 @@ ofix(char **o, int k)
 	o -= 8;
 	o[0] = o[2];
 	o[1] = o[3];
-	for(o += 2; *o = o[k]; o++);
+	for(o += 2; (*o = o[k]); o++);
 	}
 
  void
-#ifdef KR_headers
-usage_ASL(oi, rc) Option_Info *oi; int rc;
-#else
-usage_ASL(Option_Info *oi, int rc)
-#endif
+usage_noexit_ASL(Option_Info *oi, int rc)
 {
-	static char *opts[] = {
+	static const char *opts[] = {
 		"-", "end of options",
 		"=", "show name= possibilities",
 		"?", "show usage",
@@ -125,7 +159,8 @@ usage_ASL(Option_Info *oi, int rc)
 		"u", "just show available user-defined functions",
 		"v", "just show version",
 		0};
-	char **o, *s, *s1;
+	char **o;
+	const char *s, *s1;
 	keyword *kw, *kwe;
 	int i, L, L1, L2;
 	FILE *f = stdout;
@@ -147,11 +182,11 @@ usage_ASL(Option_Info *oi, int rc)
 	fprintf(f, "usage: %s [options] stub [-AMPL] [<assignment> ...]\n",
 		s ? s : basename(progname));
 	if (o)
-		while(s = *o++)
+		while((s = *o++))
 			fprintf(f, "%s\n", s);
 	fprintf(f, "\nOptions:\n");
-	o = opts;
-	if (!oi || !(oi->flags && ASL_OI_want_funcadd))
+	o = (char**)opts;
+	if (!oi || !(oi->flags & ASL_OI_want_funcadd))
 		ofix(o, 4);
 	else if (!ix_details_ASL[0])
 		ofix(o, 2);
@@ -166,7 +201,7 @@ usage_ASL(Option_Info *oi, int rc)
 		if (i < 0)
 			fprintf(f, "\t-%-*s{%s}\n", L, s, o[1]);
 		else {
-			if (s1 = kw->desc)
+			if ((s1 = kw->desc))
 				if (*s1 == '=') {
 					while(*++s1 > ' ');
 					L1 = s1 - kw->desc;
@@ -188,15 +223,17 @@ usage_ASL(Option_Info *oi, int rc)
 			s = *o;
 			}
 		}
+	}
+
+ void
+usage_ASL(Option_Info *oi, int rc)
+{
+	usage_noexit_ASL(oi, rc);
 	exit(rc);
 	}
 
  char *
-#ifdef KR_headers
-get_opt_ASL(oi, s) Option_Info *oi; char *s;
-#else
 get_opt_ASL(Option_Info *oi, char *s)
-#endif
 {
 	keyword *kw;
 	char buf[256];
@@ -208,8 +245,8 @@ get_opt_ASL(Option_Info *oi, char *s)
 		return s;
 	oi->nnl = 0;
 	s0 = s;
-	if (kw = (keyword *)b_search_ASL(oi->keywds, (int)sizeof(keyword),
-			oi->n_keywds, &s, &oi->eqsign)) {
+	if ((kw = (keyword *)b_search_ASL(oi->keywds, (int)sizeof(keyword),
+			oi->n_keywds, &s, &oi->eqsign))) {
 		oi->option_echo = (oi->option_echo | ASL_OI_echothis)
 				& ~ASL_OI_badvalue;
 		s1 = (*kw->kf)(oi, kw, s);
@@ -280,7 +317,7 @@ get_opt_ASL(Option_Info *oi, char *s)
  void
 show_version_ASL(Option_Info *oi)
 {
-	char *s;
+	const char *s;
 	Const char *ver;
 	int L;
 	extern Const char *Version_Qualifier_ASL;
@@ -307,11 +344,7 @@ show_version_ASL(Option_Info *oi)
 	}
 
  char *
-#ifdef KR_headers
-Ver_val_ASL(oi, kw, v) Option_Info *oi; keyword *kw; char *v;
-#else
 Ver_val_ASL(Option_Info *oi, keyword *kw, char *v)
-#endif
 {
 	char *s;
 	int wantver;
@@ -337,20 +370,16 @@ Ver_val_ASL(Option_Info *oi, keyword *kw, char *v)
  static void
 ix_usage(VOID)
 {
-	char **o = ix_details_ASL, *s;
+	const char **o = ix_details_ASL, *s;
 
 	printf("-i options:\n");
-	while(s = *o++)
+	while((s = *o++))
 		printf("\t%s\n", s);
 	exit(0);
 	}
 
  char *
-#ifdef KR_headers
-getstub_ASL(asl, pargv, oi) ASL *asl; char ***pargv; Option_Info *oi;
-#else
 getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
-#endif
 {
 	char *s, *s1;
 	keyword *kw, *okw;
@@ -369,17 +398,18 @@ getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
 		oi->nnl = 0;
 		oi->asl = asl;
 		okw = oi->options;
-		if (s = getenv("solver_msg")) {
+		if ((s = getenv("solver_msg"))) {
 			i = (int)strtol(s, &s1, 10);
 			if (s1 > s && !*s1 && i >= 0 && !(i & 1))
 				oi->option_echo = ASL_OI_never_echo;
 			}
-		oi->option_echo = (oi->option_echo & ASL_OI_never_echo)
-			? ASL_OI_never_echo : ASL_OI_clopt | ASL_OI_echo;
+		oi->option_echo = (oi->option_echo & ASL_OI_showname_bits)
+			| ((oi->option_echo & ASL_OI_never_echo)
+				? ASL_OI_never_echo : ASL_OI_clopt | ASL_OI_echo);
 		oi->n_badopts = 0;
 		}
 
-	while(s = *++argv) {
+	while((s = *++argv)) {
 		if (*s == '-' && options) {
 			s1 = s + 1;
 			if (okw
@@ -429,7 +459,7 @@ getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
 					continue;
 				case 'i':
 					if (ix_details_ASL[0]) {
-						if (s = argv[1]) {
+						if ((s = argv[1])) {
 							argv++;
 							if (*s == '?' && !s[1])
 								ix_usage();
@@ -480,11 +510,7 @@ getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
 	}
 
  int
-#ifdef KR_headers
-getopts_ASL(asl, argv, oi) ASL *asl; char **argv; Option_Info *oi;
-#else
 getopts_ASL(ASL *asl, char **argv, Option_Info *oi)
-#endif
 {
 	char *s;
 
@@ -501,7 +527,7 @@ getopts_ASL(ASL *asl, char **argv, Option_Info *oi)
 		while(*s)
 			s = get_opt_ASL(oi, s);
 
-	while(s = *argv++)
+	while((s = *argv++))
 		do s = get_opt_ASL(oi, s);
 			while(*s);
 
@@ -513,11 +539,7 @@ getopts_ASL(ASL *asl, char **argv, Option_Info *oi)
 	}
 
  char *
-#ifdef KR_headers
-getstops_ASL(asl, argv, oi) ASL *asl; char **argv; Option_Info *oi;
-#else
 getstops_ASL(ASL *asl, char **argv, Option_Info *oi)
-#endif
 {
 	char *s;
 
@@ -534,22 +556,14 @@ getstops_ASL(ASL *asl, char **argv, Option_Info *oi)
 	}
 
  void
-#ifdef KR_headers
-badopt_ASL(oi) Option_Info *oi;
-#else
 badopt_ASL(Option_Info *oi)
-#endif
 {
 	oi->n_badopts++;
 	oi->option_echo &= ~ASL_OI_echothis;
 	}
 
  char *
-#ifdef KR_headers
-badval_ASL(oi, kw, value, badc) Option_Info *oi; keyword *kw; char *value; char *badc;
-#else
 badval_ASL(Option_Info *oi, keyword *kw, char *value, char *badc)
-#endif
 {
 	char *s;
 	int c, w, w1;

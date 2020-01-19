@@ -40,11 +40,7 @@ THIS SOFTWARE.
  */
 
  static int
-#ifdef KR_headers
-non_int(asl, i) ASL *asl; int i;
-#else
 non_int(ASL *asl, int i)
-#endif
 {
 	if (i < nlvb)
 		return i < nlvb - nlvbi;
@@ -59,19 +55,14 @@ non_int(ASL *asl, int i)
 	}
 
  int
-#ifdef KR_headers
-mip_pri_ASL(asl, startp, nump, prip, pmax)
-	ASL *asl; int **startp, **nump, **prip; fint pmax;
-#else
 mip_pri_ASL(ASL *asl, int **startp, int **nump, int **prip, fint pmax)
-#endif
 {
 	FILE *f;
 	char *s0;
 	int bad, echo, eq, i, j, k, len, listsize, nn, nn1, nnames,
-		nntk, nreal, quit;
+		nntk, nreal, nv, quit;
 	int *ntk, *num0, *num1, *p, *perm,
-		*pv, *pv0, *start0, *start1;
+		*pv, *pv0, *q, *start0, *start1;
 	char *comma, **pn0, **pn, *ps, *s, *s1, *s2, *se;
 	fint L;
 	char buf[512], buf0[512], namechar[256];
@@ -108,7 +99,7 @@ mip_pri_ASL(ASL *asl, int **startp, int **nump, int **prip, fint pmax)
 	if (!maxcolnamelen) {
 		printf("No .col file; %s $mip_priorities.\n%s", s,
 			"To get a .col file, in your AMPL session say\n");
-		if (s = getenv("solver"))
+		if ((s = getenv("solver")))
 			printf("\toption %s_auxfiles c;\n%s", s,
 				"before saying\n\tsolve;\nor\n");
 		printf("\toption auxfiles c;\nbefore saying\n\twrite ...\n");
@@ -157,7 +148,7 @@ mip_pri_ASL(ASL *asl, int **startp, int **nump, int **prip, fint pmax)
 		L = strtol(s2 = s, &s, 10);
 		if (s == s2 || L <= 0 || L > pmax)
 			goto badnum;
-		if (*s > ' ')
+		if (*s > ' ') {
 		    if (*s == ',')
 			comma = s++;
 		    else {
@@ -175,6 +166,7 @@ mip_pri_ASL(ASL *asl, int **startp, int **nump, int **prip, fint pmax)
 				printf("Ignoring further entries in $mip_priorities.\n");
 			goto counted;
 			}
+		    }
 		nnames++;
 		len += s1 - se;
 		se = s;
@@ -193,10 +185,13 @@ mip_pri_ASL(ASL *asl, int **startp, int **nump, int **prip, fint pmax)
 	start0 = start1 = (int *)Malloc(nnames*(3*sizeof(int)));
 	num0 = num1 = start0 + nnames;
 	pv = pv0 = num0 + nnames;
+	nv = n_var;
 
+	len += nv*sizeof(int);
 	pn = pn0 = (char **)Malloc(nnames*(sizeof(char*)+sizeof(int)+1) + len);
 	p = perm = (int *)(pn0 + nnames);
-	ps = (char *)(perm + nnames);
+	q = perm + nnames;
+	ps = (char *)(q + nv);
 	i = 0;
 	for(s = s0; s < se; ) {
 		*start1++ = *num1++ = -1;
@@ -230,7 +225,7 @@ mip_pri_ASL(ASL *asl, int **startp, int **nump, int **prip, fint pmax)
 	nn = nntk = nnames;
 	listsize = 0;
 	nreal = n_var - (nbv + niv);
-	for(i = 0; fgets(buf, sizeof(buf), f); i++) {
+	for(i = j = 0; fgets(buf, sizeof(buf), f); i++) {
 		for(s = buf; namechar[*(unsigned char *)s]; s++);
 		if (s == buf) {
 			printf("Bad .row file %s\n", filename);
@@ -301,8 +296,14 @@ mip_pri_ASL(ASL *asl, int **startp, int **nump, int **prip, fint pmax)
 		printf(bad ? "Valid $mip_priorities seen:\n"
 				: "$mip_priorities used:\n");
 	nn = 0;
-	p = asl->i.z[0];
-	do if (num0[nn] > 0 && (!p || p[start0[nn]] >= 0)) {
+	if ((p = asl->i.vmap)) {
+		for(i = nv; --i >= 0; )
+			q[i] = -1;
+		for(i = 0; i < nv; ++i)
+			if ((j = p[i]) >= 0 && j < nv)
+				q[j] = i;
+		}
+	do if (num0[nn] > 0 && (!p || q[start0[nn]] >= 0)) {
 		if (echo)
 			printf("\t%s\t%d\n", pn0[nn], pv0[nn1] = pv0[nn]);
 		pv0[nn1] = pv0[nn];

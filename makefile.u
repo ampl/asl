@@ -71,7 +71,8 @@ SHELL=/bin/sh
 # For Solaris on the i386 architecture, add fpsetprec.s to the "a ="
 # assignment below.  For compilation with Sun's cc and -xarch=generic64
 # or -xarch=amd64, add fpsetprec64.s rather than fpsetprec.s to the "a ="
-# assignment.
+# assignment.  If you use gcc (try "cc --version" to see if cc is really gcc),
+# no changes to the "a =" assignment are needed.
 
 # For cygwin, change a.out to a.exe in the rule below for arith.h, and use
 # CC = gcc
@@ -91,7 +92,6 @@ a = \
 	asldate.c \
 	atof.c \
 	auxinfo.c \
-	avldelete.c \
 	avltree.c \
 	b_search.c \
 	basename.c \
@@ -124,20 +124,25 @@ a = \
 	getenv.c \
 	getstub.c \
 	htcl.c \
+	indic_cons.c \
 	jac0dim.c \
 	jac2dim.c \
 	jacdim.c \
 	jacinc.c \
 	jacinc1.c \
+	libnamsave.c \
 	mach.c \
 	mainexit.c \
 	mip_pri.c \
 	misc.c \
+	mpec_adj.c \
 	mypow.c \
 	names.c \
 	nl_obj.c \
 	nqpcheck.c \
+	nqpcheckZ.c \
 	obj2val.c \
+	obj_adj.c \
 	obj_prec.c \
 	objconst.c \
 	objval.c \
@@ -150,6 +155,7 @@ a = \
 	punknown.c \
 	qp_read.c \
 	qpcheck.c \
+	qpcheckZ.c \
 	qsortv.c \
 	readsol.c \
 	repwhere.c \
@@ -183,13 +189,14 @@ amplsolver.a: $a
 # or just comment out the ranlib invocation above.
 
 Aslh = arith.h asl.h funcadd.h stdio1.h
-auxinfo.o: funcadd.h stdio1.h
+auxinfo.o libnamsave.o: funcadd.h stdio1.h
 mach.o: arith.h
-avldelete.o avltree.o bscanf.o conscale.o derprop.o dynlink.o func_add.o\
+avltree.o bscanf.o conscale.o derprop.o dynlink.o func_add.o\
  funcadd.o funcadd1.o funcaddk.o funcaddr.o funcadd0.o g_fmt.o\
- genrowno.o jac0dim.o jacdim.o jac2dim.o jacinc.o jacinc1.o names.o\
- obj_prec.o objval_.o repwhere.o sigcatch.o sjac0dim.o studchk0.o: $(Aslh)
-avldelete.o avltree.o: avltree.h
+ genrowno.o jac0dim.o jacdim.o jac2dim.o jacinc.o jacinc1.o\
+ names.o obj_prec.o objval_.o sigcatch.o sjac0dim.o studchk0.o: $(Aslh)
+avltree.o: avltree.h
+repwhere.o: errchk.h $(Aslh)
 xp1known.o: asl_pfg.h psinfo.h nlp.h $(Aslh)
 duthes.o fullhes.o htcl.o sphes.o: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 getstub.o value.o writesol.o wrtsol_.o: getstub.h $(Aslh)
@@ -198,22 +205,23 @@ com2eval.o con2ival.o con2val.o obj2val.o\
 conpval.o pshvprod.o xp2known.o:\
 	jacpdim.h asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 comeval.o con1ival.o conval.o mip_pri.o objval.o qpcheck.o\
- readsol.o: nlp.h $(Aslh)
-misc.o nl_obj.o sos_add.o suf_sos.o:\
+ qpcheckZ.o readsol.o: nlp.h $(Aslh)
+indic_cons.o misc.o mpec_adj.o nl_obj.o obj_adj.o sos_add.o suf_sos.o:\
 	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 op_type.o: op_type.hd op_typeb.hd
 fgh_read.o: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
 rops.o: nlp.h errchk.h $(Aslh)
 rops2.o: nlp2.h errchk.h $(Aslh)
 conadj.o fg_write.o qp_read.o: nlp.h r_opn.hd $(Aslh)
-f_read.o fg_read.o: nlp.h r_opn.hd dvalue.hd $(Aslh)
+f_read.o fg_read.o: fg_read.c nlp.h r_opn.hd dvalue.hd $(Aslh)
 objconst.o: r_opn0.hd nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 pfg_read.o: asl_pfg.h r_opn0.hd dvalue.hd nlp.h psinfo.h $(Aslh)
-pfghread.o: jacpdim.h asl_pfgh.h opnos.hd r_opn0.hd dvalue.hd\
+pfghread.o: pfg_read.c jacpdim.h asl_pfgh.h opnos.hd r_opn0.hd dvalue.hd\
 	psinfo.h nlp2.h $(Aslh)
-nqpcheck.o: nlp.h r_qp.hd $(Aslh)
+nqpcheck.o nqpcheckZ.o: nlp.h r_qp.hd $(Aslh)
 printf.o punknown.o sscanf.o: stdio1.h
 dtoa1.o: dtoa.c arith.h stdio1.h
+nqpcheck.o nqpcheckZ.o obj_adj.o: obj_adj.h
 
 # Use CFLAGS in compiling arithchk.c in case something in CFLAGS affects
 # the number of bits in integral data types.  (It's probably best not to
@@ -222,7 +230,9 @@ dtoa1.o: dtoa.c arith.h stdio1.h
 arith.h: arithchk.c fpinit.c
 	$(CC) -c $(CFLAGS) -DASL_NO_FPINITMT fpinit.c
 	$(CC) $(CFLAGS) arithchk.c fpinit.o -lm ||\
-	 $(CC) -DNO_LONG_LONG $(CFLAGS) arithchk.c fpinit.o -lm
+	 $(CC) -DNO_LONG_LONG $(CFLAGS) arithchk.c fpinit.o -lm ||\
+	 $(CC) -DNO_SSIZE_T $(CFLAGS) arithchk.c fpinit.o -lm ||\
+	 $(CC) -DNO_SSIZE_T -DNO_SSIZE_T $(CFLAGS) arithchk.c fpinit.o -lm
 	./a.out >arith.h
 	rm -f a.out arithchk.o fpinit.o
 
@@ -250,7 +260,7 @@ arith.h: arithchk.c fpinit.c
 # will start only after arith.h and stdio1.h have been created.
 
 details.c: details.c0 arith.h stdio1.h
-	sed "s!System_details!`uname -sr`!" details.c0 >details.c
+	sed "s!System_details!`uname -sm`!" details.c0 >details.c
 
 float.h: float.h0
 	ln float.h0 float.h
@@ -299,7 +309,6 @@ xs0 = \
 	asldate.c \
 	atof.c \
 	auxinfo.c \
-	avldelete.c \
 	avltree.c \
 	avltree.h \
 	b_search.c \
@@ -349,6 +358,7 @@ xs0 = \
 	getstub.c \
 	getstub.h \
 	htcl.c \
+	indic_cons.c \
 	jac0dim.c \
 	jac2dim.c \
 	jac2dim.h \
@@ -356,6 +366,7 @@ xs0 = \
 	jacinc.c \
 	jacinc1.c \
 	jacpdim.h \
+	libnamsave.c \
 	mach.c \
 	mainexit.c \
 	makefile.lc \
@@ -365,13 +376,19 @@ xs0 = \
 	makefile.wat \
 	mip_pri.c \
 	misc.c \
+	mpec_adj.c \
+	mpec_adj0.c \
 	mypow.c \
 	names.c \
 	nl_obj.c \
 	nlp.h \
 	nlp2.h \
 	nqpcheck.c \
+	nqpcheckZ.c \
 	obj2val.c \
+	obj_adj.c \
+	obj_adj.h \
+	obj_adj0.c \
 	obj_prec.c \
 	objconst.c \
 	objval.c \
@@ -389,6 +406,7 @@ xs0 = \
 	punknown.c \
 	qp_read.c \
 	qpcheck.c \
+	qpcheckZ.c \
 	qsortv.c \
 	r_op.hd \
 	r_opn.hd \

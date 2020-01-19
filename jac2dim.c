@@ -25,16 +25,16 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
+#ifdef __cplusplus
+extern "C" {
+extern int jac2dim_(char *stub, fint *M, fint *N, fint *NO, fint *NZ,
+		fint *MXROW, fint *MXCOL, ftnlen stub_len);
+}
+#endif
+
  int
-#ifdef KR_headers
-jac2dim_(stub, M, N, NO, NZ, MXROW, MXCOL, stub_len)
- char *stub;
- fint *M, *N, *NO, *NZ, *MXROW, *MXCOL;
- ftnlen stub_len;
-#else
 jac2dim_(char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 		fint *MXROW, fint *MXCOL, ftnlen stub_len)
-#endif
 {
 	ASL *asl;
 

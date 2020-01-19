@@ -23,18 +23,17 @@ THIS SOFTWARE.
 ****************************************************************/
 
 /* include vararg/stdarg stuff first to avoid trouble with C++ */
-#ifdef KR_headers
-#include "varargs.h"
-#else
 #include "stddef.h"
 #include "stdarg.h"
-#endif
-
 #include "asl.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+ extern void mpec_adjust_ASL(ASL*);
+ extern void obj_adj_ASL(ASL*);
+
 
 real edagread_one = 1.;
 char *progname;
@@ -45,11 +44,7 @@ ASLhead ASLhead_ASL = {&ASLhead_ASL, &ASLhead_ASL};
  static char psedag[] = "pfg_read, pfgh_read, or jacpdim";
 
  ASL *
-#ifdef KR_headers
-set_cur_ASL(a) ASL *a;
-#else
 set_cur_ASL(ASL *a)
-#endif
 {
 	ASL *rv = cur_ASL;
 	cur_ASL = a;
@@ -57,15 +52,11 @@ set_cur_ASL(ASL *a)
 	}
 
   ASL *
-get_cur_ASL(VOID)
+get_cur_ASL(void)
 { return cur_ASL; }
 
  void
-#ifdef KR_headers
-exit_ASL(R, n) EdRead *R; int n;
-#else
 exit_ASL(EdRead *R, int n)
-#endif
 {
 	Jmp_buf *J;
 	if ((J = R->asl->i.err_jmp_) && n > 0)
@@ -74,35 +65,16 @@ exit_ASL(EdRead *R, int n)
 	}
 
  void
-scream
-#ifdef KR_headers
-	(va_alist)
- va_dcl
-{
-	EdRead *R;
-	char *fmt;
-	int n;
-	va_list ap;
-	va_start(ap);
-	R = va_arg(ap, EdRead*);
-	n = va_arg(ap, int);
-	fmt = va_arg(ap, char*);
-#else
-	(EdRead *R, int n, const char *fmt, ...)
+scream(EdRead *R, int n, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-#endif
 	vfprintf(Stderr, fmt, ap);
 	exit_ASL(R, n);
-	} /*}*/
+	}
 
  static real
-#ifdef KR_headers
-notread(what, pred) char *what, *pred;
-#else
-notread(char *what, char *pred)
-#endif
+notread(const char *what, const char *pred)
 {
 	fprintf(Stderr, "\n*** %s called before %s.\n", what, pred);
 	exit(1);
@@ -111,11 +83,7 @@ notread(char *what, char *pred)
 	}
 
  static real
-#ifdef KR_headers
-obj0val(a, nobj, X, nerror) ASL *a; real *X; int nobj; fint *nerror;
-#else
 obj0val(ASL *a, int nobj, real *X, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(nobj);
@@ -125,11 +93,7 @@ obj0val(ASL *a, int nobj, real *X, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-obj0grd(a, nobj, X, G, nerror) ASL *a; int nobj; fint *nerror; real *X, *G;
-#else
 obj0grd(ASL *a, int nobj, real *X, real *G, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(nobj);
@@ -140,11 +104,7 @@ obj0grd(ASL *a, int nobj, real *X, real *G, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-con0val(a, X, R, nerror) ASL *a; real *X, *R; fint *nerror;
-#else
 con0val(ASL *a, real *X, real *R, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(X);
@@ -154,11 +114,7 @@ con0val(ASL *a, real *X, real *R, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-jac0val(a, X, J, nerror) ASL *a; real *X, *J; fint *nerror;
-#else
 jac0val(ASL *a, real *X, real *J, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(X);
@@ -168,11 +124,7 @@ jac0val(ASL *a, real *X, real *J, fint *nerror)
 	}
 
  static real
-#ifdef KR_headers
-con0ival(a, i, X, nerror) ASL *a; int i; real *X; fint *nerror;
-#else
 con0ival(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(i);
@@ -182,12 +134,26 @@ con0ival(ASL *a, int i, real *X, fint *nerror)
 	return 0.;
 	}
 
+ static real
+conivalmap(ASL *a, int i, real *X, fint *nerror)
+{
+	int *cm;
+	if ((cm = a->i.cmap))
+		i = cm[i];
+	return a->p.Conival_nomap(a, i, X, nerror);
+	}
+
+ static void
+congrdmap(ASL *a, int i, real *X, real *G, fint *nerror)
+{
+	int *cm;
+	if ((cm = a->i.cmap))
+		i = cm[i];
+	a->p.Congrd_nomap(a, i, X, G, nerror);
+	}
+
  static int
-#ifdef KR_headers
-lcon0val(a, i, X, nerror) ASL *a; int i; real *X; fint *nerror;
-#else
 lcon0val(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(i);
@@ -198,11 +164,7 @@ lcon0val(ASL *a, int i, real *X, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-con0grd(a, i, X, G, nerror) ASL *a; int i; real *X, *G; fint *nerror;
-#else
 con0grd(ASL *a, int i, real *X, real *G, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(i);
@@ -213,11 +175,7 @@ con0grd(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-hv0comp(a, hv, p, nobj, ow, y) ASL *a; real *hv, *p, *ow, *y; int nobj;
-#else
 hv0comp(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
-#endif
 {
 	Not_Used(a);
 	Not_Used(hv);
@@ -229,11 +187,7 @@ hv0comp(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 	}
 
  static void
-#ifdef KR_headers
-hv0init(a, n, no, ow, y) ASL *a; int n, no; real *ow, *y;
-#else
 hv0init(ASL *a, int n, int no, real *ow, real *y)
-#endif
 {
 	Not_Used(a);
 	Not_Used(n);
@@ -244,12 +198,7 @@ hv0init(ASL *a, int n, int no, real *ow, real *y)
 	}
 
  static void
-#ifdef KR_headers
-hes0set(a, flags, obj, nobj, con, ncon) ASL *a; int flags; int obj;
-					int nobj; int con; int ncon;
-#else
 hes0set(ASL *a, int flags, int obj, int nobj, int con, int ncon)
-#endif
 {
 	Not_Used(a);
 	Not_Used(flags);
@@ -261,11 +210,7 @@ hes0set(ASL *a, int flags, int obj, int nobj, int con, int ncon)
 	}
 
  static void
-#ifdef KR_headers
-x0known(a, x, nerror) ASL *a; real *x; fint *nerror;
-#else
 x0known(ASL *a, real *x, fint *nerror)
-#endif
 {
 	Not_Used(a);
 	Not_Used(x);
@@ -274,11 +219,7 @@ x0known(ASL *a, real *x, fint *nerror)
 	}
 
  static void
-#ifdef KR_headers
-dut0hes(a, H, nobj, ow, y) ASL *a; real *H; int nobj; real *ow, *y;
-#else
 dut0hes(ASL *a, real *H, int nobj, real *ow, real *y)
-#endif
 {
 	Not_Used(a);
 	Not_Used(H);
@@ -289,11 +230,7 @@ dut0hes(ASL *a, real *H, int nobj, real *ow, real *y)
 	}
 
  static void
-#ifdef KR_headers
-ful0hes(a, H, LH, nobj, ow, y) ASL *a; real *H, *ow, *y; fint LH; int nobj;
-#else
 ful0hes(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
-#endif
 {
 	Not_Used(a);
 	Not_Used(H);
@@ -305,11 +242,7 @@ ful0hes(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
 	}
 
  static void
-#ifdef KR_headers
-sut0hes(a, p, H, nobj, ow, y) ASL *a; SputInfo **p; real *H; int nobj; real *ow, *y;
-#else
 sut0hes(ASL *a, SputInfo **p, real *H, int nobj, real *ow, real *y)
-#endif
 {
 	Not_Used(a);
 	Not_Used(p);
@@ -321,12 +254,7 @@ sut0hes(ASL *a, SputInfo **p, real *H, int nobj, real *ow, real *y)
 	}
 
  static fint
-#ifdef KR_headers
-sut0set(a, p, nobj, have_ow, have_y, both)
-	ASL *a; SputInfo **p; int nobj, have_ow, have_y, both;
-#else
 sut0set(ASL *a, SputInfo **p, int nobj, int have_ow, int have_y, int both)
-#endif
 {
 	Not_Used(a);
 	Not_Used(p);
@@ -345,32 +273,41 @@ Edagpars edagpars_ASL = {
 	5,	/* maxfwd */
 	1,	/* need_funcadd */
 	100,	/* vrefGulp */
+#ifdef ASL_OLD_DERIV_ERR_CHECK
+	2,	/* want_derivs */
+#else
 	1,	/* want_derivs */
+#endif
 	12,	/* ihd_limit */
 	-1,	/* solve_code */
 	obj0val,
+	obj0val,
+	obj0grd,
 	obj0grd,
 	con0val,
 	jac0val,
 	con0ival,
+	con0ival,
+	con0grd,
 	con0grd,
 	hv0comp,
+	hv0comp,
+	hv0init,
 	hv0init,
 	hes0set,
 	lcon0val,
 	x0known,
 	dut0hes,
+	dut0hes,
 	ful0hes,
+	ful0hes,
+	sut0hes,
 	sut0hes,
 	sut0set
 	};
 
  int
-#ifdef KR_headers
-edag_peek(R) EdRead *R;
-#else
 edag_peek(EdRead *R)
-#endif
 {
 	int c;
 	R->Line++;
@@ -380,11 +317,7 @@ edag_peek(EdRead *R)
 	}
 
  static void
-#ifdef KR_headers
-eatcr(nl) FILE *nl;
-#else
 eatcr(FILE *nl)
-#endif
 {
 	int c;
 
@@ -394,11 +327,7 @@ eatcr(FILE *nl)
 	}
 
  char *
-#ifdef KR_headers
-read_line(R) EdRead *R;
-#else
 read_line(EdRead *R)
-#endif
 {
 	char *s, *se;
 	int x;
@@ -454,31 +383,20 @@ read_line(EdRead *R)
 	}
 
  static void
-#ifdef KR_headers
-memfailure(who, what, len) char *who, *what; size_t len;
-#else
-memfailure(char *who, char *what, size_t len)
-#endif
+memfailure(const char *who, const char *what, size_t len)
 {
+	if (progname)
+		fprintf(Stderr, "%s: ", progname);
 	fprintf(Stderr, "%s(%lu) failure: %s.\n", who, (long)len, what);
 	exit(1);
 	}
 
 static char	ran_out[] =	"ran out of memory";
 
-#ifdef KR_headers
- Char *
-mymalloc(len) size_t len;
-#else
  void *
 mymalloc(size_t len)
-#endif
 {
-#ifdef KR_headers
-	char *rv;
-#else
 	void *rv;
-#endif
 	static char who[] = "malloc";
 	rv = malloc(len);
 	if (!rv) {
@@ -494,13 +412,8 @@ mymalloc(size_t len)
 	return rv;
 	}
 
-#ifdef KR_headers
- Char *
-myralloc(rv, len) char *rv; size_t len;
-#else
  void *
 myralloc(void *rv, size_t len)
-#endif
 {
 	static char who[] = "realloc";
 	rv = realloc(rv, len);
@@ -514,29 +427,21 @@ myralloc(void *rv, size_t len)
 	}
 
  void
-what_prog(VOID)
+what_prog(void)
 {
 	if (progname)
 		fprintf(Stderr, "%s: ", progname);
 	}
 
  void
-#ifdef KR_headers
-badread(R) EdRead *R;
-#else
 badread(EdRead *R)
-#endif
 {
 	what_prog();
 	fprintf(Stderr, "error reading line %ld of %s:\n\t", R->Line, R->asl->i.filename_);
 	}
 
  void
-#ifdef KR_headers
-badline(R) EdRead *R;
-#else
 badline(EdRead *R)
-#endif
 {
 	ASL *asl = R->asl;
 	FILE *nl;
@@ -565,23 +470,19 @@ badline(EdRead *R)
 #define Mb_gulp 31
  typedef struct Mblock {
 	struct Mblock *next;
-	Char *m[Mb_gulp];
+	void *m[Mb_gulp];
 	} Mblock;
 
- Char **
-#ifdef KR_headers
-M1record_ASL(I, x) Edaginfo *I; Char *x;
-#else
-M1record_ASL(Edaginfo *I, Char *x)
-#endif
+ void **
+M1record_ASL(Edaginfo *I, void *x)
 {
 	Mblock *mb;
-	Char **rv;
+	void **rv;
 
 	if (I->Mbnext >= I->Mblast) {
 		mb = (Mblock *)Malloc(sizeof(Mblock));
 		mb->next = (Mblock*)I->Mb;
-		I->Mb = (Char*)mb;
+		I->Mb = (void*)mb;
 		I->Mbnext = mb->m;
 		I->Mblast = mb->m + Mb_gulp;
 		}
@@ -590,52 +491,40 @@ M1record_ASL(Edaginfo *I, Char *x)
 	return rv;
 	}
 
- Char *
-#ifdef KR_headers
-M1alloc_ASL(I, n) Edaginfo *I; size_t n;
-#else
+ void *
 M1alloc_ASL(Edaginfo *I, size_t n)
-#endif
 {
 	Mblock *mb;
 
 	if (I->Mbnext >= I->Mblast) {
 		mb = (Mblock *)Malloc(sizeof(Mblock));
 		mb->next = (Mblock*)I->Mb;
-		I->Mb = (Char*)mb;
+		I->Mb = (void*)mb;
 		I->Mbnext = mb->m;
 		I->Mblast = mb->m + Mb_gulp;
 		}
 	return *I->Mbnext++ = Malloc(n);
 	}
 
- Char *
-#ifdef KR_headers
-M1zapalloc_ASL(I, n) Edaginfo *I; size_t n;
-#else
+ void *
 M1zapalloc_ASL(Edaginfo *I, size_t n)
-#endif
 {
-	Char *rv;
+	void *rv;
 
 	memset(rv = M1alloc_ASL(I, n), 0, n);
 	return rv;
 	}
 
  void
-#ifdef KR_headers
-M1free_ASL(I, mnext, mlast) Edaginfo *I; Char **mnext, **mlast;
-#else
-M1free_ASL(Edaginfo *I, Char **mnext, Char **mlast)
-#endif
+M1free_ASL(Edaginfo *I, void **mnext, void **mlast)
 {
-	Char **x, **x0;
+	void **x, **x0;
 	Mblock *Mb, *mb;
-	Char **Mblast;
+	void **Mblast;
 
 	if (!(Mb = (Mblock *)I->Mb))
 		return;
-	x = (Char **)I->Mbnext;
+	x = (void **)I->Mbnext;
 	Mblast = I->Mblast;
 	I->Mbnext = mnext;
 	I->Mblast = mlast;
@@ -647,7 +536,7 @@ M1free_ASL(Edaginfo *I, Char **mnext, Char **mlast)
 			if (*--x)
 				free(*x);
 		if (mlast == Mblast) {
-			I->Mb = (Char*)Mb;
+			I->Mb = (void*)Mb;
 			return;
 			}
 		mb = Mb->next;
@@ -661,11 +550,7 @@ M1free_ASL(Edaginfo *I, Char **mnext, Char **mlast)
 	}
 
  void
-#ifdef KR_headers
-xknown_(x) real *x;
-#else
 xknown_(real *x)
-#endif
 {
 	ASL *asl;
 	if (!(asl = cur_ASL))
@@ -674,11 +559,7 @@ xknown_(real *x)
 	}
 
  void
-#ifdef KR_headers
-xknowe_(x, nerror) real *x; fint *nerror;
-#else
 xknowe_(real *x, fint *nerror)
-#endif
 {
 	ASL *asl;
 	if (!(asl = cur_ASL))
@@ -688,7 +569,7 @@ xknowe_(real *x, fint *nerror)
 
 
  void
-xunkno_(VOID)
+xunkno_(void)
 {
 	ASL *asl;
 	if (!(asl = cur_ASL))
@@ -697,31 +578,28 @@ xunkno_(VOID)
 	}
 
  void
-#ifdef KR_headers
-mnnzchk_ASL(asl, M, N, NZ, who1) ASL*asl; fint *M,*N,*NZ; char*who1;
-#else
-mnnzchk_ASL(ASL *asl, fint *M, fint *N, fint *NZ, char *who1)
-#endif
+mnnzchk_ASL(ASL *asl, fint *M, fint *N, size_t NZ, const char *who1)
 {
 	int n;
-	if (!asl || (n = asl->i.ASLtype) < ASL_read_fg || n > ASL_read_pfgh)
-		badasl_ASL(asl, ASL_read_fg, who1);
+	if (!asl)
+		goto bad;
+	n = asl->i.ASLtype;
+	if (n < ASL_read_fg || n > ASL_read_pfgh)
+		goto bad;
 	ASL_CHECK(asl, n, who1);
-	if (*M != n_con || *N != c_vars || *NZ != nzjac) {
-		what_prog();
-		fprintf(Stderr,
+	if (*M == n_con && *N == c_vars && NZ == nzjac)
+		return;
+	what_prog();
+	fprintf(Stderr,
  "%s: got M = %ld, N = %ld, NZ = %ld\nexpected M = %d, N = %d, NZ = %d\n",
-			who1, (long)*M, (long)*N, *NZ, n_con, c_vars, nzjac);
-		exit(1);
-		}
+			who1, (long)*M, (long)*N, NZ, n_con, c_vars, nzjac);
+	exit(1);
+ bad:
+	badasl_ASL(asl, ASL_read_fg, who1);
 	}
 
  void
-#ifdef KR_headers
-LUcopy_ASL(nv, L, U, LU) int nv; real *L, *U, *LU;
-#else
 LUcopy_ASL(int nv, real *L, real *U, real *LU)
-#endif
 {
 	real *LUe;
 	for(LUe = LU + 2*nv; LU < LUe; LU += 2) {
@@ -731,22 +609,14 @@ LUcopy_ASL(int nv, real *L, real *U, real *LU)
 	}
 
  int
-#ifdef KR_headers
-already_ASL(who) char *who;
-#else
-already_ASL(char *who)
-#endif
+already_ASL(const char *who)
 {
 	fprintf(Stderr, "%s called after ASL_alloc().\n", who);
 	return 1;
 	}
 
  void
-#ifdef KR_headers
-ASL_free(aslp) ASL **aslp;
-#else
 ASL_free(ASL **aslp)
-#endif
 {
 	ASL *a;
 	ASLhead *h;
@@ -760,17 +630,13 @@ ASL_free(ASL **aslp)
 	(h->next = a->p.h.next)->prev = h;
 	if (a->i.arprev)
 		at_end_ASL(a->i.arprev);
-	M1free(&a->i, (Char**)0, (Char**)0);
-	free((Char*)a);
+	M1free(&a->i, (void**)0, (void**)0);
+	free((void*)a);
 	*aslp = 0;
 	}
 
  void
-#ifdef KR_headers
-badasl_ASL(a, n, who) ASL *a; int n; char *who;
-#else
-badasl_ASL(ASL *a, int n, char *who)
-#endif
+badasl_ASL(ASL *a, int n, const char *who)
 {
 	if (!Stderr)
 		Stderr_init_ASL();	/* set Stderr if necessary */
@@ -794,11 +660,7 @@ badasl_ASL(ASL *a, int n, char *who)
 #include "asl_pfgh.h"
 
  ASL *
-#ifdef KR_headers
-ASL_alloc(k) int k;
-#else
 ASL_alloc(int k)
-#endif
 {
 	static int msize[5] = {
 		sizeof(ASL_fg),
@@ -833,12 +695,8 @@ ASL_alloc(int k)
 
 #define Egulp 400
 
- Char *
-#ifdef KR_headers
-mem_ASL(asl, len) ASL *asl; unsigned int len;
-#else
+ void *
 mem_ASL(ASL *asl, unsigned int len)
-#endif
 {
 	fint k;
 	char *memNext;
@@ -862,11 +720,7 @@ mem_ASL(ASL *asl, unsigned int len)
 	}
 
  EdRead *
-#ifdef KR_headers
-EdReadInit_ASL(R, asl, nl, S) EdRead *R; ASL *asl; FILE *nl; void *S;
-#else
 EdReadInit_ASL(EdRead *R, ASL *asl, FILE *nl, void *S)
-#endif
 {
 	R->asl = asl;
 	R->nl = nl;
@@ -880,18 +734,14 @@ EdReadInit_ASL(EdRead *R, ASL *asl, FILE *nl, void *S)
 	}
 
  void
-#ifdef KR_headers
-Suf_read_ASL(R, readall) EdRead *R; int readall;
-#else
 Suf_read_ASL(EdRead *R, int readall)
-#endif
 {
-	int *d, isreal, i, k, n, nx, nx1;
-	real *r, t;
-	SufDesc *D;
-	char *fmt;
 	ASL *asl = R->asl;
-	char sufname[128];
+	SufDesc *D;
+	char *s, sufname[128];
+	const char *fmt;
+	int *d, i, isreal, k, n, nx, nx1;
+	real *r, t;
 
 	if (xscanf(R, "%d %d %127s", &k, &n, sufname) != 3)
 		badline(R);
@@ -904,14 +754,15 @@ Suf_read_ASL(EdRead *R, int readall)
 		nx += n_lcon;
 	if (n > nx)
 		badline(R);
-	if (readall & 1) {
+	if (readall) {
  new_D:
 		D = (SufDesc*)M1zapalloc(sizeof(SufDesc) + strlen(sufname) + 1);
 		D->next = asl->i.suffixes[k];
 		asl->i.suffixes[k] = D;
 		asl->i.nsuff[k]++;
 		asl->i.nsuffixes++;
-		strcpy(D->sufname = (char*)(D+1), sufname);
+		strcpy(s = (char*)(D+1), sufname);
+		D->sufname = s;
 		D->kind = k;
 		if (isreal)
 			D->kind |= ASL_Sufkind_real;
@@ -934,7 +785,7 @@ Suf_read_ASL(EdRead *R, int readall)
 		}
 	if ((D->kind & ASL_Sufkind_outonly) == ASL_Sufkind_outonly)
 		goto skip;
-	nx1 = nx + D->nextra;
+	nx1 = nx + D->nextra + asl->i.nsufext[k];
 	if (D->kind & ASL_Sufkind_real) {
 		D->u.i = 0;
 		if (!(r = D->u.r))
@@ -988,11 +839,7 @@ Suf_read_ASL(EdRead *R, int readall)
 	}
 
  real
-#ifdef KR_headers
-f_OPNUM_ASL(e) expr_n *e;
-#else
 f_OPNUM_ASL(expr_n *e)
-#endif
 {
 #ifdef _WIN32	/* Work around a Microsoft linker bug... */
 		/* Without the following test, f_OPNUM gets confused */
@@ -1007,22 +854,182 @@ f_OPNUM_ASL(expr_n *e)
 	}
 
  void
-#ifdef KR_headers
-No_derivs_ASL(who) char *who;
-#else
 No_derivs_ASL(const char *who)
-#endif
 {
 	fprintf(Stderr, "\nBUG: %s called with want_derivs == 0.\n", who);
 	exit(1);
 	}
 
+#define ndcc asl->i.ndcc_
+#define nzlb asl->i.nzlb_
+
  void
-#ifdef KR_headers
-suf_declare_ASL(asl, sd, n) ASL *asl; SufDecl *sd; int n;
-#else
+flagsave_ASL(ASL *asl, int flags)
+{
+	real t;
+	ssize_t nc, nv, nz;
+
+	t = nZc;
+	if (t >= 2147483648. /* 2^31 */) {
+		if (sizeof(size_t) <= 4) {
+			fprintf(Stderr, "\n*** Problem too large for 32-bit "
+					"addressing (%.g Jacobian nonzeros).\n", t);
+			exit(1);
+			}
+		else if (!(flags & (ASL_allow_Z | ASL_use_Z))) {
+			fprintf(Stderr, "\n*** Problem too large (%.g Jacobian nonzeros)\n", t);
+			exit(1);
+			}
+		else if (sizeof(((cgrad*)0)->goff) <= 4)
+			fprintf(Stderr, "\n*** Problem too large (%.g Jacobian nonzeros) for "
+				"jacval().\nRecompile ASL with \"#define ASL_big_goff\" "
+				"added to arith.h.\n", t);
+		flags |= ASL_use_Z;
+		}
+	asl->i.rflags = flags;
+	if (flags & ASL_cc_simplify && n_cc) {
+		if (ndcc < 0)
+			/* supply overestimates */
+			ndcc = nzlb = n_cc;
+		asl->i.nsufext[ASL_Sufkind_var] += 3*ndcc + n_cc + nzlb;
+		asl->i.nsufext[ASL_Sufkind_con] += 2*ndcc + nzlb;
+		/* use nsufext[ASL_Sufkind_prob] for # of extra Jacobian nonzeros */
+		asl->i.nsufext[ASL_Sufkind_prob] += 5*ndcc + n_cc + 2*nzlb;
+		}
+	nv = n_var + asl->i.nsufext[ASL_Sufkind_var];
+	nc = n_con + asl->i.nsufext[ASL_Sufkind_con];
+	nz = nZc + asl->i.nsufext[ASL_Sufkind_prob];
+	if (!LUv) {
+		LUv = (real*)M1alloc(2*sizeof(real)*nv);
+		if (flags & ASL_sep_U_arrays)
+			Uvx = LUv + nv;
+		}
+	if (!LUrhs) {
+		LUrhs = (real*)M1alloc(2*sizeof(real)*nc);
+		if (flags & ASL_sep_U_arrays)
+			Urhsx = LUrhs + nc;
+		}
+	if (flags & ASL_sep_U_arrays) {
+		if (!Uvx)
+			Uvx = (real*)M1alloc(nv*sizeof(real));
+		if (!Urhsx)
+			Urhsx = (real*)M1alloc(nc*sizeof(real));
+		}
+	if (flags & ASL_want_A_vals && !A_vals)
+		A_vals = (real*)M1alloc(nz*sizeof(real));
+	if (A_vals) {
+		if (!A_rownos)
+			A_rownos = (int *)M1alloc(nz*sizeof(int));
+		}
+	else if (nc)
+		asl->i.Cgrad0 = asl->i.Cgrad_ = (cgrad **)M1zapalloc(nc*sizeof(cgrad *));
+	}
+
+ static void
+zerograd_chk(ASL *asl)
+{
+	int j, n, nv, nx, *z, **zg;
+	ograd *og, **ogp, **ogpe;
+
+	nx =  asl->i.nsufext[ASL_Sufkind_var];
+	if (!(nv = asl->i.nlvog)) {
+		nv = n_var;
+		if (nv > asl->i.n_var0)
+			nx -= nv - asl->i.n_var0;
+		}
+	zerograds = 0;
+	ogp = Ograd;
+	ogpe = ogp + (j = n_obj);
+	while(ogp < ogpe) {
+		og = *ogp++;
+		n = 0;
+		while(og) {
+			j += og->varno - n;
+			n = og->varno + 1;
+			if (n >= nv)
+				break;
+			og = og->next;
+			}
+		if (n < nv)
+			j += nv - n;
+		}
+	if (j == n_obj)
+		return;
+	j += n_obj * nx;
+	zerograds = zg = (int **)mem(n_obj*sizeof(int*)+j*sizeof(int));
+	z = (int*)(zg + n_obj);
+	ogp = Ograd;
+	while(ogp < ogpe) {
+		*zg++ = z;
+		og = *ogp++;
+		n = 0;
+		while(og) {
+			while(n < og->varno)
+				*z++ = n++;
+			og = og->next;
+			if (++n >= nv)
+				break;
+			}
+		while(n < nv)
+			*z++ = n++;
+		*z++ = -1;
+		z += nx;
+		}
+	}
+
+ void
+adjust_zerograds_ASL(ASL *asl, int nnv)
+{
+	int i, j, k, n, *z, **zg, **zge;
+
+	if (!(zg = zerograds)) {
+		zerograd_chk(asl);
+		return;
+		}
+	n = n_var;
+	for(zge = zg + n_obj; zg < zge; ++zg) {
+		z = *zg;
+		for(i = 0; (k = z[i]) >= 0; ++i) {
+			if (k >= n)
+				break;
+			}
+		for(j = n, k = nnv; k > 0; --k)
+			z[i++] = j++;
+		z[i] = -1;
+		}
+	}
+
+ int
+prob_adj_ASL(ASL *asl)
+{
+	cgrad *cg, **pcg, **pcge;
+	int flags, k;
+
+	if (n_obj)
+		adjust_zerograds_ASL(asl, 0);
+	flags = asl->i.rflags;
+	asl->i.Cgrad0 = asl->i.Cgrad_;
+	if (flags & (ASL_obj_replace_eq | ASL_obj_replace_ineq))
+		obj_adj_ASL(asl);
+	if (!A_vals) {
+		if (flags & ASL_cc_simplify && n_cc)
+			mpec_adjust_ASL(asl);
+		if (flags & ASL_rowwise_jac) {
+			pcg = Cgrad;
+			pcge = pcg + n_con;
+			k = 0;
+			while(pcg < pcge)
+				for(cg = *pcg++; cg; cg = cg->next)
+					cg->goff = k++;
+			}
+		}
+	if (n_obj)
+		zerograd_chk(asl);
+	return 0;
+	}
+
+ void
 suf_declare_ASL(ASL *asl, SufDecl *sd, int n)
-#endif
 {
 	SufDesc *d, *dnext[4];
 	SufDecl *sde;
@@ -1038,7 +1045,7 @@ suf_declare_ASL(ASL *asl, SufDecl *sd, int n)
 		for(i = 0; i < n; i++)
 			asl->i.nsuff[sd[i].kind & ASL_Sufkind_mask]++;
 		for(i = 0; i < 4; i++)
-			if (j = asl->i.nsuff[i])
+			if ((j = asl->i.nsuff[i]))
 				asl->i.suffixes[i] = d += j;
 		memset(dnext, 0, 4*sizeof(SufDesc*));
 		for(sde = sd + n; sd < sde; sd++) {
@@ -1056,11 +1063,7 @@ suf_declare_ASL(ASL *asl, SufDecl *sd, int n)
 	}
 
  SufDesc *
-#ifdef KR_headers
-suf_get_ASL(asl, name, kind) ASL *asl; char *name; int kind;
-#else
 suf_get_ASL(ASL *asl, const char *name, int kind)
-#endif
 {
 	SufDesc *d, *de;
 	int ifread;
@@ -1084,11 +1087,7 @@ suf_get_ASL(ASL *asl, const char *name, int kind)
 	}
 
  SufDesc *
-#ifdef KR_headers
-suf_iput_ASL(asl, name, kind, I) ASL *asl; char *name; int kind, *I;
-#else
 suf_iput_ASL(ASL *asl, const char *name, int kind, int *I)
-#endif
 {
 	SufDesc *d = suf_get_ASL(asl, name, kind);
 	d->u.i = I;
@@ -1098,16 +1097,215 @@ suf_iput_ASL(ASL *asl, const char *name, int kind, int *I)
 	}
 
  SufDesc *
-#ifdef KR_headers
-suf_rput_ASL(asl, name, kind, R) ASL *asl; char *name; int kind; real *R;
-#else
 suf_rput_ASL(ASL *asl, const char *name, int kind, real *R)
-#endif
 {
 	SufDesc *d = suf_get_ASL(asl, name, kind);
 	d->u.r = R;
 	d->kind |= ASL_Sufkind_output | ASL_Sufkind_real;
 	return d;
+	}
+
+ int *
+get_vcmap_ASL(ASL *asl, int k)
+{
+	cgrad **cgp;
+	int i, m, n, *x;
+
+	if ((x = (&asl->i.vmap)[k &= 1]))
+		return x;
+	m = 0;
+	if (k == ASL_Sufkind_con && Cgrad)
+		m = asl->i.n_con0 + asl->i.nsufext[ASL_Sufkind_con];
+	n = (&asl->i.n_var0)[k] + asl->i.nsufext[k];
+	cgp = (cgrad**)M1alloc(m * sizeof(cgrad*) + n*sizeof(int));
+	x = (&asl->i.vmap)[k] = (int*)(cgp + m);
+	for(i = 0; i < n; ++i)
+		x[i] = i;
+	asl->p.Conival = conivalmap;
+	asl->p.Congrd = congrdmap;
+	if (m)
+		memcpy(asl->i.Cgrad0 = cgp, Cgrad, m*sizeof(cgrad*));
+	return x;
+	}
+
+ int *
+get_vminv_ASL(ASL *asl)
+{
+	int i, j, n, *vm, *x;
+
+	if ((x = asl->i.vminv))
+		return x;
+	if (!(vm = asl->i.vmap))
+		vm = get_vcmap_ASL(asl, ASL_Sufkind_var);
+	n = asl->i.n_var0 + asl->i.nsufext[ASL_Sufkind_var];
+	x = (int*)M1alloc(n*sizeof(int));
+	for(i = 0; i < n; ++i)
+		x[i] = -1;
+	n = n_var;
+	for(i = 0; i < n; ++i) {
+		if ((j = vm[i]) >= 0)
+			x[j] = i;
+		}
+	for(i = 0, j = n; i < n; ++i)
+		if (x[i] < 0)
+			x[i] = j++;
+	return asl->i.vminv = x;
+	}
+
+ int
+ka_read_ASL(ASL *asl, EdRead *R, int mode, int **kap, size_t **kapZ)
+{
+	int flags, *kai;
+	size_t i, k, *ka, t;
+	int j;
+	unsigned Long u;
+
+	k = asl->i.n_var0;
+	if (!xscanf(R,"%d",&j) || j != k - 1)
+		return 1;
+	if ((i = k) < n_var)
+		i = n_var;
+	flags = asl->i.rflags;
+	if (flags & ASL_use_Z) {
+		*kap = kai = A_colstarts = 0;
+		if (!(ka = A_colstartsZ))
+			A_colstartsZ = ka = (size_t*)M1alloc((i+1)*Sizeof(size_t));
+		*kapZ = ka + 1;
+		}
+	else {
+		*kapZ = ka = A_colstartsZ = 0;
+		if (!(kai = A_colstarts))
+			A_colstarts = kai = (int*)M1alloc((i+1)*Sizeof(int));
+		*kap = kai + 1;
+		}
+	if (sizeof(int) == sizeof(size_t)) {
+		if (!ka)
+			ka = (size_t*)kai;
+		*ka++ = 0;
+		*ka++ = 0;	/* sic */
+		if (mode == 'K') {
+			t = 0;
+			while(--k > 0) {
+				if (!xscanf(R, "%d", &u))
+					return 1;
+				*ka++ = t += u;
+				}
+			}
+		else {
+			while(--k > 0) {
+				if (!xscanf(R, "%d", &u))
+					return 1;
+				*ka++ = u;
+				}
+			}
+		}
+	else if (flags & ASL_use_Z) {
+		*ka++ = 0;
+		*ka++ = 0;	/* sic */
+		if (mode == 'K') {
+			t = 0;
+			while(--k > 0) {
+				if (!xscanf(R, "%d", &u))
+					return 1;
+				*ka++ = t += u;
+				}
+			}
+		else {
+			while(--k > 0) {
+				if (!xscanf(R, "%d", &u))
+					return 1;
+				*ka++ = u;
+				}
+			}
+		}
+	else {
+		*kai++ = 0;
+		*kai++ = 0;	/* sic */
+		if (mode == 'K') {
+			t = 0;
+			while(--k > 0) {
+				if (!xscanf(R, "%d", &u))
+					return 1;
+				*kai++ = (int)(t += u);
+				}
+			}
+		else {
+			while(--k > 0) {
+				if (!xscanf(R, "%d", &u))
+					return 1;
+				*kai++ = (int)u;
+				}
+			}
+		}
+	return 0;
+	}
+
+ void
+goff_comp_ASL(ASL *asl)
+{
+	cgrad *cg, **cgx, **cgxe;
+	size_t *ka;
+
+
+	/* The following "if" test and either its "then" or its "else" block */
+	/* should be optimized away. */
+
+	if (sizeof(size_t) == sizeof(int)) {
+		cgx = Cgrad;
+		cgxe = cgx + asl->i.n_con0;
+		if (!(ka = A_colstartsZ))
+			ka = (size_t*)A_colstarts;
+		++ka;
+		while(cgx < cgxe)
+			for(cg = *cgx++; cg; cg = cg->next)
+				cg->goff = ka[cg->varno]++;
+		}
+	else {
+		int *kai;
+
+		cgx = Cgrad;
+		cgxe = cgx + asl->i.n_con0;
+		if ((kai = A_colstarts)) {
+			++kai;
+			while(cgx < cgxe)
+				for(cg = *cgx++; cg; cg = cg->next)
+					cg->goff = kai[cg->varno]++;
+			}
+		else {
+			ka = A_colstartsZ + 1;
+			while(cgx < cgxe)
+				for(cg = *cgx++; cg; cg = cg->next)
+					cg->goff = ka[cg->varno]++;
+			}
+		}
+	}
+
+ void
+colstart_inc_ASL(ASL *asl)
+{
+	size_t *ka, *kae;
+
+	ka = A_colstartsZ;
+	if (sizeof(size_t) == sizeof(int)) {
+		if (!ka)
+			ka = (size_t*)A_colstarts;
+		kae = ka + asl->i.n_var0;
+		while(ka <= kae)
+			++*ka++;
+		}
+	else if (ka) {
+		kae = ka + asl->i.n_var0;
+		while(ka <= kae)
+			++*ka++;
+		}
+	else {
+		int *kai, *kaie;
+
+		kai = A_colstarts;
+		kaie = kai + asl->i.n_var0;
+		while(kai <= kaie)
+			++*kai++;
+		}
 	}
 
 #ifdef __cplusplus

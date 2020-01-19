@@ -47,6 +47,7 @@
 +names.obj &
 +nl_obj.obj &
 +nqpcheck.obj &
++nqpcheckZ.obj &
 +obj2val.obj &
 +obj_prec.obj &
 +objconst.obj &
@@ -60,6 +61,7 @@
 +punknown.obj &
 +qp_read.obj &
 +qpcheck.obj &
++qpcheckZ.obj &
 +qsortv.obj &
 +readsol.obj &
 +repwhere.obj &

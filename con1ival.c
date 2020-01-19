@@ -25,11 +25,7 @@ THIS SOFTWARE.
 #include "nlp.h"
 
  static void
-#ifdef KR_headers
-INchk(asl, who, i, ix) ASL *asl; char *who; int i, ix;
-#else
-INchk(ASL *asl, char *who, int i, int ix)
-#endif
+INchk(ASL *asl, const char *who, int i, int ix)
 {
 	ASL_CHECK(asl, ASL_read_fg, who);
 	if (i < 0 || i >= ix) {
@@ -40,11 +36,7 @@ INchk(ASL *asl, char *who, int i, int ix)
 	}
 
  static real
-#ifdef KR_headers
-cival(asl, i, X, nerror) ASL_fg *asl; int i; fint *nerror; real *X;
-#else
 cival(ASL_fg *asl, int i, real *X, fint *nerror)
-#endif
 {
 	Jmp_buf err_jmp0;
 	expr *e;
@@ -54,7 +46,7 @@ cival(ASL_fg *asl, int i, real *X, fint *nerror)
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
+		if ((*nerror = ij))
 			return 0.;
 		}
 	want_deriv = want_derivs;
@@ -79,38 +71,28 @@ cival(ASL_fg *asl, int i, real *X, fint *nerror)
 	}
 
  real
-#ifdef KR_headers
-con1ival(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
-#else
 con1ival(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
 	ASL_fg *asl;
-	cgrad *gr, **gr0;
+	cgrad *gr;
 	expr_v *V;
 	real f;
 
-	INchk(a, "con1ival", i, a->i.n_con_);
-	f = cival(asl = (ASL_fg*)a, i, X, nerror);
-	gr0 = Cgrad + i;
-	gr = *gr0;
-	if (asl->i.vscale)
+	INchk(a, "con1ival", i, a->i.n_con0);
+	asl = (ASL_fg*)a;
+	f = cival(asl, i, X, nerror);
+	gr = asl->i.Cgrad0[i];
+	if (asl->i.vmap || asl->i.vscale)
 		for(V = var_e; gr; gr = gr->next)
 			f += gr->coef * V[gr->varno].v;
 	else
 		for(; gr; gr = gr->next)
 			f += gr->coef * X[gr->varno];
-	if (asl->i.cscale)
-		f *= asl->i.cscale[i];
 	return f;
 	}
 
  int
-#ifdef KR_headers
-lcon1val(a, i, X, nerror) ASL *a; int i; fint *nerror; real *X;
-#else
 lcon1val(ASL *a, int i, real *X, fint *nerror)
-#endif
 {
 	real f;
 
@@ -120,30 +102,25 @@ lcon1val(ASL *a, int i, real *X, fint *nerror)
 	}
 
  void
-#ifdef KR_headers
-con1grd(a, i, X, G, nerror)
-	ASL *a; int i; fint *nerror; real *X, *G;
-#else
 con1grd(ASL *a, int i, real *X, real *G, fint *nerror)
-#endif
 {
-	cde *d;
-	cgrad *gr, **gr0;
-	real *Adjoints, *vscale;
-	Jmp_buf err_jmp0;
-	int i0, ij, L, xksave;
 	ASL_fg *asl;
-	real scale;
+	Jmp_buf err_jmp0;
+	cde *d;
+	cgrad *gr, *gr1;
+	int i0, ij, j, *vmi, xksave;
+	real *Adjoints, *vscale;
+	size_t L;
 	static char who[] = "con1grd";
 
-	INchk(a, who, i, a->i.n_con_);
+	INchk(a, who, i, a->i.n_con0);
 	asl = (ASL_fg*)a;
 	if (!want_derivs)
 		No_derivs_ASL(who);
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if (*nerror = ij)
+		if ((*nerror = ij))
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
@@ -159,6 +136,8 @@ con1grd(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (nerror && *nerror)
 			return;
 		}
+	if (asl->i.Derrs)
+		deriv_errchk_ASL(a, nerror, i, 1);
 	if (!(x0kind & ASL_have_funnel)) {
 		if (f_b)
 			funnelset_ASL(asl, f_b);
@@ -167,39 +146,58 @@ con1grd(ASL *a, int i, real *X, real *G, fint *nerror)
 		x0kind |= ASL_have_funnel;
 		}
 	Adjoints = adjoints;
-	d = con_de + i;
-	gr0 = Cgrad + i;
-	scale = asl->i.cscale ? asl->i.cscale[i] : 1.;
-	for(gr = *gr0; gr; gr = gr->next)
+	d = &con_de[i];
+	gr1 = asl->i.Cgrad0[i];
+	for(gr = gr1; gr; gr = gr->next)
 		Adjoints[gr->varno] = gr->coef;
-	if (L = d->zaplen) {
+	if ((L = d->zaplen)) {
 		memset(adjoints_nv1, 0, L);
 		derprop(d->d);
 		}
-	if (vscale = asl->i.vscale)
-		for(gr = *gr0; gr; gr = gr->next) {
-			L = gr->varno;
-			Adjoints[L] *= vscale[L];
-			}
-	gr = *gr0;
+	vmi = 0;
+	if (asl->i.vmap)
+		vmi = get_vminv_ASL(a);
+	if ((vscale = asl->i.vscale)) {
+		if (vmi)
+			for(gr = gr1; gr; gr = gr->next) {
+				i0 = gr->varno;
+				Adjoints[i0] *= vscale[vmi[i0]];
+				}
+		else
+			for(gr = gr1; gr; gr = gr->next) {
+				i0 = gr->varno;
+				Adjoints[i0] *= vscale[i0];
+				}
+		}
+	gr = gr1;
 	i0 = 0;
 	switch(asl->i.congrd_mode) {
 	  case 1:
 		for(; gr; gr = gr->next)
-			G[i0++] = scale * Adjoints[gr->varno];
+			G[i0++] = Adjoints[gr->varno];
 		break;
 	  case 2:
 		for(; gr; gr = gr->next)
-			G[gr->goff] = scale * Adjoints[gr->varno];
+			G[gr->goff] = Adjoints[gr->varno];
 		break;
 	  default:
-		for(; gr; gr = gr->next) {
-			i = gr->varno;
-			while(i0 < i)
-				G[i0++] = 0;
-			G[i] = scale * Adjoints[i];
-			i0 = i + 1;
+		if (vmi) {
+			for(; gr; gr = gr->next) {
+				i = vmi[j = gr->varno];
+				while(i0 < i)
+					G[i0++] = 0;
+				G[i] = Adjoints[j];
+				i0 = i + 1;
+				}
 			}
+		else
+			for(; gr; gr = gr->next) {
+				i = gr->varno;
+				while(i0 < i)
+					G[i0++] = 0;
+				G[i] = Adjoints[i];
+				i0 = i + 1;
+				}
 		i = n_var;
 		while(i0 < i)
 			G[i0++] = 0;

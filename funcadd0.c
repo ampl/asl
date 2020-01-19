@@ -26,14 +26,10 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
- char *ix_details_ASL[] = {0};
+ const char *ix_details_ASL[] = {0};
 
  void
-#ifdef KR_headers
-funcadd(ae) AmplExports *ae;
-#else
 funcadd(AmplExports *ae)
-#endif
 {
 	ae = ae; /* silence warning */
 	/* insert calls on addfunc here */

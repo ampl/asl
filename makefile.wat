@@ -94,6 +94,7 @@ a = \
 	names.obj \
 	nl_obj.obj \
 	nqpcheck.obj \
+	nqpcheckZ.obj \
 	obj2val.obj \
 	obj_prec.obj \
 	objconst.obj \
@@ -107,6 +108,7 @@ a = \
 	punknown.obj \
 	qp_read.obj \
 	qpcheck.obj \
+	qpcheckZ.obj \
 	qsortv.obj \
 	readsol.obj \
 	repwhere.obj \
@@ -149,7 +151,7 @@ com2eval.obj con2ival.obj con2val.obj obj2val.obj\
 conpval.obj pshvprod.obj xp2known.obj:\
 	jacpdim.h asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 comeval.obj con1ival.obj conval.obj mip_pri.obj objval.obj qpcheck.obj\
- readsol.obj: nlp.h $(Aslh)
+ qpcheckZ.obj readsol.obj: nlp.h $(Aslh)
 misc.obj nl_obj.obj sos_add.obj suf_sos.obj:\
 	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 op_type.obj: op_type.hd op_typeb.hd
@@ -162,7 +164,7 @@ objconst.obj: r_opn0.hd nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 pfg_read.obj: asl_pfg.h r_opn0.hd dvalue.hd nlp.h psinfo.h $(Aslh)
 pfghread.obj: jacpdim.h asl_pfgh.h opnos.hd r_opn0.hd dvalue.hd\
 	psinfo.h nlp2.h $(Aslh)
-nqpcheck.obj: nlp.h r_qp.hd $(Aslh)
+nqpcheck.obj nqpcheckZ.obj: nlp.h r_qp.hd $(Aslh)
 printf.obj punknown.obj sscanf.obj: stdio1.h
 dtoa1.obj: dtoa.c arith.h stdio1.h
 

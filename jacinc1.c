@@ -24,24 +24,27 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
+#ifdef __cplusplus
+extern "C" {
+extern void
+jacinc1_(fint *M, fint *N, fint *NO, fint *NZ, fint *JP,
+	fint *JI, real *X, real *L, real *U,
+	real *Lrhs, real *Urhs, real *Inf, fint *Objdir);
+}
+#endif
+
  void
-#ifdef KR_headers
-jacinc1_(M, N, NO, NZ, JP, JI, X, L, U, Lrhs, Urhs, Inf, Objdir)
-	fint *M, *N, *NO, *NZ, *JP, *JI, *Objdir;
-	real *X, *L, *U, *Lrhs, *Urhs, *Inf;
-#else
 jacinc1_(fint *M, fint *N, fint *NO, fint *NZ, fint *JP,
 	fint *JI, real *X, real *L, real *U,
 	real *Lrhs, real *Urhs, real *Inf, fint *Objdir)
-#endif
 {
 	int n;
 	cgrad *gr, **grp;
 	ASL *asl = cur_ASL;
 
-	mnnzchk_ASL(asl, M, N, NZ, "jacinc");
+	mnnzchk_ASL(asl, M, N, *NZ, "jacinc");
 	*Inf = Infinity;
-	if (n = n_con) {
+	if ((n = n_con)) {
 		LUcopy_ASL(n, Lrhs, Urhs, LUrhs);
 		grp = Cgrad + n;
 		for(; n > 0; --n)

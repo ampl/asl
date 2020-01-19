@@ -1,7 +1,7 @@
 README	10f02af0	4679
 README.gjh	f7831fa4	21107
 amplfun4.c	f5166977	5414
-amplfunc.c	fd078f89	6583
+amplfunc.c	ce3bf76	6658
 dminos	84cc26b	251
 dualconv.c	eb55ba16	17596
 enewt.m	f7be0c71	5356
@@ -11,8 +11,8 @@ evalg.m	a3f0775	1505
 evalw.m	ef935ae5	1477
 fmng1.f	e14e7d8d	2897
 fnl21.f	ebc2e72f	3131
-gjh.c	e5353e2c	6193
-hist.c	f5c37fe2	4680
+gjh.c	19ab10fc	6237
+hist.c	ad3cbf	5116
 hkeywds.c	eb4d4fce	53
 init.m	156f1d30	2786
 keywds.c	624ef49	6758
@@ -21,7 +21,7 @@ lin2.c	fe2df350	2322
 lin3.c	13e37cae	2726
 linrc.c	ffb5438	4508
 makefile.sy	aa6ad36	5759
-makefile.u	1229d660	8055
+makefile.u	f6903e30	8044
 makefile.vc	fd1266e	5481
 makefile.wat	e30cd23f	5352
 mng.c	a9366c3	3574
@@ -34,8 +34,7 @@ qtest.c	ee5052d0	3519
 rvmsg.c	160c0263	3756
 rvmsg.h	11021ce	1868
 savesol.m	1f5724b9	1675
-spamfun4.c	44eeda3	6043
-spamfunc.c	fdf81581	7159
+spamfunc.c	1644a306	7233
 tnmain.c	fd38f276	5444
 v8.c	e75a64bb	35
 ve08.c	edb04b54	16436

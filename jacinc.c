@@ -25,11 +25,7 @@ THIS SOFTWARE.
 #include "asl.h"
 
  static void
-#ifdef KR_headers
-ASL_check1(asl, who) ASL *asl; char *who;
-#else
-ASL_check1(ASL *asl, char *who)
-#endif
+ASL_check1(ASL *asl, const char *who)
 {
 	if (!asl
 	 || asl->i.ASLtype < ASL_read_fg
@@ -38,23 +34,17 @@ ASL_check1(ASL *asl, char *who)
 	}
 
  void
-#ifdef KR_headers
-jacinc_(M, N, NZ, JP, JI, X, L, U, Lrhs, Urhs, Inf)
-	fint *M, *N, *NZ; register fint *JP;
-	register short *JI; real *X, *L, *U, *Lrhs, *Urhs, *Inf;
-#else
 jacinc_(fint *M, fint *N, fint *NZ, register fint *JP,
 	register short *JI, real *X, real *L, real *U,
 	real *Lrhs, real *Urhs, real *Inf)
-#endif
 {
 	int n;
 	cgrad *gr, **grp;
 	ASL *asl = cur_ASL;
 
-	mnnzchk_ASL(asl, M, N, NZ, "jacinc");
+	mnnzchk_ASL(asl, M, N, *NZ, "jacinc");
 	*Inf = Infinity;
-	if (n = n_con) {
+	if ((n = n_con)) {
 		LUcopy_ASL(n, Lrhs, Urhs, LUrhs);
 		grp = Cgrad + n;
 		for(; n > 0; --n)
@@ -69,11 +59,7 @@ jacinc_(fint *M, fint *N, fint *NZ, register fint *JP,
 	}
 
  void	/* arrange for dense Jacobian computation */
-#ifdef KR_headers
-dense_j_ASL(asl) ASL *asl;
-#else
 dense_j_ASL(ASL *asl)
-#endif
 {
 	cgrad *cg;
 	int i;
@@ -88,5 +74,5 @@ dense_j_ASL(ASL *asl)
 	}
 
  void
-densej_(VOID)
+densej_(void)
 { dense_j_ASL(cur_ASL); }

@@ -168,7 +168,9 @@ typedef void AddRand ANSI((
 		AmplExports *ae
 		));
 
- typedef void Exitfunc ANSI((void*));
+typedef void (*RandSeedSetter) ANSI((void*, unsigned long));
+typedef void AddRandInit ANSI((AmplExports *ae, RandSeedSetter, void*));
+typedef void Exitfunc ANSI((void*));
 
  struct
 AuxInfo {
@@ -248,18 +250,22 @@ AmplExports {
 	int (*VsnprintF) ANSI((char*, size_t, const char*, VA_LIST));
 
 	AddRand *Addrand;	/* for random function/inverse CDF pairs */
+	AddRandInit *Addrandinit; /* for adding a function to receive a new random seed */
 	};
 
-extern char *i_option_ASL, *ix_details_ASL[];
+extern const char *i_option_ASL, *ix_details_ASL[];
 
 #define funcadd funcadd_ASL
 
-extern void func0add ANSI((AmplExports*));	/* statically linked */
-extern void func1add ANSI((AmplExports*));	/* for amplodbc.dll  */
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-extern void funcadd  ANSI((AmplExports*));	/* dynamically linked */
+extern void funcadd ANSI((AmplExports*));	/* dynamically linked */
+extern void af_libnamesave_ASL ANSI((AmplExports*, const char *fullname, const char *name, int nlen));
+extern void note_libuse_ASL ANSI((void));	/* If funcadd() does not provide any imported */
+						/* functions, it can call note_libuse_ASL() to */
+						/* keep the library loaded; note_libuse_ASL() is */
+						/* called, e.g., by the tableproxy table handler. */
 
 #ifdef __cplusplus
 	}
@@ -328,6 +334,7 @@ enum {	/* bits in flags field of TableInfo */
 #define Stderr (ae->StdErr)
 #define addfunc(a,b,c,d,e) (*ae->Addfunc)(a,b,c,d,e,ae)
 #define addrand(a,b,c,d,e,f) (*ae->Addrand)(a,b,c,d,e,f,ae)
+#define addrandinit(a,b) (*ae->Addrandinit)(ae,a,b)
 #define printf	(*ae->PrintF)
 #define fprintf (*ae->FprintF)
 #define snprintf (*ae->SnprintF)

@@ -31,21 +31,21 @@ THIS SOFTWARE.
  typedef struct keyword keyword;
 
  typedef char *
-Kwfunc ANSI((Option_Info *oi, keyword *kw, char *value));
+Kwfunc(Option_Info *oi, keyword *kw, char *value);
 
  struct
 keyword {
 	char *name;
 	Kwfunc *kf;
-	Char *info;
+	void *info;
 	char *desc;
 	};
 
-#define KW(a,b,c,d) {a,b,(Char*)(c),d}
+#define KW(a,b,c,d) {a,b,(void*)(c),d}
 #define nkeywds (int)(sizeof(keywds)/sizeof(keyword))
 
- typedef fint Solver_KW_func ANSI((char*, fint));
- typedef fint Fileeq_func ANSI((fint*, char*, fint));
+ typedef fint Solver_KW_func(char*, fint);
+ typedef fint Fileeq_func(fint*, char*, fint);
 
  struct
 Option_Info {
@@ -102,25 +102,28 @@ Option_Info {
 	ASL_OI_echothis = 2,
 	ASL_OI_clopt	= 4,
 	ASL_OI_badvalue = 8,
-	ASL_OI_never_echo = 16
+	ASL_OI_never_echo = 16,
+	ASL_OI_tabexpand  = 32,	/* have shownames() expand tabs */
+	ASL_OI_addnewline = 64, /* have shownames() add a newline */
+				/* after each keyword description */
+	ASL_OI_showname_bits = 96
 	} ;
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
-#ifdef KR_headers
-extern long strtol();
-#endif
 /* Kwfuncs should invoke badopt_ASL() if they complain. */
-extern void  badopt_ASL ANSI((Option_Info*));
-extern char *badval_ASL ANSI((Option_Info*, keyword*, char *value, char *badc));
-extern char* get_opt_ASL  ANSI((Option_Info*, char*));
-extern int   getopts_ASL  ANSI((ASL*, char **argv, Option_Info*));
-extern char* getstops_ASL ANSI((ASL*, char **argv, Option_Info*));
-extern char* getstub_ASL ANSI((ASL*, char ***pargv, Option_Info*));
+extern void  badopt_ASL (Option_Info*);
+extern char *badval_ASL (Option_Info*, keyword*, char *value, char *badc);
+extern char* get_opt_ASL  (Option_Info*, char*);
+extern int   getopts_ASL  (ASL*, char **argv, Option_Info*);
+extern char* getstops_ASL (ASL*, char **argv, Option_Info*);
+extern char* getstub_ASL (ASL*, char ***pargv, Option_Info*);
+extern void show_version_ASL(Option_Info*);
 extern char  sysdetails_ASL[];
-extern void  usage_ASL ANSI((Option_Info*, int exit_code));
+extern void  usage_ASL(Option_Info*, int exit_code);
+extern void  usage_noexit_ASL(Option_Info*, int exit_code);
 
 #define getstub(a,b)	getstub_ASL((ASL*)asl,a,b)
 #define getstops(a,b)	getstops_ASL((ASL*)asl,a,b)
@@ -157,11 +160,11 @@ extern Kwfunc SU_val;
 
 /* Routines for converting Double (real), Long, and int values: */
 
-extern char *Dval_ASL ANSI((Option_Info*, keyword*, char*, real*));
-extern char *Ival_ASL ANSI((Option_Info*, keyword*, char*, int*));
-extern char *Lval_ASL ANSI((Option_Info*, keyword*, char*, Long*));
+extern char *Dval_ASL (Option_Info*, keyword*, char*, real*);
+extern char *Ival_ASL (Option_Info*, keyword*, char*, int*);
+extern char *Lval_ASL (Option_Info*, keyword*, char*, Long*);
 
-#define voffset_of(t,c) ((Char *)&((t*)0)->c)
+#define voffset_of(t,c) ((void *)&((t*)0)->c)
 
 /* Structs whose address can be the info field for known values... */
 

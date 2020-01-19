@@ -27,7 +27,7 @@ THIS SOFTWARE.
 #include "math.h"	/* for sqrt */
 #include "funcadd.h"	/* includes "stdio1.h" */
 
- char *ix_details_ASL[] = {0};	/* no -i command-line option */
+ const char *ix_details_ASL[] = {0};	/* no -i command-line option */
 
  static real
 ginv(arglist *al)	/* generalized inverse of a single argument */

@@ -1844,3 +1844,391 @@ not unchanged.
 20110620
   configurehere: fix a misplaced backquote in the change of 20110410;
 asldate.c not changed.
+
+20110708
+  fg_read.c, fgh_rad.c, pfg_read.c, pfghread.c:  fix a bug in handling
+complementarity constraints of the form
+	const + lin complements L <= expr <= U
+in which "const" is a nonzero numeric constant and "lin" is a linear
+expression.  The const value was lost by pfgh_read().  The bug only
+bit when the flags argument to the .nl reader did not have the
+ASL_no_linear_cc_rhs_adjust bit set.
+  asl.h: adjust comment about niv.
+
+20110809
+  suf_sos.c:  fix a bug in counting nonzeros when an explicit SOS set
+(given by .sosno and .ref) has too few members:  only 1 for an SOS1
+set, at most 2 for an SOS2 set.
+  avltree.[ch], avldelete.c: avldelete.c folded into avltree.c and
+withdrawn; new functionality added.  See avltree.h for deatils.
+  Many files: KR_header stuff omitted from most files.  New enum
+values that can be "or-ed" into flags argument to .nl readers:
+ASL_cc_simplify (for simplifying complementarity conditions for
+impoverished solvers that only want to see complementarities of the
+form var1 >= 0 complements var2 >= 0), ASL_obj_replace_ineq and
+ASL_obj_replace_eq (to replace an objective that is a linear
+expression in one variable with the body of a constraint in which the
+variable appears linearly and nowhere else), ASL_rowwise_jac (to
+request row-wise rather than column-wise storage of Jacobians),
+ASL_want_A_vals (to cause A_vals to be allocated), and
+ASL_sep_U_arrays (to request allocation and use of Uvx and Urhsx).
+See comments in asl.h about the new enum values.  The entire interface
+library and anything using its headers must be recompiled.
+  New files mpec_adj.c, mpec_adj0.c, obj_adj.c obj_adj0.c.  When
+ASL_cc_simplify is not used, linking with mpec_adj0.o will give a
+slightly smaller program, and when neither ASL_obj_replace_ineq nor
+ASL_obj_replace_eq is used, linking with mpec_adj0.o will give s
+slightly smaller program.
+
+20110811
+  conscale.c:  fix a sign error in adjusting bounds for s < 0 in
+varscale(i, s, nerror) and conscale(i, s, nerror).
+  writesol.c:  fix a bug in the scaling of returned dual variables
+after a call on conscale(i, s, nerror) or lagscale(s, ierror) with
+s < 0.
+
+20110814
+  asl.h getstub.h sos_add.c: omit recently added "const" in a few places
+to avoid trouble with badly written solver interfaces.  Sensible interfaces
+use static tables, for which the added "const" keywords eliminated some
+compiler warnings.  No change to asldate.c, which remains at 20110811.
+
+20110822
+  pfg_read.c, pfghread.c:  fix a rarely-seen fault.
+  conscale.c: fix a glitch in Inftest().
+
+20110824
+  nqpcheck.c: fix faults introduced 20110809 in, e.g., quadratically
+constrained problems as handled by cplex and xpress.
+
+20110826
+  suf_sos.c: fix a glitch (possible fault) introduced 20110809 while
+trying to eliminate a spurious compiler warning.
+
+20110913
+  asl.h:  change Sizeof(x) from (fint)sizeof(x) to simply sizeof(x).
+The old definition was once useful on small machine; recently it caused
+trouble on a very large problem.
+  New source file indic_cons.c (with updates to asl.h, makefile.*,
+xsum0.out), to make some code for extracting indicator constraints
+generally available that was previously only used in the cplex driver
+(which is being updated to use the new indicator_constrs_ASL()
+function).
+
+20110916
+  Allow function evaluations whose derivatives cannot be evaluated
+to succeed, deferring error reporting until the associated
+derivatives are requested.  For, say, x^1.2 at 0, whose first but
+not second derivative can be computed, with pfgh_read(), the
+gradient evaluation will complain, as the Hessian evaluators operate
+on cached partial derivative values and do not (currently) provide
+for an error return.  Compiling repwhere.c with -DASL_OLD_DERIV_CHECK
+restores the old behavior; alternatively, assigning
+asl->p.want_derivs_ = 2 before the desired evaluations restores the
+old error handling, and assigning asl->p.want_derivs_ = 1 gives the
+new error handling.  Compiling misc.c with -DASL_OLD_DERIV_CHECK
+changes the default asl->p.want_derivs_ from 1 to 2.
+  Add "#ifdef WANT_INFNAN" logic to rops2.c.  (It was already in
+rops.c.)  Compiling rops.c and rops2.c with -DWANT_INFNAN will cause
+them to return Infinities or NaNs in some cases where they would
+otherwise report evaluation errors.
+  Catch some Hessian errors (by default) in some corner cases of x^y,
+e.g., for x^1.2 at x == 0, for which incorrect values were previously
+supplied.
+
+20110927
+  suf_sos.c:  fix a fault introduced 20110809 when Cgrad == 0.
+  repwhere.c: tweak to avoid a compiler error with archaic compilers.
+
+20110928
+  suf_sos.c: fix an off-by-one bug (introduced 20110809) that could
+cause a fault.
+
+20111003
+  indic_cons.c:  allow double inequalities (and sequences of
+constraints separated by && or given by a forall{...} construct) in
+indicator constraints.
+
+20111005
+  writesol.c:  allocate a scratch array in a couple of previously
+missed cases where needed in conjunction with flags ASL_obj_replace_eq
+and ASL_obj_replace_ineq to the .nl reader.
+
+20111011
+  xectim.c:  on MS Windows systems, have xectim_() return the sum of
+times in all threads, just as it does on on Unix-like (Posix) systems.
+
+20111014
+  htcl.c:  fix a glitch that only matters when MULTIPLE_THREADS is
+#defined:  change NEW_MBLK_LOCK to MBLK_LOCK.
+  conscale.c:  fix a mistake in the changes of 20110811 affecting
+infinite bounds with negative scalings.
+
+20111018
+  mpec_adj.c:  adjust zerograds to reflect the number of variables
+after problem adjustments (to prevent out-of-bounds array references
+when zeroing gradient components of unused variables).  This only
+matters on problems with complementarity constraints when the .nl
+reader has ASL_cc_simplify set in its flags argument.
+  sphes.c: after sphsetup(-1,1,1,uptri), allow sphes(h,-1,ow,y)
+with ow == 0 or y == 0 (or both, giving all zeros in h).
+
+20111111
+  makefile.vc:  add comments and "fpinitmt_cl64.obj" rule for use
+with Microsoft's 64-bit cl compiler, which does not correctly
+support the C standard.
+
+20111117
+  fg_read.c, fgh_read.c, misc.c, pfg_read.c: fix a glitch with flag
+ASL_keep_all_suffixes to .nl readers: not all suffixes were kept.
+
+20111120
+  obj_adj.c, suf_sos.c: fix a bug that could cause an out-of-bounds
+array reference (possible fault) in write_sol().
+
+20120117
+  For the seldom-used -ix command-line option, in addition to
+allowing multiple files on separate lines of a suitably quoted x,
+allow multiple files on the same line if each file name is enclosed
+in single or double quotes.  Add a brief explanation of multiple
+files to the "-i?" output.  Fix a glitch that prevented an error
+message from appearing when -ix gives an inappropriate x.
+  avltree.[ch]:  add routines AVL_first_ge(), AVL_last_le(),
+AVL_vfirst_ge(), and AVL_vlast_le() for finding the first
+element >= or last element <= a specified element.
+  New source file libnamsave.c to facilitate a non-solver use of ASL.
+  New function note_libuse_ASL() for a non-solver use of ASL.
+  Change to search rules for locating shared-libraries, to facilitate
+using a 64-bit solver with a 32-bit AMPL or vice versa:  for a 64-bit
+solver, if the library name involves '.' and the final '.' is
+preceded by "_32", change the "32" to "64".  Otherwise, if the
+library fails to load and there is a '.' in the name, insert
+"_64" before the final '.'.  (For 32-bit solvers, the rules are
+similar, with the roles of "32" and "64" reversed.)
+  printf.c: compiling with -DQUOTIFY makes AMPL's %q and %Q format
+items available.
+
+20120120
+  funcadd1.c:  under MS Windows, add a test that a proposed DLL has is
+for the right number of addressing bits.  (The Windows LoadLibrary
+function "works" even for DLLs compiled for the wrong number of bits.)
+On all platforms, ignore "." in directory names.
+
+20120126
+  funcadd1.c: for a nonsolver application, have libload_ASL(name,2)
+give return 1 when name is not found.
+
+20120323
+  nqpcheck.c: arrange for mqpcheck(n,0,0,0) not to fault with NULL
+values for Cgrad and Ograd.
+  printf.c: increase a buffer size (an "invisible" change).
+
+20120417
+  dtoa.c, dtoa1.c: an obscure bug fix (see /netlib/fp/changes) that
+should not affect solvers.
+
+20120423
+  dtoa.c: invisible changes; asldate.c not updated.
+
+20120619
+  opnos.hd pfg_read.c pfghread.c: tweak so division by a constant is
+gives the same sparsity as multiplication by the constant's reciprocal.
+
+20120624
+  asl.h, fgh_read.c, fg_read.c, misc.c: pfghread.c, pfg_read.c:  move
+some common operations to misc.c, where they will happen after some
+problem adjustments.
+  mpec_adj.c: fix bugs in handling problems with integer (including
+binary) variables.
+  suf_sos.c, writesol.c: tweak to work with some problem modifications.
+  getstub.c, getstub.h: add variant usage_noexit_ASL() of usage_ASL()
+(same calling sequence: the exit-code argument affects where the
+usage information is written) that does not exit.  This alternate
+routine may be withdrawn if it we do not see convincing examples of
+its utility.
+
+20120703
+  README:  adjust to reflect that the tar service of netlib.sandia.gov
+is no longer available by clicking on "(tar").  URLs of the form
+
+	ftp://www.netlib.org/ampl/solvers.tar.gz
+
+still work (to get ampl/solvers and all its subdirectories at once),
+as do suitable "send all" requests to netlib@netlib.org.
+
+20120712
+  README:  adjust to reflect that URL
+http://netlib.sandia.gov/cgi-bin/netlib/netlibfiles.tar?filename=netlib/ampl/solvers
+still works.
+  makefile.vc:  tweak to allow invocations of the form
+	nmake RUNTIME=...
+(with makefile copied from makefile.vc) to replace "-MT" with ... .
+
+20120830
+  asl.h, func_add.c, funcadd.h:  Add Addrandinit to struct
+AmplExports, which is available to imported functions in al->AE.
+An imported function or, more likely the funcadd_ASL function that
+makes known the imported functions in an imported-function library,
+can invoke addrandinit(rsi,v) (i.e., ae->Addrandinit(ae,rsi,v)) with
+apparent signature
+
+	typedef void (*RandSeedSetter)(void*, unsigned long);
+	void addrandinit(RandSeedSetter rsi, void*);
+
+to have rsi(v,$randseed) called initially with the current value
+of $randseed (as an unsigned long) and, in an AMPL session, again
+whenever option randseed is assigned a value.  This is meant to
+supply a new seed for random functions provided by the containing
+imported-function library.  Like calls on at_reset() and unlike
+calls on at_exit, calls on addrandinit() are forgotten after a
+"reset;".  Note that a "reset;" causes the funcadd_ASL() routines in
+all currently loaded imported function libraries to be called again.
+
+20121005
+  misc.c: add progname (if not NULL) to memfailure message.
+  suf_sos.c: fix a glitch with discarding SOS1 sets of size 1
+and SOS2 sets of size 2 when explicitly specified by suffixes
+sosno and ref (a bad idea -- it is much less error prone to
+use AMPL's <<...>> notation for piecewise-linear terms).
+
+20121016
+  indic_cons.c:  fix some bugs (likely faults) that bit on problems
+with many logical constraints (more than 6000 in the example behind
+this bug fix).
+
+20121101
+  npqcheck.c: call get_vminv_ASL() if necessary to prevent vminv
+from being inappropriately freed in the subsequent free_block(S).
+
+20121116
+  nqpcheck.c: take asl->i.nsufext[ASL_Sufkind_var] into account.
+(This value is set to a positive value, e.g., by the Gurobi driver
+on problems that have range constraints.)
+
+20121212
+  fpinit.c and comments in makefile.u:  make treatment of Solaris on
+Intel (i386 or x86_64) self-contained.  When Intel 8087
+extended-precision registers might be used, fpinit() tries to set the
+rounding precision to 53 bits, to remove a source of confusion.
+
+20121220
+  dtoa.c, dtoa1.c: fix a possible one-time race when multiple
+threads are used for input involving Infinity or NaN.
+
+20130129
+  dtoa.c, dtoa1.c: fix an obscure memory leak in reading hexadecimal-
+format number (0x...).  This change does not affect any known solver
+interfaces.  See /netlib/fp/changes.
+
+20130213
+  asl.h: move qsortv declaration ahead of include "funcadd.h" to avoid
+trouble when Permit_AE_redefs is #defined; asldate.c not changed.
+
+20130328
+  asl.h, writesol.c: change msg arg to the write_sol* routines from char*
+to const char*.  This should be invisible except for banishing a warning
+in some solver interfaces.
+
+20130419
+  pfg_read.c, pfghread.c:  fix a bug occasionally seen (with readers
+pfg_read() and pfgh_read()) in problems having defined variables.
+
+20130530
+  suf_sos.c:  fix a bug in removing SOS1 sets of size 1.  Wrong arrays
+were computed.
+
+20130604
+  indic_cons.c:  fix a bug in handling unary minus (wrong return value,
+causing indicator constraints to be rejected).
+
+20130606
+  obj_adj.c:  fix a fault that was possible with flags
+ASL_obj_replace_ineq and ASL_obj_replace_eq to the .nl reader.
+
+20130622
+  New source file obj_adj.h, and adjustments to makefile.u, nqpcheck.c
+and obj_adj.c to extend the obj_replace facilities to solvers that
+request A_vals.  Examples: the updated CPLEX and XPRESS drivers,
+/netlib/ampl/solvers/cplex/cplex.c and
+/netlib/ampl/solvers/cplex/xpress.c.
+
+20130703
+  New source files npqcheckZ.c and qpcheckZ.c and changes to many
+files.  New alternative A_colstartsZ to A_colstarts:  A_colstartsZ is
+of type size_t* rather than int* to permit handling problems with 2^31
+or more Jacobian nonzeros.  New alternatives nZc and nZo to nzc and
+nzo, of type size_t rather than int.  New bits in flags argument to
+.nl readers:
+	ASL_allow_Z ==> accept problems with nZc >= 2^31, setting the
+		ASL_use_Z bit in flags if nZc >= 2^31.
+	ASL_use_Z ==> populate A_colstartsZ rather than A_colstarts,
+		regardless of problem size.
+New field hcolstartsZ in SputInfo, of type size_t.  For simplicity, both
+hcolstarts and hcolstartsZ are populated.  New source files npqcheckZ.c
+and qpcheckZ.c provide functions mqpcheckZ, nqpcheckZ and qpcheckZ
+as alternatives to mqpcheck, nqpcheck, and qpcheck, respectively,
+taking size_t** rather than fint** arguments for colqp.
+  For jacval() to work with nZc >= 2^31, everything should be compiled
+with -DASL_big_goff.  It is simplest to add "#define ASL_big_goff" to
+arith.h (after "make arith.h").  This increases memory requirements.
+  Add "ifdef NO_SSIZE_T" lines to arithchk.c to define ssize_t when
+not provided by the system.
+
+20130801
+  asl.h, qp_read.c:  new rflags bit for internal use: ASL_opified, used
+in qp_read.c so calls on qp_opify() after the first are quietly ignored.
+  misc.c:  fix a bug that caused ASL_use_Z to be ignored.
+  obj_adj.c:  adjust for ASL_use_Z; avoid looking at A_vals if there
+are no obj_replace candidates.
+
+20130822
+  pfg_read.c, pfghread.c:  fix a possible glitch (error message
+"bad e->a = ...") with Hessian computations when if-then-else,
+min(...), and max(...) are involved.
+
+20130916
+  obj_adj.c:  fix a fault with ASL_use_Z when ASL_obj_replace_eq or
+ASL_obj_replace_ineq was specified (in the flags argument to the .nl
+reader) and there was a linear objective involving just one variable.
+
+20130919
+  asl.h: adjust calling sequences of internally-used routines
+con_name_nomap_ASL and var_name_nomap_ASL.
+  names.c, writesol.c: adjust names printed by write_sol() when
+wantsol & 4 is nonzero and some problem adjustments were done.
+  obj_adj.c:  adjust to give correct results with outside manipulations,
+such as those in netlib/ampl/solvers/cplex/cplex.c for problems with
+quadratic objectives and constraints.
+  qp_read.c:  adjust a loop limit affected by manipulations for
+ASL_obj_replace_ineq and ASL_obj_replace_eq.
+
+20130920
+  getstub.c, getstub.h:  new bits ASL_OI_tabexpand and ASL_OI_addnewline
+in the option_echo field of Option_Info affect command-line option -=
+in getstub().  The ASL_OI_tabexpand bit causes tab expansion and
+causes each line after the first line of each keyword description to
+be indented at least as far as the description portion of the first
+line.  The ASL_OI_addnewline adds an extra newline after each
+keyword description.
+
+20131018
+  funcadd1.c:  if an imported-function library name has "_32" or "_64"
+before the final "." and fails to load (perhaps after changing "32" to
+"64" or vice versa, as appropriate), try omitting the "_32" or "_64".
+  getstub.c:  fix a glitch in the test on the ASL_OI_want_funcadd
+bit of Option_Info.flags (used && instead of &).
+
+20131029
+  suf_sos.c:  fix a bug (fault) with ASL_allow_Z and ASL_use_Z.
+
+20131122
+  nqpcheck.c obj_adj.c obj_adj.h: tweak so qp_opify() need not be
+included in binaries that will never call it.
+  dtoa.c, dtoa1.c: obscure bug fix, probably irrelevant to ASL.
+
+20131124
+  nqpcheckZ.c:  add comment to force recompilation due to changed
+nqpcheck.c.
+
+20131209
+  dtoa.c, dtoa1.c: minor performance improvement; see netlib/fp/changes.
