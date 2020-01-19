@@ -296,7 +296,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 	psb_elem *b, *be;
 	linarg *la, **lap, **lape;
 	ograd *og;
-	int i, xksave;
+	int i, nx, xksave;
 	fint ne0;
 	Jmp_buf err_jmp0;
 	ASL_pfgh *asl;
@@ -322,6 +322,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
+	nx = asl->i.nxval;
 	Adjoints = adjoints;
 	gr0 = Cgrad;
 	gre = gr0 + n_conjac[1];
@@ -330,6 +331,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 		cscale += i;
 	vscale = asl->i.vscale;
 	for(p = asl->P.cps + i; gr0 < gre; gr0++) {
+		p->nxval = nx;
 		if (p->ng)
 			psgcomp(asl, p);
 		for(gr = *gr0; gr; gr = gr->next)
@@ -507,6 +509,7 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	Adjoints = adjoints;
+	p->nxval = asl->i.nxval;
 	if (p->ng)
 		psgcomp(asl, p);
 	gr0 = Ograd[i];
@@ -694,6 +697,7 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		}
 	Adjoints = adjoints;
 	p = asl->P.cps + i;
+	p->nxval = asl->i.nxval;
 	gr0 = Cgrad[i];
 	scale = asl->i.cscale ? asl->i.cscale[i] : 1.;
 	if (p->ng)

@@ -114,6 +114,7 @@ SputInfo {
 	int khinfo;	/* mblk size in sphes_setup */
 	int khinfob;
 	int uptri;	/* from sphsetup() */
+	int *uptolow;
 	} SputInfo;
 
  typedef union
@@ -233,7 +234,7 @@ Edagpars {
 	void (*Duthes) ANSI((ASL*, real *H, int nobj, real *ow, real *y));
 	void (*Fulhes) ANSI((ASL*, real *H,fint LH, int no, real *ow, real *y));
 	void (*Sphes)  ANSI((ASL*, SputInfo**, real *H, int nobj, real *ow, real *y));
-	fint (*Sphset) ANSI((ASL*, SputInfo**, int nobj, int ow, int y, int both));
+	fint (*Sphset) ANSI((ASL*, SputInfo**, int nobj, int ow, int y, int uptri));
 	} Edagpars;
 
  extern Edagpars edagpars_ASL;

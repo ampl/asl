@@ -2648,7 +2648,7 @@ PSfind_init(S, f, psf, wantg) Static *S; ps_func *f; PSfind *psf; int wantg;
 PSfind_init(Static *S, ps_func *f, PSfind *psf, int wantg)
 #endif
 {
-	f->nb = f->ng = 0;
+	f->nxval = f->nb = f->ng = 0;
 	psf->f = f;
 	psf->b = new_Elemtemp(S, sizeof(psb_elem), (void**)&f->b);
 	if (wantg)

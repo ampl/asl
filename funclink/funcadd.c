@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1998 Lucent Technologies
+Copyright (C) 1997, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -100,7 +100,7 @@ ncall(void)		/* returns its invocation count */
 { static real x; return ++x; }
 
  static real
-mean(register arglist *al)	/* mean of arbitrarily many arguments */
+mean(arglist *al)	/* mean of arbitrarily many arguments */
 {
 	real x, z;
 	real *d, *de, *ra;
@@ -145,7 +145,7 @@ mean(register arglist *al)	/* mean of arbitrarily many arguments */
  * a variant of stdio.h supplied by funcadd.h. */
 
  static Const char *
-kth(register arglist *al)	/* kth(k,a1,a2,...,an) return ak */
+kth(arglist *al)	/* kth(k,a1,a2,...,an) return ak */
 {
 	int j, k, n;
 	char *buf;
@@ -166,6 +166,16 @@ kth(register arglist *al)	/* kth(k,a1,a2,...,an) return ak */
 		return buf;
 		}
 	return al->sa[-(j+1)];
+	}
+
+ static char *
+get_env(arglist *al)	/* test/demonstrate ae->Getenv */
+{
+	AmplExports *ae = al->AE;
+
+	if (al->at[0])
+		return getenv(al->sa[0]);
+	return "";
 	}
 
 /* Illustration of at_exit() and at_reset() processing */
@@ -227,7 +237,7 @@ funcadd(AmplExports *ae){
  *	>=  0 ==> the function has exactly nargs arguments
  *	<= -1 ==> the function has >= -(nargs+1) arguments.
  *
- * Arg5, called funcinfo, is copied without change to the arglist
+ * Arg 5, called funcinfo, is copied without change to the arglist
  *	structure passed to the function; funcinfo is for the
  *	function to use or ignore as it sees fit.
  */
@@ -246,6 +256,8 @@ funcadd(AmplExports *ae){
 	addfunc("mean0", (rfunc)mean, 0, -1, 0);
 	addfunc("mean", (rfunc)mean, 1, -1, 0);
 	addfunc("kth", (rfunc)kth, 3, -2, 0);
+	if (ae->ASLdate >= 20000608)
+		addfunc("getenv", (rfunc)get_env, 3, 1, 0);
 	addfunc("ginvae", (rfunc)ginvae, 0, 1, 0); /* demo at_exit, at_reset */
 	/* at_end() and at_reset() calls could appear here, too. */
 	}

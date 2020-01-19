@@ -45,11 +45,11 @@ extern void fpinit_ASL(VOID);
 #endif
 #ifdef Want_bswap
 
- static void
+ void
 #ifdef KR_headers
-bswap(x, L) void *x; unsigned long L;
+bswap_ASL(x, L) void *x; unsigned long L;
 #else
-bswap(void *x, unsigned long L)
+bswap_ASL(void *x, unsigned long L)
 #endif
 {
 	char *s = (char*)x;
@@ -226,7 +226,7 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 			else if (k >= 3 && i != Arith_Kind_ASL && i) {
 #ifdef Want_bswap
 				if (i > 0 && i + Arith_Kind_ASL == 3) {
-					asl->i.iadjfcn = asl->i.dadjfcn = bswap;
+					asl->i.iadjfcn = asl->i.dadjfcn = bswap_ASL;
 					binary_nl = i << 1;
 					}
 				else

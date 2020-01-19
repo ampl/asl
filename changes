@@ -1352,3 +1352,28 @@ evaluation took place.  Also with .nl reader pfgh_read(), fix a bug
 with objgrd(np,x,g,ne) with non-null ne (and *ne >= 0) and np != 0
 (i.e., when treating an objective other than the first):  wrong
 results may have been computed.
+
+Sat Oct 18 22:06:09 EDT 2003
+  conpval.c, pfg_read.c, pfghread.c:  fix a bug in handling partially
+separable functions where an unset variable could cause unnecessary
+re-evaluations (or under just the right conditions, missed evaluations)
+of parts of the derivatives.
+
+Fri Dec  5 07:28:06 MST 2003
+  Tweaks to asl.h and sphes.c so when uptri (final arg to sphsetup) is 2,
+sphes computes the sparse lower triangle of the Hessian (stored column-wise).
+
+Thu Jan 22 00:58:11 MST 2004
+  jac0dim.c:  make bswap visible as bswap_ASL (for use in a forthcoming addition
+to solvers/examples).
+  writesol.c: similary make new write_solx_ASL visible (able to byte-swap while
+writing).
+  comptry.bat:  adjust to permit lots of stuff in CFLAGS (thanks to Erling
+Andersen for this suggestion).
+
+Sun Feb  8 23:07:16 MST 2004
+  sphes.c:  fix a botch in sphes_setup's handling of problems with
+multiple objectives and arguments (nobj and y) indicating that just
+one of the objectives is to be used or that constraints are to be
+ignored in the Hessian:  the sparsity pattern was overestimated
+(encompassing the undesired objectives and constraints).

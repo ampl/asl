@@ -673,6 +673,81 @@ bothadj(ASL_pfgh *asl, SputInfo *spi)
 	return nod;
 	}
 
+ static void
+#ifdef KR_headers
+upper_to_lower(asl, spi, nz) ASL_pfgh *asl; SputInfo *spi; fint nz;
+#else
+upper_to_lower(ASL_pfgh *asl, SputInfo *spi, fint nz)
+#endif
+{	/* convert upper to lower triangular */
+
+	fint hr1, hr2;
+	fint *cs, *hcolstarts, *hrownos, *rn;
+	int f, i, j, j1, j2, k, n;
+	int *rs, *u0, *utoL, *z;
+
+	f = Fortran;
+	n = n_var;
+	hrownos = spi->hrownos;
+	hcolstarts = spi->hcolstarts;
+	k = htcl((nz + n + 1)*sizeof(fint));
+	rn = spi->hrownos = spi->ulinc0 = (fint*)new_mblk(k);
+	spi->khinfob = k;
+	spi->hcolstarts = cs = rn + nz;
+	k = htcl((n+nz)*sizeof(int));
+	rs = (int*)new_mblk(k);
+	z = rs + n;
+	memset(rs, 0, n*sizeof(fint));
+	for(i = 0; i < nz; i++)
+		rs[hrownos[i]-f]++;
+	for(i = j = 0; i < n; i++) {
+		cs[i] = j + f;
+		j1 = rs[i];
+		rs[i] = j;
+		j += j1;
+		}
+	cs[n] = nz + f;
+	j1 = hcolstarts[1] - f;
+	for(i = j = 0; i < nz; i++) {
+		while(i >= j1)
+			j1 = hcolstarts[++j + 1] - f;
+		rn[z[i] = rs[hrownos[i]-f]++] = j + f;
+		}
+	for(i = j = 0; i < nz; i++) {
+		if ((j1 = z[i]) <= i) {
+			if (j1 < 0)
+				z[i] = -(j1 + 1);
+			continue;
+			}
+		j += 3;
+		while((j2 = z[j1]) != i) {
+			z[j1] = -(j2 + 1);
+			j++;
+			j1 = j2;
+			}
+		}
+	if (j) {
+		j += 2;
+		j1 = htcl(j*sizeof(int));
+		spi->uptolow = utoL = (int*)new_mblk(j1);
+		*utoL++ = j1;
+		for(i = 0; i < nz; i++) {
+			if ((j = z[i]) <= i)
+				continue;
+			u0 = utoL++;
+			*utoL++ = i;
+			*utoL++ = j;
+			while((j2 = z[j]) != i) {
+				z[j] = -(j2 + 1);
+				j = *utoL++ = j2;
+				}
+			*u0 = (utoL - u0) - 1;
+			}
+		*utoL = 0;
+		}
+	Del_mblk_ASL((ASL*)asl, k, rs);
+	}
+
  fint
 #ifdef KR_headers
 sphes_setup_ASL(a, pspi, nobj, ow, y, uptri) ASL *a; SputInfo **pspi;
@@ -682,6 +757,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 #endif
 {
 	int i, j, k, khinfo, kog, kz, n, n1, nhinfo, no, noe, nqslim, nzc;
+	int rfilter, robjno;
 	int *ui, *zc, *zci;
 	linarg *la, **lap, **lap1, **lape;
 	expr_v *v;
@@ -693,6 +769,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	fint *hcolstarts, *hr, *hre, *hrownos, rv, *tf;
 	derp *D1;
 	de *d;
+	psb_elem *b;
 	psg_elem *g, *ge;
 	ps_func *p, *pe;
 	ASL_pfgh *asl;
@@ -704,12 +781,15 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	if (!pspi)
 		pspi = &asl->i.sputinfo_;
 	if (nobj >= 0 && nobj < n_obj) {
+		robjno = -2 - nobj;
+		rfilter = n_obj > 1 || !y && n_con > 0;
 		ow = 0;
 		no = nobj;
 		noe = no + 1;
 		}
 	else {
-		nobj = -1;
+		robjno = nobj = -1;
+		rfilter = !ow && n_obj > 0 || !y && n_con > 0;
 		no = noe = 0;
 		if (ow) {
 			noe = n_obj;
@@ -726,6 +806,8 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		del_mblk(spi->khinfo, spi);
 		if (spi->ulinc0)
 			del_mblk(spi->khinfob, spi->ulinc0);
+		if (ui = spi->uptolow)
+			del_mblk(*ui, ui);
 		*pspi = 0;
 		}
 	if (!asl->P.hes_setup_called)
@@ -753,6 +835,18 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	for(r = asl->P.rlist.next; r != r0; r = r->rlist.next) {
 		if ((j = r->n) <= 0)
 			continue;
+		if (rfilter) {
+			for(b = r->refs; b; b = b->next) {
+				if (b->conno >= 0) {
+					if (y)
+						goto keep;
+					}
+				else if (b->conno == robjno)
+					goto keep;
+				}
+			continue;
+			}
+ keep:
 		i = r->lasttermno;
 		rp = rtodo + i;
 		r->hnext = *rp;
@@ -948,13 +1042,19 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	if (ogsave)
 		restog(asl, ogsave, no, noe, y, kog);
 	spi->ulinc0 = spi->ulinc = spi->ulcopy = 0;
+	spi->uptolow = 0;
 	del_mblk(kz, zc);
  done:
 	spi->hrownos = spi->hrn[0];
 	spi->hcolstarts = hcolstarts = spi->hcs[0];
 	rv = hcolstarts[n] - hcolstarts[0];
-	if (!uptri)
+	switch(uptri) {
+	  case 0:
 		rv += bothadj(asl, spi);
+		break;
+	  case 2:
+		upper_to_lower(asl, spi, rv);
+	  }
 	return rv;
 	}
 
@@ -1193,7 +1293,18 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 				}
 		}
 	del_mblk(kh, Hi);
+	H = H00;
 	if (hr = spi->ulcopy)
 		for(uli = spi->ulcend; hr < uli; hr += 2)
-			H00[hr[1]] = H00[hr[0]];
+			H[hr[1]] = H[hr[0]];
+	else if (ui = spi->uptolow)
+		while(k = *++ui) {
+			t = H[j = *++ui];
+			while(--k) {
+				t1 = H[i = *++ui];
+				H[i] = t;
+				t = t1;
+				}
+			H[j] = t;
+			}
 	}
