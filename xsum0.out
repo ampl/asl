@@ -8,7 +8,7 @@ arithchk.c	e29dc721	4260
 asl.h	f69ed41c	32541
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	1fe71934	29
+asldate.c	19d4d6c7	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 b_search.c	18aac04a	3312
@@ -43,7 +43,7 @@ fpsetprec.s	1d0b2972	535
 fullhes.c	96ff405	3938
 func_add.c	fd327e39	9923
 funcadd.c	18a9a80f	3475
-funcadd.h	ee3e8735	14054
+funcadd.h	e18edba1	14054
 funcadd0.c	ee0ae780	1392
 funcadd1.c	9b0d49a	6919
 funcaddk.c	1913fb94	3359
@@ -66,7 +66,7 @@ makefile.u	ff692dd1	9201
 makefile.vc	eaf3cd8	5806
 makefile.wat	e5f90275	5285
 mip_pri.c	19e54f76	7877
-misc.c	e56b4ff9	19565
+misc.c	ffb5f768	19900
 mypow.c	1571ef65	2294
 names.c	47b40cd	3435
 nl_obj.c	faef2e84	2054

@@ -102,7 +102,7 @@ typedef real (ufunc) ANSI((arglist *));
 	AMPLFUNC_STROUT = 8	/* String output value allowed */
 	};
 
- enum FUNCADD_TYPE {			/* bits in "type" arg to funcadd */
+ enum FUNCADD_TYPE {			/* bits in "type" arg to addfunc */
 
 		/* The type arg to funcadd should consist of one of the */
 		/* following values ... */

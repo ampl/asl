@@ -980,3 +980,8 @@ underflows to zero.
 
 Wed Feb  7 13:15:13 EST 2001
   dtoa.c, dtoa1.c, atof.c: obscure bug fixes (see /netlib/fp/changes).
+
+Thu Mar 22 14:07:07 EST 2001
+  funcadd.h: fix a typo in a comment (s/funcadd/addfunc/).
+  misc.c: tweak to permit reading ASCII .nl files massaged to have
+either Microsoft (\r\n) or Macintosh (\r) end-of-line notation.
