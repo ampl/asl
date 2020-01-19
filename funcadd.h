@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -53,6 +53,7 @@ typedef struct arglist arglist;
 typedef struct function function;
 typedef struct TVA TVA;
 typedef struct AmplExports AmplExports;
+typedef struct AuxInfo AuxInfo;
 typedef struct TableInfo TableInfo;
 typedef struct TMInfo TMInfo;
 
@@ -152,6 +153,14 @@ typedef void AddFunc ANSI((
  typedef void Exitfunc ANSI((void*));
 
  struct
+AuxInfo {
+	AuxInfo *next;
+	char *auxname;
+	void *v;
+	void (*f)(AmplExports*, void*, ...);
+	};
+
+ struct
 AmplExports {
 	FILE *StdErr;
 	AddFunc *Addfunc;
@@ -212,6 +221,8 @@ AmplExports {
 	FILE*	(*Tmpfile)	ANSI((void));
 	char*	(*Tmpnam)	ANSI((char*));
 	int	(*Ungetc)	ANSI((int, FILE*));
+	AuxInfo *AI;
+	char*	(*Getenv)	ANSI((const char*));
 	};
 
 extern char *i_option_ASL, *ix_details_ASL[];
@@ -278,6 +289,7 @@ enum {	/* bits in flags field of TableInfo */
 #undef Stderr
 #undef addfunc
 #undef fprintf
+#undef getenv
 #undef printf
 #undef sprintf
 #undef strtod
@@ -296,6 +308,7 @@ enum {	/* bits in flags field of TableInfo */
 #define at_reset(x,y) (*ae->AtReset)(ae,x,y)
 #define add_table_handler(a,b,c,d,e) (*ae->Add_table_handler)(a,b,c,d,e)
 #define qsortv(a,b,c,d,e) (*ae->Qsortv)(a,b,c,d,e)
+#define getenv(x) (*ae->Getenv)(x)
 #ifdef Stdio_redefs
 #undef clearerr
 #undef fclose

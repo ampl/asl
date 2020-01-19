@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -33,6 +33,10 @@ getenv_ASL(s) char *s;
 
 #else
 #include "stdlib.h"
+
+#ifdef __cplusplus
+extern "C" char *getenv_ASL(const char *);
+#endif
 
  char *
 getenv_ASL(const char *s)

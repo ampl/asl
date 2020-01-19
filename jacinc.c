@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -65,7 +65,7 @@ jacinc_(fint *M, fint *N, fint *NZ, register fint *JP,
 		JP[c_vars] = nzjac + 1;
 		}
 	LUcopy_ASL(c_vars, L, U, LUv);
-	memcpy(X, X0, x0len);
+	memcpy(X, X0, asl->i.n_var0 * sizeof(real));
 	}
 
  void	/* arrange for dense Jacobian computation */

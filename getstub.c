@@ -126,8 +126,13 @@ usage_ASL(Option_Info *oi, int rc)
 	char **o, *s, *s1;
 	keyword *kw, *kwe;
 	int i, L, L1, L2;
-	FILE *f = rc ? Stderr : stdout;
+	FILE *f = stdout;
 
+	if (rc) {
+		if (!Stderr)
+			Stderr_init_ASL();
+		f = Stderr;
+		}
 	kw = kwe = 0;
 	o = 0;
 	s = 0;
@@ -290,7 +295,7 @@ Ver_val_ASL(Option_Info *oi, keyword *kw, char *v)
 	while(L > 0 && s[L-1] == '\n')
 		--L;
 	printf("%.*s%s, ASL(%ld)\n", L, s, oi->nnl ? "\n" : "", ASLdate_ASL);
-	if (oi->option_echo & 4)	/* -v */
+	if (oi->option_echo & ASL_OI_clopt)	/* -v */
 		exit(0);
 	oi->option_echo &= ~ASL_OI_echothis;
 	return v;
@@ -368,7 +373,7 @@ getstub_ASL(ASL *asl, char ***pargv, Option_Info *oi)
 #endif
 				case 'e':
 					if (oi)
-						oi->option_echo &= ~1;
+						oi->option_echo &= ~ASL_OI_echo;
 					continue;
 				case 's':
 					if (oi)
@@ -509,3 +514,4 @@ badval_ASL(Option_Info *oi, keyword *kw, char *value, char *badc)
 	badopt_ASL(oi);
 	return s;
 	}
+/* 20000703: basename --> basename_ASL in asl.h */

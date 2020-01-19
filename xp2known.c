@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -23,6 +23,10 @@ THIS SOFTWARE.
 ****************************************************************/
 
 #include "jacpdim.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern void funpset_ASL ANSI((ASL_pfgh*, funnel*));
 #undef funnelset
@@ -284,3 +288,7 @@ hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
 		}
 	asl->P.ihdcur = ihc;
 	}
+
+#ifdef __cplusplus
+}
+#endif

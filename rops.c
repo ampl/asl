@@ -1074,9 +1074,9 @@ f_OPprecision(expr *e A_ASL)
 
  static real
 #ifdef KR_headers
-round(x, prec) real x; int prec;
+Round(x, prec) real x; int prec;
 #else
-round(real x, int prec)
+Round(real x, int prec)
 #endif
 {
 	real scale;
@@ -1105,9 +1105,9 @@ round(real x, int prec)
 
  static real
 #ifdef KR_headers
-round(x, prec) real x; int prec;
+Round(x, prec) real x; int prec;
 #else
-round(real x, int prec)
+Round(real x, int prec)
 #endif
 {
 	char *b, *s, *s0, *se;
@@ -1158,7 +1158,7 @@ f_OPround(expr *e A_ASL)
 	L = (*e1->op)(e1 K_ASL);
 	e1 = e->R.e;
 	R = (*e1->op)(e1 K_ASL);
-	return round(L, (int)R);
+	return Round(L, (int)R);
 	}
 
  static real
@@ -1177,10 +1177,10 @@ f_OPtrunc(expr *e A_ASL)
 	e1 = e->R.e;
 	if (!(R = (*e1->op)(e1 K_ASL)))
 		return L >= 0. ? floor(L) : ceil(L);
-	R = round(L, prec = (int)R);
+	R = Round(L, prec = (int)R);
 	if (R != L) {
 		R = 0.5*mypow(10., (real)-prec);
-		R = round(L > 0 ? L - R : L + R, prec);
+		R = Round(L > 0 ? L - R : L + R, prec);
 		}
 	return R;
 	}

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1998 Lucent Technologies
+Copyright (C) 1997, 1998, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -25,6 +25,18 @@ THIS SOFTWARE.
 /* Try to deduce arith.h from arithmetic properties. */
 
 #include <stdio.h>
+
+#ifdef NO_FPINIT
+#define fpinit_ASL()
+#else
+#ifndef KR_headers
+extern
+#ifdef __cplusplus
+	"C"
+#endif
+	void fpinit_ASL(void);
+#endif /*KR_headers*/
+#endif /*NO_FPINIT*/
 
  static int dalign;
  typedef struct
@@ -142,6 +154,7 @@ main()
 	int Ldef = 0;
 	FILE *f;
 
+	fpinit_ASL();
 #ifdef WRITE_ARITH_H	/* for Symantec's buggy "make" */
 	f = fopen("arith.h", "w");
 	if (!f) {

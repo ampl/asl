@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-1999, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -31,6 +31,10 @@ THIS SOFTWARE.
 #endif
 
 #include "asl.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 real edagread_one = 1.;
 char *progname;
@@ -738,6 +742,8 @@ ASL_alloc(int k)
 	ASLhead *h;
 	int n;
 
+	if (!Stderr)
+		Stderr_init_ASL();	/* set Stderr if necessary */
 	Mach_ASL();
 	if (k < 1 || k > 5)
 		return 0;
@@ -841,7 +847,7 @@ Suf_read_ASL(EdRead *R, int readall)
 				goto new_D;
  skip:
 			/* Skip this suffix table */
-			fmt = isreal ? "%d %lf" : "%d %d";
+			fmt = (char*)(isreal ? "%d %lf" : "%d %d");
 			do if (xscanf(R,fmt,&k,&t) != 2)
 					badline(R);
 				while(--n);
@@ -892,7 +898,7 @@ Suf_read_ASL(EdRead *R, int readall)
 				if (xscanf(R,"%d %lf",&i,&t) != 2
 				 || i < 0 || i >= nx)
 					badline(R);
-				d[i] = t + 0.5;
+				d[i] = (int)(t + 0.5);
 				} while(--n);
 		else
 			do {
@@ -1017,3 +1023,7 @@ suf_rput_ASL(ASL *asl, const char *name, int kind, real *R)
 	d->kind |= ASL_Sufkind_output | ASL_Sufkind_real;
 	return d;
 	}
+
+#ifdef __cplusplus
+}
+#endif

@@ -649,7 +649,7 @@ that arose in a complicated use of defined variables.
 variable.
 
 Wed Feb 16 19:13:18 EST 2000
-  npqcheck.c: adjust to cope with <<0;0,0>>x*x with AMPL
+  nqpcheck.c: adjust to cope with <<0;0,0>>x*x with AMPL
 versions < 20000216, which gave 0*x*x rather than 0.
 
 Thu Feb 17 18:21:17 EST 2000
@@ -674,3 +674,169 @@ tempnam function.
 Mon Mar  6 12:35:27 EST 2000
   pfg_read.c, pfghread.c: minor "invisible" tweak to recycle a bit more
 memory.
+
+Wed Mar  8 13:49:57 EST 2000
+  Fix minor printf glitch:
+	printf "%.0f\n", .1;
+printed "0." rather than "0" -- under "%.0f", numbers less than 1
+in absolute value that do not round to 1 or -1 should print as "0"
+with no trailing decimal point.
+
+Wed Mar 15 12:42:05 EST 2000
+  pfg_read.c, pfghread.c: fix another botch with linear (affine)
+defined variables: scaling was lost in linear references.  For
+example, in
+	var x; var y = 3*x; s.t. zot: sin(x) - 4*y == 1;
+the factor (-4) in zot was lost.
+  asl.h, con1ival.c, con2ival.c, con2val.c, conpval.c, conval.c,
+obj2val.c, objval.c: tweaks to avoid redundant work with some
+combinations of calls.
+  fg_write.c, readsol.c: "invisible" cleanups.
+
+Fri Mar 17 22:46:32 EST 2000
+  arithchk.c, makefile.*: On Unix/Linux systems, account for the
+effects of fpinit_ASL when deriving arith.h.  On SGI systems using
+the n32 or 64 ABI, this causes Sudden_Underflow not to be #defined.
+
+Sat Mar 18 23:22:24 EST 2000
+  func_add.c: fix bug introduced 19990804 in handling imported
+functions when two or more .nl readers are called.  (This affects
+loqo, which may call both qp_read and pfgh_read.)
+
+Mon Mar 20 16:55:45 EST 2000
+  Minor tweaks for compilation with -DKR_headers (files asl.h,
+fg_read.c, fg_write.c, func_add.c, funcadd1.c).
+
+Mon Mar 27 01:33:59 EST 2000
+  pfg_read.c, pfghread.c: fix bugs in handling defined variables in
+certain complicated situations (e.g., on Vanderbei's hs090.mod).  One
+bug arose under AMPL's "option linelim 1".
+
+Tue Mar 28 11:20:09 EST 2000
+  pfg_read.c, pfghread.c: fix glitch with nonlinear "if" expressions
+with constant "then" or "else" expressions and with "min" or "max"
+expressions having a constant operand: a fault was possible during
+expression evaluations (after reading).
+
+Tue Apr  4 11:52:52 EDT 2000
+  pfg_read.c, pfghread.c: fix yet another bug with defined variables:
+if a nonlinear defined variable appeared linearly in an objective and
+could be split into several terms, each depending on a different set
+of variables, and if linear combinations of variables appeared
+nonlinearly, incorrect derivative computations could result.
+
+Thu Apr 27 19:17:20 EDT 2000
+  New field AI of type AuxInfo* in AmplExports.  It can be assigned
+by auxinfo_ASL() to provide general kinds of auxiliary information.
+The (new) default auxinfo_ASL in amplsolver.a (amplsolv.lib) simply
+assigns AI = 0, but solvers can provide their own auxinfo_ASL to
+provide more interesting values.
+  opcode.hd moved from directory ampl/solvers/nlc to ampl/solvers
+for more convenient use by other solver drivers.
+
+Wed May  3 07:53:14 EDT 2000
+  New subdirectory lbfgsb with an interface to L-BFGS-B, which
+minimizes or maximizes a differentiable objective subject only to
+simple-bound constraints.  See Algorithm 778, ACM Trans. Math.
+Software 23 #4 (1997), by Ciyou Zhu, Richard Byrd, Peihuang Lu,
+and Jorge Nocedal.
+
+Fri Jun  2 08:57:49 EDT 2000
+  fpinit.c: new section for Solaris on i386 machines.
+  New fpsetprec.s for use with fpinit.c on Solaris i386 systems.
+  getstub.c: "invisible" tweak for readability.
+  pfg_read.c pfghread.c: fix some bugs with defined variables:
+definitions of the form
+	var x = if something then 1 else 2;
+where both the "then" and "else" clauses were constant almost
+everywhere were mishandled, and
+definitions that could be split apart (while identifying
+partially separable structure) were sometimes mishandled.
+Here is an example that caused a fault in pfgh_read():
+	var a := 0; var b := 2; var c := 3;
+	var x = if 2 <= a then 2 else b + c;
+	var y = if 2 <= a then 0 else -2;
+	var z = 2*x + y^2;
+	minimize zot: z;
+
+Thu Jun  8 19:13:13 EDT 2000
+  func_add.c, funcadd.h: new ae->Getenv and #define for
+	char* getenv(const char*)
+mainly for use in AMPL sessions to let imported functions and table
+handlers access the current environment (as modified by option,
+environ, and problem commands).  Only use getenv in imported
+functions (in the form (*al->Getenv)) if ae->ASLdate >= 20000608.
+  func_add.c: fix glitch that could result in "_fileno" reported as
+missing on some systems.
+
+Mon Jul  3 11:44:29 EDT 2000
+  Tweak to fpsetprec.s for use with fpinit.c on Solaris i386 systems.
+(Adjust stack to allow interrupts to intervene in fpsetprec().)
+  asl.h, basename.c, getstub.c: change "basename" to "basename_ASL",
+to avoid (rare) trouble on hostile systems.
+  rops.c, rops2.c: "invisible" tweak (change "round" to "Round") to
+avoid trouble on other hostile systems.
+
+Fri Jul  7 08:40:36 EDT 2000
+  funcadd1.c: when loading a library to import functions, arrange for
+subsequent unloading of the library to happen after any at_exit() or
+at_reset() processing requested directly or indirectly by addfunc().
+(This matters to an experimental facility for importing Java functions.)
+  der0prop.c withdrawn (unused).
+  Various files: adjustments to permit compilation by C++ compilers.
+
+Thu Jul 20 11:03:28 EDT 2000
+  basename.c: omit an 0x01 visible under -DKR_headers, introduced
+on 20000707.
+  pfg_read.c, pfghread.c: fix bug in handling nonlinear defined
+variables that appeared linearly in an objective or constraint and
+involved the sum of two or more terms involving different sets of
+variables (so they could be split into a sum of defined variables
+to make Hessian computations more efficient).  If introducing a
+linear change of variables also helped and was discovered at the
+"right" time, incorrect derivative computations resulted.  Example:
+	var x{i in 0..2} := .1;
+	var v3 = 1 / x[0];
+	var v4 = x[1] + 5*x[2];
+	var v5 = v3 - x[1]*v4;
+	minimize foo: v5 + x[2]*v4;
+Correcting this bug involved changing one line from
+	ce->z.i = ka;
+to
+	ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k-Ncom])->a0;
+but today's changes also include an "invisible" adjustment to the
+a1 field of struct expr_vx.
+
+Thu Jul 27 21:41:42 EDT 2000
+  Extend comments in makefile.u about Solaris on the i386 architecture.
+
+Thu Aug  3 13:44:35 EDT 2000
+  funcadd1.c: mostly invisible addition of "#undef mymalloc".
+  jac0dim.c, misc.c: move Stderr_init call to ASL_alloc() (a change
+invisible on most systems, but relevant to some solvers, such as cplex,
+on some Linux systems, if the solver issues an error message too soon).
+  getstub.c: usage_ASL(): call Stderr_init if necessary.
+
+Tue Aug 22 23:36:17 EDT 2000
+  New genrowno.c defining gen_rownows_ASL (#defined as usual to
+apparent prototype void gen_rownos(void)):  solvers that handle sparse
+nonlinear constraints and wish to have Jacobian nonzeros stored
+sparsely by columns in A_rownos may simply call gen_rownos() after
+calling the .nl reader (with A_vals left at its default value = NULL).
+
+Mon Aug 28 14:32:32 EDT 2000
+  pfg_read.c, pfghread.c: fix bug on systems with 64-bit addresses
+that caused, e.g., miscomputation of gradients with problem "hs105"
+(/netlib/ampl/models/nlmodels/hs105.mod).
+
+Wed Aug 30 01:11:01 EDT 2000
+  pfg_read.c, pfghread.c: fix a bug with pfgh_read(nl, flags) when
+one or both of the ASL_find_co_class bits of flags is on: wrong
+c_class or o_class values (or a fault due to an out-of-bounds
+subscript) could result if the bug bit.
+  All readers: fix bug (out-of-bounds array reference) in some
+cases when asl->i.nlvog has been assigned a positive value.
+(Of the sample drivers in /netlib/ampl/solvers subdirectories,
+only minos/m55.c and snopt/snopt.c do this.)
+  jac0dim.c jacinc.c: adjust x0len to only consider nonlinear
+variables when deciding whether nonlinear information must be updated.

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -128,12 +128,12 @@ obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
 		memset(asl->i.noxval, 0, L);
 		}
 	co_index = -(i + 1);
-	if (!(x0kind & ASL_have_objval)) {
+	if (!(x0kind & ASL_have_objcom)) {
 		if (ncom0 > combc)
 			comeval_ASL(asl, combc, ncom0);
 		if (comc1 < ncom1)
 			com1eval_ASL(asl, comc1, ncom1);
-		x0kind |= ASL_have_objval;
+		x0kind |= ASL_have_objcom;
 		}
 	d = obj_de + i;
 	gr0 = Ograd + i;
@@ -162,7 +162,7 @@ obj1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	ograd *gr, **gr0;
 	real *Adjoints, *vscale;
 	Jmp_buf err_jmp0;
-	int L, ij, *z;
+	int L, ij, xksave, *z;
 	fint ne0;
 	ASL_fg *asl;
 	static char who[] = "obj1grd";
@@ -182,8 +182,10 @@ obj1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	if (!asl->i.x_known)
 		x0_check_ASL(asl,X);
 	if (!asl->i.noxval || asl->i.noxval[i] != asl->i.nxval) {
-		want_deriv = 1;
+		xksave = asl->i.x_known;
+		asl->i.x_known = 1;
 		obj1val_ASL(a, i, X, nerror);
+		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
 			return;
 		}

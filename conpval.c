@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -285,7 +285,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 	psb_elem *b, *be;
 	linarg *la, **lap, **lape;
 	ograd *og;
-	int i;
+	int i, xksave;
 	fint ne0;
 	Jmp_buf err_jmp0;
 	ASL_pfgh *asl;
@@ -305,8 +305,9 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known && xp_check_ASL(asl,X)
 	 || !(x0kind & ASL_have_conval)) {
-		want_deriv = 1;
+		xksave = asl->i.x_known;
 		conpval_ASL(a,X,0,nerror);
+		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
@@ -427,7 +428,6 @@ objpval_ASL(ASL *a, int i, real *X, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		xp_check_ASL(asl,X);
-	x0kind |= ASL_have_objval;
 	if (!asl->i.noxval) {
 		asl->i.noxval = (int*)M1alloc(L = n_obj*sizeof(int));
 		memset(asl->i.noxval, 0, L);
@@ -468,7 +468,7 @@ objpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 	ograd *gr, *gr0;
 	real *Adjoints;
 	Jmp_buf err_jmp0;
-	int *z;
+	int xksave, *z;
 	ps_func *p;
 	linarg *la;
 	real t, *vscale;
@@ -492,8 +492,10 @@ objpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 	if (!asl->i.x_known)
 		xp_check_ASL(asl,X);
 	if (!asl->i.noxval || asl->i.noxval[i] != asl->i.nxval) {
-		want_deriv = 1;
+		xksave = asl->i.x_known;
+		asl->i.x_known = 1;
 		objpval_ASL(a, i, X, nerror);
+		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
@@ -619,7 +621,7 @@ conpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 	psb_elem *b, *be;
 	linarg *la, **lap, **lape;
 	ograd *og;
-	int i0;
+	int i0, xksave;
 	fint ne0;
 	real t, *vscale;
 	Jmp_buf err_jmp0;
@@ -641,9 +643,13 @@ conpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		xp_check_ASL(asl, X);
-	if (!asl->i.ncxval || asl->i.ncxval[i] != asl->i.nxval) {
-		want_deriv = 1;
+	if ((!asl->i.ncxval || asl->i.ncxval[i] != asl->i.nxval)
+	 && (!(x0kind & ASL_have_conval)
+	     || i < n_conjac[0] || i >= n_conjac[1])) {
+		xksave = asl->i.x_known;
+		asl->i.x_known = 1;
 		conpival(a,i,X,nerror);
+		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
 			return;
 		}

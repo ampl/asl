@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -50,12 +50,15 @@ con1val_ASL(ASL *a, register real *X, real *F, fint *nerror)
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
-	if (asl->i.x_known != 2)
+	if (!asl->i.x_known)
 		x0_check_ASL(asl,X);
-	if (comb < combc)
-		comeval_ASL(asl, comb, combc);
-	if (comc1)
-		com1eval_ASL(asl, 0,comc1);
+	if (!(x0kind & ASL_have_concom)) {
+		if (comb < combc)
+			comeval_ASL(asl, comb, combc);
+		if (comc1)
+			com1eval_ASL(asl, 0,comc1);
+		x0kind |= ASL_have_concom;
+		}
 	x0kind |= ASL_have_conval;
 	d = con_de;
 	dend = d + n_conjac[1];
@@ -94,7 +97,7 @@ jac1val_ASL(ASL *a, real *X, real *G, fint *nerror)
 	real *Adjoints, *cscale, t, *vscale;
 	Jmp_buf err_jmp0;
 	fint ne0;
-	int L;
+	int L, xksave;
 	ASL_fg *asl;
 	static char who[] = "jac1val";
 
@@ -112,8 +115,10 @@ jac1val_ASL(ASL *a, real *X, real *G, fint *nerror)
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known && x0_check_ASL(asl,X)
 	 || !(x0kind & ASL_have_conval)) {
-		want_deriv = 1;
+		xksave = asl->i.x_known;
+		asl->i.x_known = 1;
 		con1val_ASL(a, X, 0, nerror);
+		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
 			return;
 		}

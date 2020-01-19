@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -32,6 +32,12 @@ THIS SOFTWARE.
 #define fg_read_ASL f_read_ASL
 #else
 #define who "fg_read"
+#ifdef __cplusplus
+extern "C" {
+ static real Missing_func(arglist*);
+ static int compar(const void*, const void*, void*);
+	}
+#endif /* __cplusplus */
 #endif /* Just_Linear */
 
 #undef nzc
@@ -1323,7 +1329,8 @@ zerograd_chk(Static *S)
 			while(n < og->varno)
 				*z++ = n++;
 			og = og->next;
-			n++;
+			if (++n >= nv)
+				break;
 			}
 		while(n < nv)
 			*z++ = n++;
@@ -1524,7 +1531,11 @@ nlvzap(Static *S, int i, int j)
 	}
 
  static real
+#ifdef KR_headers
+Missing_func(al) arglist *al;
+#else
 Missing_func(arglist *al)
+#endif
 {
 	AmplExports *ae = al->AE;
 	func_info *fi = (func_info*)al->funcinfo;

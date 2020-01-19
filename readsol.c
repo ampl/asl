@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999,2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -96,7 +96,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 	int binary, flag1, i, j, je, n, need_vbtol;
 	FILE *f;
 	char buf[512], *s, *se;
-	real t, vbtol, *y;
+	real vbtol, *y;
 	ftnlen L, L1, L2;
 	fint Objno[2], nOpts, *z;
 	msginfo mi;

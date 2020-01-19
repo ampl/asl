@@ -450,6 +450,12 @@ pshv_prod1(ASL_pfgh *asl, range *r, int nobj, int ow, int y)
 		}
 	}
 
+#ifdef __cplusplus
+extern "C" {
+static int compar(const void*, const void*);
+}
+#endif
+
  static int
 #ifdef KR_headers
 compar(a, b) char *a, *b;

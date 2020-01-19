@@ -1,5 +1,6 @@
 asldate.obj
 atof.obj
+auxinfo.obj
 b_search.obj
 basename.obj
 bscanf.obj
@@ -12,7 +13,6 @@ conadj.obj
 conpval.obj
 conscale.obj
 conval.obj
-der0prop.obj
 derprop.obj
 dtoa1.obj
 duthes.obj
@@ -27,6 +27,7 @@ fullhes.obj
 func_add.obj
 funcadd1.obj
 g_fmt.obj
+genrowno.obj
 getenv.obj
 getstub.obj
 htcl.obj

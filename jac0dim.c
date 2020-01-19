@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -120,15 +120,13 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 #endif
 {
 	FILE *nl;
-	int i, k;
+	int i, k, nlv;
 	char *s, *se;
 	EdRead ER, *R;
 
 	if (!asl)
 		badasl_ASL(asl,0,"jac0dim");
 	fpinit_ASL();	/* get IEEE arithmetic, if possible */
-	if (!Stderr)
-		Stderr_init_ASL();	/* set Stderr if necessary */
 
 	if (stub_len <= 0)
 		for(i = 0; stub[i]; i++);
@@ -261,7 +259,11 @@ jac0dim_ASL(ASL *asl, char *stub, ftnlen stub_len)
 		}
 	asl->i.n_var0 = n_var;
 	asl->i.n_con0 = n_con;
-	x0len = n_var * sizeof(real);
+	if ((nlv = nlvc) < nlvo)
+		nlv = nlvo;
+	if (nlv <= 0)
+		nlv = 1;
+	x0len = nlv * sizeof(real);
 	x0kind = ASL_first_x;
 	n_conjac[0] = 0;
 	n_conjac[1] = n_con;

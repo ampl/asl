@@ -591,7 +591,8 @@ x_sprintf
 					put(sign)
 				if (decpt <= 0) {
 					put('0')
-					put('.')
+					if (prec > 0 || alt)
+						put('.')
 					while(decpt < 0) {
 						put('0')
 						prec--;

@@ -47,6 +47,7 @@ all: arith.h stdio1.h amplsolv.lib funcadd0.obj
 a = \
 	asldate.obj \
 	atof.obj \
+	auxinfo.obj \
 	b_search.obj \
 	basename.obj \
 	bscanf.obj \
@@ -59,7 +60,6 @@ a = \
 	conpval.obj \
 	conscale.obj \
 	conval.obj \
-	der0prop.obj \
 	derprop.obj \
 	dtoa1.obj \
 	duthes.obj \
@@ -74,6 +74,7 @@ a = \
 	func_add.obj \
 	funcadd1.obj \
 	g_fmt.obj \
+	genrowno.obj \
 	getenv.obj \
 	getstub.obj \
 	htcl.obj \
@@ -126,11 +127,12 @@ amplsolv.lib: $a
 	wlib -c amplsolv.lib @amplsolv
 
 Aslh = arith.h asl.h funcadd.h stdio1.h
+auxinfo.obj: funcadd.h stdio1.h
 mach.obj: arith.h
-bscanf.obj conscale.obj der0prop.obj derprop.obj dynlink.obj func_add.obj\
+bscanf.obj conscale.obj derprop.obj dynlink.obj func_add.obj\
  funcadd.obj funcadd1.obj funcaddk.obj funcaddr.obj funcadd0.obj g_fmt.obj\
- jac0dim.obj jacdim.obj jacinc.obj names.obj obj_prec.obj objval_.obj\
- repwhere.obj sjac0dim.obj studchk0.obj suf_sos.obj: $(Aslh)
+ genrowno.obj jac0dim.obj jacdim.obj jacinc.obj names.obj obj_prec.obj\
+ objval_.obj repwhere.obj sjac0dim.obj studchk0.obj suf_sos.obj: $(Aslh)
 xp1known.obj: asl_pfg.h psinfo.h nlp.h $(Aslh)
 duthes.obj fullhes.obj htcl.obj sphes.obj: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 getstub.obj value.obj writesol.obj wrtsol_.obj: getstub.h $(Aslh)
@@ -160,7 +162,7 @@ dtoa1.obj: dtoa.c arith.h stdio1.h
 # add such options to CFLAGS.)
 
 arith.h: arithchk.c
-	comptry.bat wcl386 arithchk.c
+	comptry.bat wcl386 -DNO_FPINIT arithchk.c
 	arithchk >arith.h
 	del arithchk.exe
 	del arithchk.obj

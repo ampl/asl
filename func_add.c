@@ -24,6 +24,11 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern ASLhead ASLhead_ASL;
+
 char *i_option_ASL;
 static int n_added;
 
@@ -141,7 +146,6 @@ at_exit_ASL(VOID)
 {
 	Exitcall *ec;
 	ASLhead *h, *h0;
-	extern ASLhead ASLhead_ASL;
 
 	h0 = &ASLhead_ASL;
 	h = ASLhead_ASL.next;
@@ -240,6 +244,16 @@ typedef char *(*Tempnamtype)(const char*, const char*);
 #define tempnam _tempnam
 #endif
 
+#ifdef NO_tempnam
+
+/* If the system does not provide a true tempnam function */
+/* the AMPL/solver interface library will not do so either. */
+
+ static char *
+tempnam(const char *dir, const char *pfix)
+{ return 0; }
+#endif /* NO_tempnam */
+
 #ifdef _WIN32
 #define popen _popen
 #define pclose _pclose
@@ -265,12 +279,58 @@ no_popen(const char*cmd, const char*type) { return 0; }
 
  static AmplExports AE;
 
+#ifdef clearerr
+ static void
+#ifdef KR_headers
+myclearerr(f) FILE *f;
+#else
+myclearerr(FILE *f)
+#endif
+{ clearerr(f); }
+#undef clearerr
+#define clearerr myclearerr
+#endif /*clearerr*/
+
+#ifdef feof
+ static int
+#ifdef KR_headers
+myfeof(f) FILE *f;
+#else
+myfeof(FILE *f)
+#endif
+{ return feof(f); }
+#undef feof
+#define feof myfeof
+#endif /*feof*/
+
+#ifdef ferror
+ static int
+#ifdef KR_headers
+myferror(f) FILE *f;
+#else
+myferror(FILE *f)
+#endif
+{ return ferror(f); }
+#undef ferror
+#define ferror myferror
+#endif /*ferror*/
+
 #ifdef _fileno
 #undef fileno
+#define fileno _fileno
+#endif
+
+#ifdef fileno
  static int
-myfileno(FILE *f) { return _fileno(f); }
+#ifdef KR_headers
+myfileno(f) FILE *f;
+#else
+myfileno(FILE *f)
+#endif
+{ return fileno(f); }
+#undef fileno
 #define fileno myfileno
-#endif /* _fileno */
+#endif /* fileno */
 
 #ifndef Tempnam_cast
 #define Tempnam_cast /*nothing*/
@@ -283,11 +343,12 @@ func_add(asl) ASL *asl;
 func_add(ASL *asl)
 #endif
 {
+	AmplExports *ae;
+
 	if (need_funcadd) {
 		if (!i_option_ASL
 		 && !(i_option_ASL = getenv("ampl_funclibs")))
 		      i_option_ASL = getenv("AMPLFUNC");
-		asl->i.ae = &AE;
 		if (!AE.PrintF) {
 			AE.StdIn = stdin;
 			AE.StdOut = stdout;
@@ -303,7 +364,6 @@ func_add(ASL *asl)
 			AE.AtExit = AtExit;
 			AE.AtReset = AtReset;
 			AE.Tempmem = Tempmem;
-			AE.asl = asl;
 			AE.Add_table_handler = No_table_handler;
 			AE.Crypto = No_crypto;
 			AE.Qsortv = qsortv;
@@ -338,17 +398,26 @@ func_add(ASL *asl)
 			AE.Tmpfile = tmpfile;
 			AE.Tmpnam = tmpnam;
 			AE.Ungetc = ungetc;
+			AE.Getenv = getenv_ASL;
 			}
+		if (AE.asl)
+			memcpy(ae = (AmplExports*)M1alloc(sizeof(AmplExports)),
+				&AE, sizeof(AmplExports));
+		else
+			ae = &AE;
+		asl->i.ae = ae;
+		ae->asl = (Char*)asl;
+		auxinfo_ASL(ae);
 #ifndef CLOSE_AT_RESET
 		if (nFa > 0) {
 			/* not the first nl_reader call */
 			int i = 0;
 			while(i < nFa)
-				(*Fa[i++])(&AE);
+				(*Fa[i++])(ae);
 			}
 		else
 #endif
-			funcadd(&AE);
+			funcadd(ae);
 		need_funcadd = 0;
 		}
 	}
@@ -381,13 +450,9 @@ show_funcs_ASL(ASL *asl)
 	fflush(Stderr);
 	}
 
-#ifdef __cplusplus
-extern "C" int aflibname_ASL(AmplExports*, char*, char*, int, Funcadd*, int);
-#endif
-
  int
 #ifdef KR_headers
-aflibname_ASL(ae, fullname, name, nlen, fa, ae, save_fa)
+aflibname_ASL(ae, fullname, name, nlen, fa, save_fa)
 	AmplExports *ae; char *fullname; char *name; int nlen; Funcadd *fa;
 	int save_fa;
 #else
@@ -405,7 +470,7 @@ aflibname_ASL(AmplExports *ae, char *fullname, char *name, int nlen,
 		if (++nFa >= nFamax) {
 			Funcadd **Fa1;
 			nFamax <<= 1;
-			Fa1 = Malloc(nFamax * sizeof(Funcadd*));
+			Fa1 = (Funcadd**)Malloc(nFamax * sizeof(Funcadd*));
 			memcpy(Fa1, Fa, nFa*sizeof(Funcadd*));
 			if (Fa != Fa0)
 				free(Fa);
@@ -416,4 +481,7 @@ aflibname_ASL(AmplExports *ae, char *fullname, char *name, int nlen,
 #endif /* !CLOSE_AT_RESET */
 	return n_added;
 	}
+#ifdef __cplusplus
+}
+#endif
 /* Last relevant change to asl.h: 19991013. */
