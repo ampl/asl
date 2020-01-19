@@ -56,24 +56,14 @@ See the comments about tar and .gz files in
 
 	http://netlib.bell-labs.com/netlib/bib/compression.html
 
-For more about AMPL itself, see the AMPL book:
+For more about AMPL itself, see the AMPL book (second edition):
 
 	"AMPL: A Modeling Language for Mathematical Programming"
 	by Robert M. Fourer, David M. Gay, and Brian W. Kernighan;
-	The Scientific Press, 1993;
-	ISBN 0-534-509835 with 3.5" diskettes
+	Duxbury Press / Brooks/Cole Publishing Company, 2002;
+	ISBN 0-534-38809-4
 
-which should be available from the Duxbury Press, or from its parent
-company,
-
-	Thompson Publishing Company
-	7625 Empire Drive
-	Florence, KY 41042
-	Phone:  1-800-865-5840
-	FAX:    1-606-647-5013
-	E-mail:  americas-info@list.thomson.com
-
-See the pointers in
+See the pointers to book vendors in
 
 	http://www.ampl.com/BOOK/
 

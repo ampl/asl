@@ -26,7 +26,7 @@ conscale.c	83a1310	3526
 conval.c	78074e7	4119
 derprop.c	e1181b02	1359
 details.c0	fa7ec7b3	182
-dtoa.c	fcce4ecf	68016
+dtoa.c	f3ec32d0	68012
 dtoa1.c	ed967a36	3071
 duthes.c	ea8758e9	3635
 dvalue.hd	fedc7579	1104
@@ -104,7 +104,7 @@ rops2.c	f580f34f	23913
 sigcatch.c	e883ab2	2372
 sjac0dim.c	dfd5e10	1528
 sos_add.c	f0109117	24089
-sphes.c	10e4ed9	27118
+sphes.c	e4630bb9	27102
 sprintf.c	a9642c8	3063
 sscanf.c	e8b1a5c0	2932
 stderr.c	e0b448ee	1487

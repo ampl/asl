@@ -1377,3 +1377,11 @@ multiple objectives and arguments (nobj and y) indicating that just
 one of the objectives is to be used or that constraints are to be
 ignored in the Hessian:  the sparsity pattern was overestimated
 (encompassing the undesired objectives and constraints).
+
+Wed Mar 24 00:42:30 MST 2004
+  sphes.c:  omit declaration of unused variables hr1, hr2;
+asldate.c not changed.
+
+Sun Apr 11 23:39:41 MDT 2004
+  dtoa.c:  update contact info. for dmg and correct page numbers in
+comment on Steele & White (1990); asldate.c not changed.

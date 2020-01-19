@@ -681,7 +681,6 @@ upper_to_lower(ASL_pfgh *asl, SputInfo *spi, fint nz)
 #endif
 {	/* convert upper to lower triangular */
 
-	fint hr1, hr2;
 	fint *cs, *hcolstarts, *hrownos, *rn;
 	int f, i, j, j1, j2, k, n;
 	int *rs, *u0, *utoL, *z;

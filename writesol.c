@@ -210,12 +210,14 @@ AMPL_version_ASL(ASL *asl)
 	return strtol(s+7,0,10);
 	}
 
+typedef size_t (*Fwrite) ANSI((const void*, size_t, size_t, FILE*));
+
  void
 #ifdef KR_headers
-write_sol_ASL(asl, msg, x, y, oi)
-	ASL *asl; char *msg; double *x, *y; Option_Info *oi;
+write_solx_ASL(asl, msg, x, y, oi, fw_d, fw_i, fw_s)
+	ASL *asl; char *msg; double *x, *y; Option_Info *oi; Fwrite fw_d, fw_i, fw_s;
 #else
-write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
+write_solx_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi, Fwrite fw_d, Fwrite fw_i, Fwrite fw_s)
 #endif
 {
 	FILE *f;
@@ -315,49 +317,49 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 		L[3] = (ampl_options[0] + 5)*sizeof(fint) + 7;
 		L[4] = m*sizeof(double);
 		L[5] = n*sizeof(double);
-		fwrite(L, sizeof(ftnlen), 1, f);
+		(*fw_i)(L, sizeof(ftnlen), 1, f);
 		fwrite("binary", 6, 1, f);
-		fwrite(L, sizeof(ftnlen), 2, f);
+		(*fw_i)(L, sizeof(ftnlen), 2, f);
 		if (L[1]) {
 			fwrite(msg, L[1], 1, f);
-			fwrite(L+1, sizeof(ftnlen), 2, f);
+			(*fw_i)(L+1, sizeof(ftnlen), 2, f);
 			}
 		if (k) {
-			fwrite(L+2, sizeof(ftnlen), 2, f);
+			(*fw_i)(L+2, sizeof(ftnlen), 2, f);
 			fwrite("Options",7,1,f);
 			nn = (size_t)ampl_options[0]+1;
 			if (ampl_options[2] == 3)
 				ampl_options[0] += 2;
-			fwrite(ampl_options, sizeof(fint), nn, f);
-			fwrite(z, sizeof(fint), 4, f);
+			(*fw_i)(ampl_options, sizeof(fint), nn, f);
+			(*fw_i)(z, sizeof(fint), 4, f);
 			if (ampl_options[2] == 3)
-				fwrite(&ampl_vbtol, sizeof(real), 1, f);
-			fwrite(L+3, sizeof(ftnlen), 2, f);
+				(*fw_d)(&ampl_vbtol, sizeof(real), 1, f);
+			(*fw_i)(L+3, sizeof(ftnlen), 2, f);
 			}
 		else {
-			fwrite(L+2, sizeof(ftnlen), 1, f);
-			fwrite(L+4, sizeof(ftnlen), 1, f);
+			(*fw_i)(L+2, sizeof(ftnlen), 1, f);
+			(*fw_i)(L+4, sizeof(ftnlen), 1, f);
 			}
 		if (y)
-			fwrite(y, sizeof(double), m, f);
-		fwrite(L+4, sizeof(ftnlen), 2, f);
+			(*fw_d)(y, sizeof(double), m, f);
+		(*fw_i)(L+4, sizeof(ftnlen), 2, f);
 		if (x)
-			fwrite(x, sizeof(double), n, f);
-		fwrite(L+5, sizeof(ftnlen), 1, f);
+			(*fw_d)(x, sizeof(double), n, f);
+		(*fw_i)(L+5, sizeof(ftnlen), 1, f);
 		if (tail)
 		  switch(asl->i.flags & 1) {
 		    case 0:
 			if (obj_no) {
 				L[0] = L[2] = sizeof(fint);
 				L[1] = obj_no;
-				fwrite(L, sizeof(fint), 3, f);
+				(*fw_i)(L, sizeof(fint), 3, f);
 				}
 			break;
 		    case 1:
 			L[0] = L[3] = 2*sizeof(fint);
 			L[1] = obj_no;
 			L[2] = solve_code;
-			fwrite(L, sizeof(fint), 4, f);
+			(*fw_i)(L, sizeof(fint), 4, f);
 			for(i1 = 0; i1 < 4; i1++)
 			  for(d = asl->i.suffixes[i1]; d; d = d->next)
 			    if (d->kind & ASL_Sufkind_output
@@ -368,8 +370,8 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 					+ sh.n*(sizeof(int) +
 						(d->kind & ASL_Sufkind_real
 						? sizeof(real) : sizeof(int)));
-				fwrite(L, sizeof(fint), 1, f);
-				fwrite(&sh, sizeof(sh), 1, f);
+				(*fw_i)(L, sizeof(fint), 1, f);
+				(*fw_s)(&sh, sizeof(sh), 1, f);
 				fwrite(d->sufname, sh.namelen, 1, f);
 				if (sh.tablen)
 					fwrite(d->table, sh.tablen, 1, f);
@@ -384,8 +386,8 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 							}
 						else
 							J[0] = i;
-						fwrite(J, sizeof(fint), 1, f);
-						fwrite(rp+i,sizeof(real),1,f);
+						(*fw_i)(J, sizeof(fint), 1, f);
+						(*fw_d)(rp+i,sizeof(real),1,f);
 						}
 					}
 				else
@@ -398,10 +400,10 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 							}
 						else
 							J[0] = i;
-						fwrite(J, sizeof(fint), 2, f);
+						(*fw_i)(J, sizeof(fint), 2, f);
 						}
 					}
-				fwrite(L, sizeof(fint), 1, f);
+				(*fw_i)(L, sizeof(fint), 1, f);
 				}
 			}
 		}
@@ -511,6 +513,17 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 		free(xycopy);
 	if (bsmsg)
 		free(bsmsg);
+	}
+
+ void
+#ifdef KR_headers
+write_sol_ASL(asl, msg, x, y, oi)
+	ASL *asl; char *msg; double *x, *y; Option_Info *oi;
+#else
+write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
+#endif
+{
+	write_solx_ASL(asl, msg, x, y, oi, fwrite, fwrite, fwrite);
 	}
 
 /* Affected by ASL update of 20020503 */
