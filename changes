@@ -1394,3 +1394,18 @@ show_version_ASL() print license information.
   pfg_read.c pfghread.c, pshvprod.c: fix bugs (e.g., faults on some
 problems) with hvcomp.
 
+Wed May 11 23:12:43 MDT 2005
+  sprintf.c: omit an unused variable.
+  pfg_read.c, pfghread.c: use size_expr_n (for benefit of a possible
+forthcoming nlc extension).
+  misc.c: fix a glitch that only matters with -DNO_STDIO1.
+
+Sat Jun 25 23:59:06 MDT 2005
+  funcadd.c: add a const qualifier to a local variable in function mean().
+  *read.c: when linear complementarity constraints are present, fold any
+nonzero right-hand side values into the bounds (LUrhs, Urhsx) on the
+constraint.  Some solvers expect the constant term in linear constraints
+to be zero, which was always true except for linear complementarity
+constraints.  New bit ASL_no_linear_cc_rhs_adjust in the flags argument
+to the .nl readers suppresses this adjustment.
+

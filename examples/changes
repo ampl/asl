@@ -131,3 +131,9 @@ necessary by a change to the .nl readers on 20010607:  ve08.c is not
 prepared to deal with group partially separable structure.
   makefile.u: change the FC assignment to f77 (to cope with some shells
 for which "fc" has special magic meaning).
+
+Tue Aug  9 22:58:01 MDT 2005
+  New files README.gjh and gjh.c, and corresponding updates to makefile.u
+and makefile.vc.  README.gjh describes "solver" gjh, whose source is gjh.c,
+which computes gradients, Jacobian matrices and Hessian matrices and makes
+their values available in an AMPL session (via an "include" command).

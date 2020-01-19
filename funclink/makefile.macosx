@@ -12,7 +12,7 @@ CFLAGS = -I$S -O2
 
 amplfunc.dll: funcadd.c
 	$(CC) -c $(CFLAGS) funcadd.c
-	cc -bundle -o amplfunc.dll funcadd.o
+	$(CC) -bundle -o amplfunc.dll funcadd.o
 
 ## Sample solver creation...
 

@@ -5,10 +5,10 @@ amplsolv.sy	e9353c7	1167
 arith.ibm	f398be2b	1391
 arith.h0	e206209c	2309
 arithchk.c	efc0d389	4669
-asl.h	b5bff62	33780
+asl.h	ed5107dc	33907
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	e91e7c3c	29
+asldate.c	d5065b9	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 b_search.c	18aac04a	3312
@@ -32,10 +32,10 @@ duthes.c	ea8758e9	3635
 dvalue.hd	fedc7579	1104
 dynlink.c	f185cc89	1375
 errchk.h	18e45db4	1786
-f_read.c	1c19db32	1227
-fg_read.c	ef527248	39489
+f_read.c	15b643cc	1227
+fg_read.c	1d76d540	40206
 fg_write.c	895af77	18941
-fgh_read.c	f4fd75f8	36050
+fgh_read.c	996b706	36680
 float.h0	11d95cda	1822
 fpecatch.c	ee2bc9f7	1573
 fpinit.c	88e33ac	3317
@@ -43,7 +43,7 @@ fpinitmt.c	e3c0b8b1	4338
 fpsetprec.s	1d0b2972	535
 fullhes.c	eeea81e	3978
 func_add.c	fe87c1c0	12548
-funcadd.c	18a9a80f	3475
+funcadd.c	153afbf1	3487
 funcadd.h	fd146a16	14539
 funcadd0.c	ee0ae780	1392
 funcadd1.c	fe7ca886	8243
@@ -67,7 +67,7 @@ makefile.u	b5146ed	9746
 makefile.vc	f9835ec	6258
 makefile.wat	e0a819a4	5374
 mip_pri.c	19e54f76	7877
-misc.c	15b19bdd	20201
+misc.c	6c65fea	20201
 mypow.c	1571ef65	2294
 names.c	f4fa0647	4205
 nl_obj.c	faef2e84	2054
@@ -83,8 +83,8 @@ op_type.c	103eae0f	1202
 op_type.hd	46993b1	1265
 opcode.hd	fa56de9c	1326
 opnos.hd	ce11c7b	64
-pfg_read.c	9e9f4c9	103122
-pfghread.c	e2353d03	1261
+pfg_read.c	fa5b9e23	103853
+pfghread.c	e2d88399	1261
 printf.c	ea54b7ea	17870
 pshvprod.c	e1661d98	20801
 psinfo.h	ee2214c4	9761
@@ -105,7 +105,7 @@ sigcatch.c	e883ab2	2372
 sjac0dim.c	dfd5e10	1528
 sos_add.c	f0109117	24089
 sphes.c	e4630bb9	27102
-sprintf.c	a9642c8	3063
+sprintf.c	e6ce1d45	3050
 sscanf.c	e8b1a5c0	2932
 stderr.c	e0b448ee	1487
 stdio1.h0	f9011b5b	2841

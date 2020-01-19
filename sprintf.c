@@ -78,7 +78,6 @@ Sprintf
 	char buf[32];
 	va_list ap;
 	long i, j;
-	int rc = 0;
 
 #ifdef KR_headers
 	char *outbuf, *fmt;

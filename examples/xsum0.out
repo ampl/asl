@@ -1,4 +1,5 @@
 README	d546f81	4685
+README.gjh	f7831fa4	21107
 amplfun4.c	f5166977	5414
 amplfunc.c	fd078f89	6583
 dminos	84cc26b	251
@@ -9,6 +10,7 @@ evalg.m	a3f0775	1505
 evalw.m	ef935ae5	1477
 fmng1.f	e14e7d8d	2897
 fnl21.f	ebc2e72f	3131
+gjh.c	1d118ff0	6200
 hkeywds.c	eb4d4fce	53
 init.m	156f1d30	2786
 keywds.c	624ef49	6758
@@ -17,8 +19,8 @@ lin2.c	fe2df350	2322
 lin3.c	13e37cae	2726
 linrc.c	ffb5438	4508
 makefile.sy	6eee0d4	5769
-makefile.u	fe48d99	7694
-makefile.vc	112783f6	5427
+makefile.u	e757fc95	7751
+makefile.vc	6c991f6	5491
 makefile.wat	eef2b13c	5362
 mng.c	a9366c3	3574
 mng1.c	c56154e	2598

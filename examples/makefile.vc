@@ -152,6 +152,9 @@ nlcopy.exe: $(nlcopy)
 qtest.exe: qtest.obj
 	$(CC) $(CFLAGS) -Feqtest.exe qtest.obj $(Af) $(Lmt)
 
+gjh.exe: gjh.obj
+	$(CC) $(CFLAGS) -Fegjh.exe gjh.obj $A $(Lmt)
+
 $S\amplsolv.lib:
 	cd $S; make amplsolv.lib
 

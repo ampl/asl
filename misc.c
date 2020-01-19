@@ -77,7 +77,7 @@ scream
 	va_list ap;
 	va_start(ap, fmt);
 #endif
-	Vfprintf(Stderr, fmt, ap);
+	vfprintf(Stderr, fmt, ap);
 	exit_ASL(R, n);
 	} /*}*/
 

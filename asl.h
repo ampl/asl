@@ -733,18 +733,20 @@ enum ASL_reader_flag_bits {	/* bits in flags arg */
 	ASL_find_co_class = 96,	/* Find all four */
 	/* applicable to all .nl file readers: */
 	ASL_return_read_err = 16,
-	ASL_keep_all_suffixes = 128,
+	ASL_keep_all_suffixes = 0x80,
 	/* Stuff for fg_wread: */
-	ASL_omit_all_suffixes = 256,
-	ASL_keep_derivs = 512,
-	ASL_allow_missing_funcs = 1024,
-	ASL_forbid_missing_funcs = 2048,
-	ASL_allow_CLP = 4096,	/* permit CLP extensions */
-	ASL_find_default_no_groups = 8192	/* Assume ASL_findgroups */
+	ASL_omit_all_suffixes = 0x100,
+	ASL_keep_derivs = 0x200,
+	ASL_allow_missing_funcs = 0x400,
+	ASL_forbid_missing_funcs = 0x800,
+	ASL_allow_CLP = 0x1000,	/* permit CLP extensions */
+	ASL_find_default_no_groups = 0x2000,	/* Assume ASL_findgroups */
 						/* when this bit is off. */
 	/* When ASL_find_default_no_groups is on, pfg_read and pfgh_read */
 	/* only honor explicit specification of the ASL_findgroups bits. */
 
+	ASL_no_linear_cc_rhs_adjust = 0x4000	/* Omit constant term adjustment */
+						/* of linear complementarities. */
 	};
 
 enum ASL_reader_error_codes {
