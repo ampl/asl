@@ -1342,3 +1342,13 @@ Thu Mar 20 22:50:38 EST 2003
 are supposed to request printing of the current value of the option in
 question):  bogus values were reported.  FI_val is for Fortran integer
 values; only a few solvers (such as filter and minlp) use it.
+
+Thu May 29 17:44:56 EDT 2003
+  conpval.c:  fix a bug that could lead to a surprising error message
+of the form "objpgrd: got NOBJ = 12; expected 0 <= NOBJ < 1" if a
+Hessian computation was requested after a function evaluation at
+a point different from the one where the most recent gradient
+evaluation took place.  Also with .nl reader pfgh_read(), fix a bug
+with objgrd(np,x,g,ne) with non-null ne (and *ne >= 0) and np != 0
+(i.e., when treating an objective other than the first):  wrong
+results may have been computed.

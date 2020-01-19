@@ -8,7 +8,7 @@ arithchk.c	efc0d389	4669
 asl.h	f0a8f5f7	33764
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	29b5cf1	29
+asldate.c	1b83dc61	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 b_search.c	18aac04a	3312
@@ -21,7 +21,7 @@ con1ival.c	e03f607a	4978
 con2ival.c	fc246fe9	5006
 con2val.c	fe922d36	4548
 conadj.c	bb213ed	2040
-conpval.c	eb44dd56	17107
+conpval.c	e2534b65	17113
 conscale.c	83a1310	3526
 conval.c	78074e7	4119
 derprop.c	e1181b02	1359

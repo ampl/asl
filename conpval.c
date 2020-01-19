@@ -475,7 +475,7 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	ograd *gr, *gr0;
 	real *Adjoints;
 	Jmp_buf err_jmp0;
-	int xksave, *z;
+	int ij, xksave, *z;
 	ps_func *p;
 	linarg *la;
 	real t, *vscale;
@@ -491,8 +491,8 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	ne0 = -1;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
-		i = setjmp(err_jmp0.jb);
-		if (*nerror = i)
+		ij = setjmp(err_jmp0.jb);
+		if (*nerror = ij)
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
@@ -803,7 +803,7 @@ xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
 	asl->i.x_known = 1;
 	if (y)
 		xpsgchk(asl, asl->P.cps, asl->i.ncxval, nlc,
-			nx, conpival_ASL, objpgrd_ASL, y);
+			nx, conpival_ASL, conpgrd_ASL, y);
 	f = asl->P.ops;
 	xv = asl->i.noxval;
 	if (nobj >= 0 && nobj < n_obj) {
