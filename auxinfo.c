@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 2000 Lucent Technologies
+Copyright (C) 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -22,33 +22,21 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-/* Print and skip past unknown keywords, possibly followed by = value. */
+/* Dummy auxinfo_ASL(); solvers that wish to provide ae->AI */
+/* will provide their own auxinfo_ASL, overriding this one. */
 
-#include "stdio1.h"
+#include "funcadd.h"
 
 #ifdef __cplusplus
-extern "C" char *pr_unknown_ASL(FILE*, char*);
+extern "C" void auxinfo_ASL(AmplExports*);
 #endif
 
- char *
+ void
 #ifdef KR_headers
-pr_unknown_ASL(f, s) FILE *f; char *s;
+auxinfo_ASL(ae) AmplExports *ae;
 #else
-pr_unknown_ASL(FILE *f, char *s)
+auxinfo_ASL(AmplExports *ae)
 #endif
 {
-	char *s1;
-
-	for(s1 = s; *s1 > ' ' && *s1 != '='; s1++);
-	fprintf(f, "Unknown keyword \"%.*s\"\n", s1-s, s);
-	while(*s1 <= ' ' && *s1)
-		s1++;
-	if (*s1 == '=') {
-		while(*++s1)
-			if (*s1 > ' ') {
-				while(*++s1 > ' ');
-				break;
-			}
-		}
-	return s1;
+	ae->AI = 0;
 	}

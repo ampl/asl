@@ -28,6 +28,10 @@
 
 global bl bu cl clb cu cub clu ceq m mp0 n p pname xlc xuc
 
+if ischar(pname) == 0,
+	error('No ''stub'' assigned to pname.');
+	end;
+
 [x,bl,bu,v,cl,cu] = amplfunc(pname);
 
 n = length(x);

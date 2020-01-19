@@ -42,3 +42,27 @@ kth(i, 'a', i + 10, 'Last arg') [*] :=
 3  'Last arg'
 ;
 
+ginvae(i) [*] :=
+0  0
+1  1
+2  0.5
+;
+
+Got to At_reset: n = 3
+Got to At_reset: n = 2
+Got to At_reset: n = 1
+ginvae(i) [*] :=
+-1  -1
+ 0   0
+ 1   1
+;
+
+Got to At_reset: n = 6
+Got to At_reset: n = 5
+Got to At_reset: n = 4
+Got to At_end: n = 6
+Got to At_end: n = 5
+Got to At_end: n = 4
+Got to At_end: n = 3
+Got to At_end: n = 2
+Got to At_end: n = 1

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997-1998 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -171,6 +171,47 @@ kth(al) arglist *al;	/* kth(k,a1,a2,...,an) return ak */
 	return al->sa[-(j+1)];
 	}
 
+/* Illustration of at_exit() and at_reset() processing */
+
+ typedef struct Aeinfo
+{
+	AmplExports *ae;
+	int n;
+	} Aeinfo;
+
+static Aeinfo AEI[10], *AEInext = AEI, *AEIlast = AEI + 10;
+
+ static void
+At_end(v) char *v;
+{
+	Aeinfo *aei = (Aeinfo *)v;
+	AmplExports *ae = aei->ae;
+	printf("Got to At_end: n = %d\n", aei->n);
+	}
+
+ static void
+At_reset(v) char *v;
+{
+	Aeinfo *aei = (Aeinfo *)v;
+	AmplExports *ae = aei->ae;
+	printf("Got to At_reset: n = %d\n", aei->n);
+	}
+
+static real
+ginvae(al) arglist *al;	/* like ginv, but enrolling At_reset and At_exit */
+{
+	static int nginv;
+	AmplExports *ae = al->AE;
+
+	if (AEInext < AEIlast) {
+		AEInext->n = ++nginv;
+		AEInext->ae = ae;
+		at_reset(At_reset, AEInext);
+		at_exit(At_end, AEInext++);
+		}
+	return ginv(al);
+	}
+
  void
 funcadd(ae) AmplExports *ae;
 {
@@ -205,4 +246,6 @@ funcadd(ae) AmplExports *ae;
 	addfunc("mean0", (rfunc)mean, 0, -1, 0);
 	addfunc("mean", (rfunc)mean, 1, -1, 0);
 	addfunc("kth", (rfunc)kth, 3, -2, 0);
+	addfunc("ginvae", (rfunc)ginvae, 0, 1, 0); /* demo at_exit, at_reset */
+	/* at_end() and at_reset() calls could appear here, too. */
 	}

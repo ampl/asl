@@ -590,3 +590,87 @@ Fri Oct  1 11:00:21 EDT 1999
  rops.c, rops2.c, errchk.h: when errno is nonzero, add its
 interpretation to error messages for library functions whose
 evaluations fail.  (This may help detect spurious setting of errno.)
+
+Thu Oct  7 18:01:56 EDT 1999
+ rops.c, rops2.c: clear errno after calling an imported function.
+ fg_read.c: "invisible" tweak to use op_type.o rather than op_type.hd.
+ makefile.*: try to get dependencies right and omit obsolete names.
+
+Thu Oct 14 00:26:12 EDT 1999
+ Tweaks to many files:
+1. Move errno = 0 assignments before x...check() calls, as these calls
+   may evaluate common expressions.
+2. Setting want_xpi0 |= 4 causes havex0 and havepi0 to be allocated
+   when primal and dual initial guesses are present.
+3. New, experimental routine fg_write can write a binary or ASCII .nl
+   file, possibly adding new linear variables, constraints, objectives;
+   normally used with new reader fg_wread(), a variant of fg_read()
+   which, like qp_read(), leaves operation numbers rather than function
+   pointers in the "op" fields.  (A subsequent call on qpopify() can
+   make it possible to evaluate nonlinear expressions, but fg_write
+   requires the operation numbers.)  New examples/nlcopy.c illustrates
+   use of fg_wread and fg_write.
+4. New bits in the flag argument to the .nl readers:
+	ASL_keep_all_suffixes
+	ASL_omit_all_suffixes
+	ASL_keep_derivs
+	ASL_allow_missing_funcs
+	ASL_forbid_missing_funcs
+   The first can be used by any reader (but is mostly for fg_wread);
+the latter are only for fg_wread.
+
+Fri Nov 19 16:55:10 EST 1999
+  xectim.c: where possible, return the sum of user and system time,
+rather than just user time.  On systems with slow software for
+gradual underflow, it is possible to contruct examples where this
+makes a significant difference in the reported times.
+
+Mon Dec 13 17:00:00 EST 1999
+  fpinit.c: tweak for Linux (e.g., S.u.S.E. 6.3, Red Hat 6.0);
+asldate.c not changed.
+
+Wed Dec 15 13:30:46 EST 1999
+  dtoa.c, dtoa1.c: tweak to bypass a bug with HUGE_VAL on HP systems.
+
+Thu Feb  3 23:18:24 EST 2000
+  funcadd.h: new fields in AmplExports.
+  asl.h and several *.c files: struct Edaginfo now has a pointer to
+an AmplExports, rather than the complete structure, so that future
+additions to AmplExports will not require recompiling everything.
+This change does require make recompiling the whole library necessary,
+as well as any solver objects that depend on asl.h or funcadd.h.
+  New variant fpinitmt.c of fpinit.c for Win32 binaries; makefile.*
+adjusted.
+
+Thu Feb 10 17:31:13 EST 2000
+  pfg_read.c, pfghread.c: fix a bug (division by zero resulting in NaNs)
+that arose in a complicated use of defined variables.
+  sphes.c: fix a probably harmless reference to an uninitialized
+variable.
+
+Wed Feb 16 19:13:18 EST 2000
+  npqcheck.c: adjust to cope with <<0;0,0>>x*x with AMPL
+versions < 20000216, which gave 0*x*x rather than 0.
+
+Thu Feb 17 18:21:17 EST 2000
+  pfg_read.c, pfghread.c: fix a bug in handling sums of three or more
+terms each involving a nonlinear expression with a sum of three or
+more terms.  The bug caused a surprising error message in the example
+that led to finding the bug, but could cause unpredictable behavior in
+general.
+
+Sun Mar  5 22:07:29 EST 2000
+  objval.c: fix bug in evaluating defined variables: defined variables
+appearing only in single constraints were evaluated during objective
+function evaluations; under unusual conditions, this could lead
+to an error being reported in the evaluation of the objective.
+  pfg_read.c, pfghread.c: fix some bugs in Jacobian and Hessian
+evaluations involving a defined variable that is an affine function
+(linear function plus constant) of a single problem variable.
+  makefile.u: comment on -DNON_STDOUT.
+  func_add.c: add #ifdef NO_tempnam lines for systems without a
+tempnam function.
+
+Mon Mar  6 12:35:27 EST 2000
+  pfg_read.c, pfghread.c: minor "invisible" tweak to recycle a bit more
+memory.

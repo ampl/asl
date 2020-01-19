@@ -1,5 +1,5 @@
 # /****************************************************************
-# Copyright (C) 1997-1998 Lucent Technologies
+# Copyright (C) 1997-1999 Lucent Technologies
 # All Rights Reserved
 #
 # Permission to use, copy, modify, and distribute this software and
@@ -24,7 +24,9 @@
 
 # For compiling solvers/examples with Symantec 7.x .
 
-# Invoke with "make -f makefile.sy" .
+# Invoke with "make -f makefile.sy" ,
+# or "copy makefile.sy makefile", possibly edit makefile,
+# and just invoke with "make".
 
 # This is for NT console applications; for DOS,
 # change "-mn" to "-mx".
@@ -45,12 +47,16 @@ CFLAGS = -s -mn -I$S
 
 Lf2c = $S\syf2c.lib
 Lp = cport.lib $(Lf2c)
+Mf2c = $S\main.obj
+
 # cport.lib = PORT subroutine library.
 # Ask netlib@netlib.bell-labs.com to
 #	send dmngb dmnhb dn2g dn2gb dq7rgs from port
 # to get source for the relevant (small) part of PORT.
 # f2c.lib is for f2c's version of Fortran I/O: we assume
 # cport.lib was compiled by f2c and $CC.
+# With Symantec, it is necessary to explicitly load f2c.lib's main.obj,
+# which here is denoted $(Mf2c).
 
 A = $S\amplsolv.lib
 Af = $S\funcadd0.obj $A
@@ -82,44 +88,44 @@ linrc = linrc.obj $A
 linrc.exe: $(linrc)
 	$(CC) $(CFLAGS) -olinrc.exe $(linrc)
 
-mng1 = mng1.obj $(Af)
+mng1 = mng1.obj $(Mf2c) $(Af)
 
 mng1.exe: $(mng1)
 	$(CC) $(CFLAGS) -omng1.exe $(mng1) $(Lp)
 
-nl21 = nl21.obj $(Af)
+nl21 = nl21.obj $(Mf2c) $(Af)
 
 nl21.exe: $(nl21)
 	$(CC) $(CFLAGS) -onl21.exe $(nl21) $(Lp)
 
-mng = mng.obj rvmsg.obj keywds.obj $A
+mng = mng.obj rvmsg.obj keywds.obj $(Mf2c) $A
 
 mng.exe: $(mng)
 	$(CC) $(CFLAGS) -omng.exe $(mng) $(Lp)
 
-mnh = mnh.obj rvmsg.obj hkeywds.obj $A
+mnh = mnh.obj rvmsg.obj hkeywds.obj $(Mf2c) $A
 
 mnh.exe: $(mnh)
 	$(CC) $(CFLAGS) -omnh.exe $(mnh) $(Lp)
 
-nl2 = nl2.obj rvmsg.obj keywds.obj $A
+nl2 = nl2.obj rvmsg.obj keywds.obj $(Mf2c) $A
 
 nl2.exe: $(nl2)
 	$(CC) $(CFLAGS) -onl2.exe $(nl2) $(Lp)
 
-fmng1 = fmng1.obj $(Af)
+fmng1 = fmng1.obj $(Mf2c) $(Af)
 
 fmng1.exe: $(fmng1)
 	$(CC) $(CFLAGS) -ofmng1.exe $(fmng1) $(Lp)
 
-fnl21 = fnl21.obj $(Af)
+fnl21 = fnl21.obj $(Mf2c) $(Af)
 
 fnl21.exe: $(fnl21)
 	$(CC) $(CFLAGS) -ofnl21.exe $(fnl21) $(Lp)
 
 # tn.f and blas.f are available from netlib.exe: ask for "tn from opt".
 
-tn = tnmain.obj tn.obj blas.obj $(Af)
+tn = tnmain.obj tn.obj blas.obj $(Mf2c) $(Af)
 
 tn.exe: $(tn)
 	$(CC) $(CFLAGS) -otn.exe $(tn) $(Lf2c)
@@ -129,12 +135,12 @@ tn.exe: $(tn)
 
 v8.o.exe: ve08.c
 
-v8 = v8.obj ve08ad.obj $(Af)
+v8 = v8.obj ve08ad.obj $(Mf2c) $(Af)
 
 v8.exe: $(v8)
 	$(CC) $(CFLAGS) -ov8.exe $(v8) $(Lp)
 
-ve08 = ve08.obj ve08ad.obj $(Af)
+ve08 = ve08.obj ve08ad.obj $(Mf2c) $(Af)
 
 ve08.exe: $(ve08)
 	$(CC) $(CFLAGS) -ove08.exe $(ve08) $(Lp)
@@ -142,6 +148,10 @@ ve08.exe: $(ve08)
 dualconv = dualconv.obj $A
 dualconv.exe: $(dualconv)
 	$(CC) $(CFLAGS) -odualconv.exe $(dualconv)
+
+nlcopy = nlcopy.obj $A
+nlcopy.exe: $(nlcopy)
+	$(CC) $(CFLAGS) -onlcopy.exe $(nlcopy)
 
 qtest.exe: qtest.obj
 	$(CC) $(CFLAGS) -oqtest.exe qtest.obj $(Af)
@@ -155,7 +165,8 @@ clean:
 ### "make test" to compare outputs.
 
 ### "make test1" to compare outputs that do not require things
-### from other netlib directories.
+### from other netlib directories.  See the comments below
+### about limitations of Symantec's "make".
 
 test1:
 	lin1 diet | rmcr >foo
@@ -180,7 +191,7 @@ test1:
 	echo test1 done >test1
 
 # Symantec's "make" does not process "|" or ">" correctly.
-# To "make test", use WATCOM's wmakel or Microsoft's nmake.
+# To "make test", use WATCOM's wmake or Microsoft's nmake.
 # With WATCOM's wmakel, you need to insert ".SUFFIXES: .f" at the top.
 
 test: all test1

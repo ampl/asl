@@ -57,7 +57,7 @@ main(int argc, char **argv)
 	FILE *nl;
 	int i, j, nz;
 	fint **colqp, ne, nq, **rowqp, *z, *z0;
-	real **delsqp, t;
+	real *LU, **delsqp, t;
 	ASL *asl;
 
 	if (argc < 2) {
@@ -72,7 +72,7 @@ main(int argc, char **argv)
 		nl = jac0dim(s, (long)strlen(s));
 		X0 = (real*)M1alloc(n_var*sizeof(real));
 		qp_read(nl,0);
-		nz = n_var + n_con;
+		nz = n_obj + n_con;
 		colqp = (fint**)Malloc(nz*(sizeof(fint)
 					   + 2*sizeof(fint*)
 					   + sizeof(real)));
@@ -97,6 +97,7 @@ main(int argc, char **argv)
 			printf("Objective %d: nq = %ld, value = %.g\n",
 					i, nq, t);
 			}
+		LU = LUrhs;
 		for(j = 0; j < n_con; i++, j++) {
 			ne = 0;
 			t = conival(j, X0, &ne);
@@ -109,6 +110,9 @@ main(int argc, char **argv)
 				t += qterm(asl, colqp[i], rowqp[i], delsqp[i]);
 			printf("Constraint body %d: nq = %ld, value = %.g\n",
 				j, nq, t);
+			printf("\t\tLslack = %g, Uslack = %g\n",
+				t - LU[0], LU[1] - t);
+			LU += 2;
 			}
 		free(colqp);
 		ASL_free((ASL**)&asl);

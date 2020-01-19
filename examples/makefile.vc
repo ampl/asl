@@ -1,5 +1,5 @@
 # /****************************************************************
-# Copyright (C) 1997-1998 Lucent Technologies
+# Copyright (C) 1997-2000 Lucent Technologies
 # All Rights Reserved
 #
 # Permission to use, copy, modify, and distribute this software and
@@ -22,9 +22,11 @@
 # THIS SOFTWARE.
 # ****************************************************************/
 
-# For compiling examples with Microsoft Visual C++ 4.2.
+# For compiling examples with Microsoft Visual C++.
 
-# Invoke with "nmake -f makefile.vc" .
+# Invoke with "nmake -f makefile.vc" ,
+# or "copy makefile.vc makefile", possibly edit makefile,
+# and just invoke with "nmake".
 
 .SUFFIXES: .c .f .obj
 
@@ -42,6 +44,7 @@ CFLAGS = -I$S
 	$(CC) -c $(CFLAGS) $*.c
 	del $*.c
 
+Lmt = libcmt.lib /link /NODEFAULTLIB:libc.lib
 Lf2c = $S\vcf2c.lib
 Lp = cport.lib $(Lf2c)
 # cport.lib = PORT subroutine library.
@@ -67,61 +70,61 @@ all1: $(all1)
 
 lin1 = lin1.obj $(Af)
 lin1.exe: $(lin1)
-	$(CC) $(CFLAGS) -o lin1.exe $(lin1)
+	$(CC) $(CFLAGS) -Felin1.exe $(lin1) $(Lmt)
 
 lin2 = lin2.obj $A
 lin2.exe: $(lin2)
-	$(CC) $(CFLAGS) -o lin2.exe $(lin2)
+	$(CC) $(CFLAGS) -Felin2.exe $(lin2) $(Lmt)
 
 lin3 = lin3.obj $A
 lin3.exe: $(lin3)
-	$(CC) $(CFLAGS) -o lin3.exe $(lin3)
+	$(CC) $(CFLAGS) -Felin3.exe $(lin3) $(Lmt)
 
 linrc = linrc.obj $A
 linrc.exe: $(linrc)
-	$(CC) $(CFLAGS) -o linrc.exe $(linrc)
+	$(CC) $(CFLAGS) -Felinrc.exe $(linrc) $(Lmt)
 
 mng1 = mng1.obj $(Af)
 
 mng1.exe: $(mng1)
-	$(CC) $(CFLAGS) -o mng1.exe $(mng1) $(Lp)
+	$(CC) $(CFLAGS) -Femng1.exe $(mng1) $(Lp) $(Lmt)
 
 nl21 = nl21.obj $(Af)
 
 nl21.exe: $(nl21)
-	$(CC) $(CFLAGS) -o nl21.exe $(nl21) $(Lp)
+	$(CC) $(CFLAGS) -Fenl21.exe $(nl21) $(Lp) $(Lmt)
 
 mng = mng.obj rvmsg.obj keywds.obj $A
 
 mng.exe: $(mng)
-	$(CC) $(CFLAGS) -o mng.exe $(mng) $(Lp)
+	$(CC) $(CFLAGS) -Femng.exe $(mng) $(Lp) $(Lmt)
 
 mnh = mnh.obj rvmsg.obj hkeywds.obj $A
 
 mnh.exe: $(mnh)
-	$(CC) $(CFLAGS) -o mnh.exe $(mnh) $(Lp)
+	$(CC) $(CFLAGS) -Femnh.exe $(mnh) $(Lp) $(Lmt)
 
 nl2 = nl2.obj rvmsg.obj keywds.obj $A
 
 nl2.exe: $(nl2)
-	$(CC) $(CFLAGS) -o nl2.exe $(nl2) $(Lp)
+	$(CC) $(CFLAGS) -Fenl2.exe $(nl2) $(Lp) $(Lmt)
 
 fmng1 = fmng1.obj $(Af)
 
 fmng1.exe: $(fmng1)
-	$(CC) $(CFLAGS) -o fmng1.exe $(fmng1) $(Lp)
+	$(CC) $(CFLAGS) -Fefmng1.exe $(fmng1) $(Lp) $(Lmt)
 
 fnl21 = fnl21.obj $(Af)
 
 fnl21.exe: $(fnl21)
-	$(CC) $(CFLAGS) -o fnl21.exe $(fnl21) $(Lp)
+	$(CC) $(CFLAGS) -Fefnl21.exe $(fnl21) $(Lp) $(Lmt)
 
 # tn.f and blas.f are available from netlib.exe: ask for "tn from opt".
 
 tn = tnmain.obj tn.obj blas.obj $(Af)
 
 tn.exe: $(tn)
-	$(CC) $(CFLAGS) -o tn.exe $(tn) $(Lf2c)
+	$(CC) $(CFLAGS) -Fetn.exe $(tn) $(Lf2c) $(Lmt)
 
 # ve08ad.f is available from netlib.exe: ask for "ve08 from opt".
 # See comments in README about a possible adjustment to ve08ad.f .
@@ -131,21 +134,25 @@ v8.o.exe: ve08.c
 v8 = v8.obj ve08ad.obj $(Af)
 
 v8.exe: $(v8)
-	$(CC) $(CFLAGS) -o v8.exe $(v8) $(Lp)
+	$(CC) $(CFLAGS) -Fev8.exe $(v8) $(Lp) $(Lmt)
 
 ve08 = ve08.obj ve08ad.obj $(Af)
 
 ve08.exe: $(ve08)
-	$(CC) $(CFLAGS) -o ve08.exe $(ve08) $(Lp)
+	$(CC) $(CFLAGS) -Feve08.exe $(ve08) $(Lp) $(Lmt)
 
 dualconv = dualconv.obj $A
 dualconv.exe: $(dualconv)
-	$(CC) $(CFLAGS) -o dualconv.exe $(dualconv)
+	$(CC) $(CFLAGS) -Fedualconv.exe $(dualconv) $(Lmt)
+
+nlcopy = nlcopy.obj $A
+nlcopy.exe: $(nlcopy)
+	$(CC) $(CFLAGS) -Fenlcopy.exe $(nlcopy) $(Lmt)
 
 qtest.exe: qtest.obj
-	$(CC) $(CFLAGS) -o qtest.exe qtest.obj $(Af)
+	$(CC) $(CFLAGS) -Feqtest.exe qtest.obj $(Af) $(Lmt)
 
-$S\amplsolv.lib.exe:
+$S\amplsolv.lib:
 	cd $S; make amplsolv.lib
 
 clean:

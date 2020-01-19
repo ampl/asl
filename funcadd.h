@@ -35,6 +35,10 @@ THIS SOFTWARE.
 #define VA_LIST va_list
 #endif
 
+#ifdef _WIN32
+#define Stdio_redefs
+#endif
+
  typedef struct cryptblock cryptblock;
 
 #ifdef __cplusplus
@@ -166,12 +170,48 @@ AmplExports {
 	void (*Add_table_handler) ANSI((
 		int (*DbRead) (AmplExports *ae, TableInfo *TI),
 		int (*DbWrite)(AmplExports *ae, TableInfo *TI),
-		char *handler_name,
+		char *handler_info,
 		int flags,
 		void *Vinfo
 		));
 	Char *Private;
 	void (*Qsortv) ANSI((void*, size_t, size_t, int(*)(const void*,const void*,void*), void*));
+
+	/* More stuff for stdio in DLLs... */
+
+	FILE	*StdIn;
+	FILE	*StdOut;
+	void	(*Clearerr)	ANSI((FILE*));
+	int	(*Fclose)	ANSI((FILE*));
+	FILE*	(*Fdopen)	ANSI((int, const char*));
+	int	(*Feof)		ANSI((FILE*));
+	int	(*Ferror)	ANSI((FILE*));
+	int	(*Fflush)	ANSI((FILE*));
+	int	(*Fgetc)	ANSI((FILE*));
+	char*	(*Fgets)	ANSI((char*, int, FILE*));
+	int	(*Fileno)	ANSI((FILE*));
+	FILE*	(*Fopen)	ANSI((const char*, const char*));
+	int	(*Fputc)	ANSI((int, FILE*));
+	int	(*Fputs)	ANSI((const char*, FILE*));
+	size_t	(*Fread)	ANSI((void*, size_t, size_t, FILE*));
+	FILE*	(*Freopen)	ANSI((const char*, const char*, FILE*));
+	int	(*Fscanf)	ANSI((FILE*, const char*, ...));
+	int	(*Fseek)	ANSI((FILE*, long, int));
+	long	(*Ftell)	ANSI((FILE*));
+	size_t	(*Fwrite)	ANSI((const void*, size_t, size_t, FILE*));
+	int	(*Pclose)	ANSI((FILE*));
+	void	(*Perror)	ANSI((const char*));
+	FILE*	(*Popen)	ANSI((const char*, const char*));
+	int	(*Puts)		ANSI((const char*));
+	void	(*Rewind)	ANSI((FILE*));
+	int	(*Scanf)	ANSI((const char*, ...));
+	void	(*Setbuf)	ANSI((FILE*, char*));
+	int	(*Setvbuf)	ANSI((FILE*, char*, int, size_t));
+	int	(*Sscanf)	ANSI((const char*, const char*, ...));
+	char*	(*Tempnam)	ANSI((const char*, const char*));
+	FILE*	(*Tmpfile)	ANSI((void));
+	char*	(*Tmpnam)	ANSI((char*));
+	int	(*Ungetc)	ANSI((int, FILE*));
 	};
 
 extern char *i_option_ASL, *ix_details_ASL[];
@@ -223,7 +263,12 @@ enum {	/* return values from (*DbRead)(...) and (*DbWrite)(...) */
 
 enum {	/* bits in flags field of TableInfo */
 	DBTI_flags_IN = 1,	/* table has IN  or INOUT entities */
-	DBTI_flags_OUT = 2	/* table has OUT or INOUT entities */
+	DBTI_flags_OUT = 2,	/* table has OUT or INOUT entities */
+	DBTI_flags_INSET = 4	/* table has "in set" phrase: */
+				/* DbRead could omit rows for */
+				/* which Lookup(...) == -1; AMPL */
+				/* will ignore such rows if DbRead */
+				/* offers them. */
 	};
 
 #endif /* FUNCADD_H_INCLUDED */
@@ -251,6 +296,92 @@ enum {	/* bits in flags field of TableInfo */
 #define at_reset(x,y) (*ae->AtReset)(ae,x,y)
 #define add_table_handler(a,b,c,d,e) (*ae->Add_table_handler)(a,b,c,d,e)
 #define qsortv(a,b,c,d,e) (*ae->Qsortv)(a,b,c,d,e)
+#ifdef Stdio_redefs
+#undef clearerr
+#undef fclose
+#undef fdopen
+#undef feof
+#undef ferror
+#undef fflush
+#undef fgetc
+#undef fgets
+#undef fileno
+#undef fopen
+#undef fputc
+#undef fputs
+#undef fread
+#undef freopen
+#undef fscanf
+#undef fseek
+#undef ftell
+#undef fwrite
+#undef getc
+#undef getchar
+#undef gets
+#undef pclose
+#undef perror
+#undef popen
+#undef putc
+#undef putchar
+#undef puts
+#undef rewind
+#undef scanf
+#undef setbuf
+#undef setvbuf
+#undef sscanf
+#undef tempnam
+#undef tmpfile
+#undef tmpnam
+#undef ungetc
+#undef vprintf
+#define clearerr	(*ae->Clearerr)
+#define fclose		(*ae->Fclose)
+#define fdopen		(*ae->Fdopen)
+#define feof		(*ae->Feof)
+#define ferror		(*ae->Ferror)
+#define fflush		(*ae->Fflush)
+#define fgetc		(*ae->Fgetc)
+#define fgets		(*ae->Fgets)
+#define fileno		(*ae->Fileno)
+#define fopen		(*ae->Fopen)
+#define fputc		(*ae->Fputc)
+#define fputs		(*ae->Fputs)
+#define fread		(*ae->Fread)
+#define freopen		(*ae->Freopen)
+#define fscanf		(*ae->Fscanf)
+#define fseek		(*ae->Fseek)
+#define ftell		(*ae->Ftell)
+#define fwrite		(*ae->Fwrite)
+#define getc		(*ae->Fgetc)
+#define getchar()	(*ae->Getc)(ae->StdIn)
+#define gets		Error - use "fgets" rather than "gets"
+#define pclose		(*ae->Pclose)
+#define perror		(*ae->Perror)
+#define popen		(*ae->Popen)
+#define putc		(*ae->Fputc)
+#define putchar(x)	(*ae->Fputc)(ae->StdOut,(x))
+#define puts		(*ae->Puts)
+#define rewind		(*ae->Rewind)
+#define scanf		(*ae->Scanf)
+#define setbuf		(*ae->Setbuf)
+#define setvbuf		(*ae->Setvbuf)
+#define sscanf		(*ae->Sscanf)
+#define tempnam		(*ae->Tempnam)
+#define tmpfile		(*ae->Tmpfile)
+#define tmpnam		(*ae->Tmpnam)
+#define ungetc		(*ae->Ungetc)
+#define vprintf(x,y)	(*ae->VfprintF)(ae->StdOut,(x),(y))
+#define Stdin		(ae->StdIn)
+#define Stdout		(ae->StdOut)
+#ifndef No_std_FILE_redefs	/* may elicit compiler warnings */
+#undef stdin
+#undef stdout
+#undef stderr
+#define stdin		(ae->StdIn)
+#define stdout		(ae->StdOut)
+#define stderr		(ae->StdErr)
+#endif /* No_std_FILE_redefs */
+#endif /* Stdio_redefs */
 #endif /* ifndef No_AE_redefs */
 
 /* DISCUSSION: the "at" field of an arglist...

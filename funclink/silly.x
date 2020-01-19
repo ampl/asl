@@ -46,3 +46,18 @@ display mean('a',2,3,4);
 function kth symbolic;	# kth(k,a1,a2,...,an) returns ak
 
 display{i in 1..3} kth(i,'a',i+10,'Last arg');
+
+function ginvae;	# like ginv, but enrolls functions
+			# that are called at "reset;" and the
+			# end of execution
+
+display{i in 0..2} ginvae(i);
+
+reset;			# causes "Got to At_reset" messages
+
+function ginvae;
+
+display {i in -1 .. 1} ginvae(i);
+
+quit;			# causes "Got to At_reset" and "Got to At_end"
+			# messages

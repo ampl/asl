@@ -133,8 +133,6 @@ obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
 			comeval_ASL(asl, combc, ncom0);
 		if (comc1 < ncom1)
 			com1eval_ASL(asl, comc1, ncom1);
-		if (comc1)
-			com1eval_ASL(asl, 0, comc1);
 		x0kind |= ASL_have_objval;
 		}
 	d = obj_de + i;

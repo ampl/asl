@@ -10,14 +10,13 @@ CFLAGS = -I$S -O
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
 
-amplfunc.so: funcadd.o
-	ld -shared -o amplfunc.so -soname amplfunc.so funcadd.o -lm
+amplfunc.dll: funcadd.o
+	$(CC) -shared -o amplfunc.dll funcadd.o -lm
 
 ## Sample solver creation...
 
 # $(myobjects) = list of .o files
 myobjects = ....
-LL = /usr/local/lib
 
 mysolver: $(myobjects)
-	$(CC) -o mysolver -L. -L$(LL) $(myobjects) $(LL)/amplfunc.so $S/amplsolver.a -lm
+	$(CC) -o mysolver $(myobjects) $S/amplsolver.a -lm

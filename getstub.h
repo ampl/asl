@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1998 Lucent Technologies
+Copyright (C) 1997-1998, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -148,6 +148,7 @@ extern char WSu_desc_ASL[];	/* desc for WS_val, unconstrained problems */
 extern Kwfunc C_val, CK_val, DA_val, DK_val, DU_val, D_val, IA_val;
 extern Kwfunc IK0_val, IK1_val, IK_val, IU_val, I_val, LK_val, LU_val;
 extern Kwfunc L_val, Ver_val, WS_val;
+extern Kwfunc SU_val;
 
 /* Routines for converting Double (real), Long, and int values: */
 

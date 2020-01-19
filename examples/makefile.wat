@@ -1,5 +1,5 @@
 # /****************************************************************
-# Copyright (C) 1997 Lucent Technologies
+# Copyright (C) 1997-1999 Lucent Technologies
 # All Rights Reserved
 #
 # Permission to use, copy, modify, and distribute this software and
@@ -23,8 +23,12 @@
 # ****************************************************************/
 
 # For compiling solvers/examples with WATCOM C/C++.
+# In the CFLAGS line, -bt=nt is for NT console binaries; for MSDOS,
+# adjust -bt suitably.
 
-# Invoke with "wmakel -u -f makefile.wat" .
+# Invoke with "wmake -u -f makefile.wat" ,
+# or "copy makefile.wat makefile", possibly edit makefile,
+# and just invoke with "wmake -u".
 
 .SUFFIXES: .f
 
@@ -32,7 +36,8 @@ CC = wcc386
 S = ..
 # "S = .." assumes this directory is solvers/examples .
 
-CFLAGS = -I$S
+CFLAGS = -fpd -I$S -bt=nt
+LFLAGS = -bt=nt -l=nt
 
 .c.obj:
 	$(CC) $(CFLAGS) $*.c
@@ -67,64 +72,61 @@ all1: $(all1)
 
 lin1 = lin1.obj $(Af)
 lin1.exe: $(lin1)
-	wcl386 -l=dos4g -fe=lin1 $(lin1)
+	wcl386 $(LFLAGS) -fe=lin1 $(lin1)
 
 lin2 = lin2.obj $A
 lin2.exe: $(lin2)
-	wcl386 -l=dos4g -fe=lin2 $(lin2)
+	wcl386 $(LFLAGS) -fe=lin2 $(lin2)
 
 lin3 = lin3.obj $A
 lin3.exe: $(lin3)
-	wcl386 -l=dos4g -fe=lin3 $(lin3)
+	wcl386 $(LFLAGS) -fe=lin3 $(lin3)
 
 linrc = linrc.obj $A
 linrc.exe: $(linrc)
-	wcl386 -l=dos4g -fe=linrc $(linrc)
+	wcl386 $(LFLAGS) -fe=linrc $(linrc)
 
 mng1 = mng1.obj $(Af)
 
 mng1.exe: $(mng1)
-	wcl386 -l=dos4g -fe=mng1 $(mng1) $(Lp)
+	wcl386 $(LFLAGS) -fe=mng1 $(mng1) $(Lp)
 
 nl21 = nl21.obj $(Af)
 
 nl21.exe: $(nl21)
-	wcl386 -l=dos4g -fe=nl21 $(nl21) $(Lp)
+	wcl386 $(LFLAGS) -fe=nl21 $(nl21) $(Lp)
 
-mng = mng.objbj funcadd.obj rvmsg.obj keywds.obj $A
+mng = mng.objbj rvmsg.obj keywds.obj $A
 
 mng.exe: $(mng)
-	wcl386 -l=dos4g -fe=mng $(mng) $(Lp)
+	wcl386 $(LFLAGS) -fe=mng $(mng) $(Lp)
 
-mnh = mnh.objbj funcadd.obj rvmsg.obj hkeywds.obj $A
+mnh = mnh.objbj rvmsg.obj hkeywds.obj $A
 
 mnh.exe: $(mnh)
-	wcl386 -l=dos4g -fe=mnh $(mnh) $(Lp)
+	wcl386 $(LFLAGS) -fe=mnh $(mnh) $(Lp)
 
-nl2 = nl2.objbj funcadd.obj rvmsg.obj keywds.obj $A
+nl2 = nl2.objbj rvmsg.obj keywds.obj $A
 
 nl2.exe: $(nl2)
-	wcl386 -l=dos4g -fe=nl2 $(nl2) $(Lp)
-
-funcadd.obj: $S\funcadd.c
-	$(CC) $(CFLAGS) $S\funcadd.c
+	wcl386 $(LFLAGS) -fe=nl2 $(nl2) $(Lp)
 
 fmng1 = fmng1.obj $(Af)
 
 fmng1.exe: $(fmng1)
-	wcl386 -l=dos4g -fe=fmng1 $(fmng1) $(Lp)
+	wcl386 $(LFLAGS) -fe=fmng1 $(fmng1) $(Lp)
 
 fnl21 = fnl21.obj $(Af)
 
 fnl21.exe: $(fnl21)
-	wcl386 -l=dos4g -fe=fnl21 $(fnl21) $(Lp)
+	wcl386 $(LFLAGS) -fe=fnl21 $(fnl21) $(Lp)
 
 # tn.f and blas.f are available from netlib.exe: ask for "tn from opt".
 
 tn = tnmain.obj tn.obj blas.obj $(Af)
 
 tn.exe: $(tn)
-	wcl386 -l=dos4g -fe=tn $(tn) $(Lf2c)
+	wcl386 $(LFLAGS) -fe=tn $(tn) $(Lf2c)
 
 # ve08ad.f is available from netlib.exe: ask for "ve08 from opt".
 # See comments in README about a possible adjustment to ve08ad.f .
@@ -134,19 +136,23 @@ v8.o.exe: ve08.c
 v8 = v8.obj ve08ad.obj $(Af)
 
 v8.exe: $(v8)
-	wcl386 -l=dos4g -fe=v8 $(v8) $(Lp)
+	wcl386 $(LFLAGS) -fe=v8 $(v8) $(Lp)
 
 ve08 = ve08.obj ve08ad.obj $(Af)
 
 ve08.exe: $(ve08)
-	wcl386 -l=dos4g -fe=ve08 $(ve08) $(Lp)
+	wcl386 $(LFLAGS) -fe=ve08 $(ve08) $(Lp)
 
 dualconv = dualconv.obj $A
 dualconv.exe: $(dualconv)
-	wcl386 -l=dos4g -fe=dualconv $(dualconv)
+	wcl386 $(LFLAGS) -fe=dualconv $(dualconv)
+
+nlcopy = nlcopy.obj $A
+nlcopy.exe: $(nlcopy)
+	wcl386 $(LFLAGS) -fe=nlcopy $(nlcopy)
 
 qtest.exe: qtest.obj
-	wcl386 -l=dos4g -fe=qtest qtest.obj $(Af)
+	wcl386 $(LFLAGS) -fe=qtest qtest.obj $(Af)
 
 $S\amplsolv.lib.exe:
 	cd $S; make amplsolv.lib

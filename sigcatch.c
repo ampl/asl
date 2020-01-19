@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 2000 Lucent Technologies
+Copyright (C) 1999 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -22,33 +22,50 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-/* Print and skip past unknown keywords, possibly followed by = value. */
+#include "signal.h"
 
-#include "stdio1.h"
+#ifdef KR_headers
+#define ANSI(x) ()
+#else
+#define ANSI(x) x
+#endif
 
 #ifdef __cplusplus
-extern "C" char *pr_unknown_ASL(FILE*, char*);
+extern "C" {
 #endif
 
- char *
+extern void mainexit_ASL ANSI((int));
+
+#ifndef Sig_ret_type
+#define Sig_ret_type void
+#endif
+
+#ifdef SIGHUP
+ static Sig_ret_type
 #ifdef KR_headers
-pr_unknown_ASL(f, s) FILE *f; char *s;
+hupcatch(n) int n;
 #else
-pr_unknown_ASL(FILE *f, char *s)
+hupcatch(int n)
 #endif
 {
-	char *s1;
-
-	for(s1 = s; *s1 > ' ' && *s1 != '='; s1++);
-	fprintf(f, "Unknown keyword \"%.*s\"\n", s1-s, s);
-	while(*s1 <= ' ' && *s1)
-		s1++;
-	if (*s1 == '=') {
-		while(*++s1)
-			if (*s1 > ' ') {
-				while(*++s1 > ' ');
-				break;
-			}
-		}
-	return s1;
+	mainexit_ASL(n);
 	}
+#endif
+
+ void
+sigcatch_ASL ANSI((void))
+{
+#ifdef SIGHUP
+	int i;
+	static int sig[] = { SIGABRT, SIGQUIT, SIGTERM, 0 };
+
+	if (signal(SIGHUP, hupcatch) == SIG_IGN)
+		signal(SIGHUP, SIG_IGN);
+	for(i = 0; sig[i]; i++)
+		signal(sig[i], hupcatch);
+#endif
+	}
+
+#ifdef __cplusplus
+}
+#endif

@@ -19,9 +19,10 @@ duthes.obj
 dynlink.obj
 f_read.obj
 fg_read.obj
+fg_write.obj
 fgh_read.obj
 fpecatch.obj
-fpinit.obj
+fpinitmt.obj
 fullhes.obj
 func_add.obj
 funcadd1.obj

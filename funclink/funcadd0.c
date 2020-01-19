@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997-1998 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -25,6 +25,8 @@ THIS SOFTWARE.
 /* dummy funcadd */
 
 #include "asl.h"
+
+ char *ix_details_ASL[] = {0};
 
  void
 #ifdef KR_headers

@@ -1,37 +1,21 @@
 # Makefile for Solaris with cc an ANSI C compiler.
-# To use a K&R C compiler, add -DKR_headers to the CFLAGS assignment
-# and change funcadd to funcaddk (in the last two lines).
 
 .SUFFIXES: .c .o
 
 # $S = ampl/solvers directory
 S = ..
 CC = cc
-CFLAGS = -I$S -O
+CFLAGS = -I$S -O -Kpic
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
 
-libampl.so.0.0: funcadd.o
-	ld -o libampl.so.0.0 -G funcadd.o
-
-# The baroque name libampl.so.0.0 permits creating a COFF shared
-# library under SunOS and using it under Solaris.  If this
-# convenience is not desired, changing libampl.so.0.0 to amplfunc.so
-# is recommended (for simplicity).
-
-# Shell variable LD_LIBRARY_PATH can specify a colon-separated
-# sequence of directories in which to look for shared objects.
+amplfunc.dll: funcadd.o
+	ld -G -o amplfunc.dll funcadd.o
 
 ## Sample solver creation...
 
 # $(myobjects) = list of .o files
 myobjects = ....
-LL = /usr/local/lib
 
-# Unfortunately, it seems necessary to have a copy of the dummy
-# /usr/local/lib/libampl.so.0.0 in the current directory (to force
-# the run-time loader to look first in the current directory for
-# libampl.so.0.0).
-
-mysolver: $(myobjects) libampl.so.0.0
-	$(CC) -o mysolver -R.:$(LL):/usr/ucblib $(myobjects) libampl.so.0.0 $S/amplfunc.a -lm
+mysolver: $(myobjects)
+	$(CC) -o mysolver $(myobjects) $S/amplfunc.a -lm -ldl

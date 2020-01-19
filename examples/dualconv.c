@@ -330,7 +330,8 @@ nl_write(int m, int n, cgrad **cg0, real *LU_bounds, real *LU_ranges, int Max)
 		 && lu[0] < lu[1])
 			nr++;
 	fprintf(fd, "%c3 0 0 0\n", c);
-	fprintf(fd, " %d %d 1 %d\n 0 0\n 0 0\n 0 0\n 0 0\n 0 0\n", n, m, nr);
+	fprintf(fd, " %d %d 1 %d\n 0 0\n 0 0\n 0 0\n 0 0 %d %d\n 0 0\n",
+		n, m, nr, binary_nl ? Arith_Kind_ASL : 0, asl->i.flags);
 	fprintf(fd, " %d %d\n 0 0\n 0 0 0 0 0\n", k, kg);
 	for(i = 0; i < m; i++) {
 		pr("C%d\n", i);
@@ -809,6 +810,15 @@ undo(char *s, int op)
 		ampl_options[i] = dvth.Options[i];
 	ampl_vbtol = dvth.vbtol;
 	Oinfo.wantsol = 9;	/* suppress message echo, force .sol writing */
+	i = solve_result_num;
+	if (i >= 200 && i < 400) {
+		/* interchange "infeasible" and "unbounded" */
+		if (i >= 300)
+			i -= 100;
+		else
+			i += 100;
+		solve_result_num = i;
+		}
 	write_sol(msg, x, y, &Oinfo);
 	return 0;
 	}

@@ -53,7 +53,7 @@ extern double strtod();
 #define strtod strtod_ASL
 #ifndef MALLOC
 #define MALLOC dtoamalloc
-#include "dtoa.c"
+#include "dtoa.c" /* >= 19991215 */
 
 #include "stdio1.h"
 

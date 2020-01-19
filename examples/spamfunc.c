@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1998 Lucent Technologies
+Copyright (C) 1997-1999 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -114,9 +114,7 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	static fint n, nc, nz;
 	fint i, nerror;
 	real *J1, *W, *c, *f, *g, *v, *t, *x;
-	static real *J;
 	cgrad *cg, **cgp;
-	static size_t Jsize;
 	Jmp_buf err_jmp0;
 	ASL_pfgh *asl = (ASL_pfgh*)cur_ASL;
 	static fint nhnz;
@@ -146,7 +144,6 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		n = n_var;
 		nc = n_con;
 		nz = nzc;
-		J = (real *)M1alloc(nz*sizeof(real));
 		X0 = mxGetPr(plhs[0] = mxCreateDoubleMatrix(n, 1, mxREAL));
 		LUv = mxGetPr(plhs[1] = mxCreateDoubleMatrix(n, 1, mxREAL));
 		Uvx = mxGetPr(plhs[2] = mxCreateDoubleMatrix(n, 1, mxREAL));
@@ -161,7 +158,6 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		else if (n_cc)
 			printf(ignore_complementarity, n_cc);
 		pfgh_read(nl, ASL_findgroups);
-		Jsize = nc*n*sizeof(real);
 		if (nlhs == 7)
 			for(i = 0; i < nc; i++)
 				x[i] = cvar[i];

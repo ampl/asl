@@ -13,17 +13,19 @@ and other updates, or send the 2-word E-mail message
 to netlib@netlib.bell-labs.com to receive notification of updates.
 Please send bug reports and other comments to dmg@bell-labs.com .
 
-File "makefile" in this directory is for Unix systems.  Variants for
-some PC compilers have names of the form makefile.* .  These variants
-start (after legal disclaimers) with comments saying what compiler
-they are for and telling what "make" incantation to use.  The
-makefile variants have rules for compiling Fortran files with f2c;
-f2cx == ftp://netlib.bell-labs.com/netlib/f2c/mdsos/f2cx.exe.gz
-is an extended-memory version of f2c.  The "rmcr" program invoked by
-the makefile variants removes \r (carriage-return) characters; you
-could make other arrangements.
+File "makefile.u" in this directory is a makefile for Unix systems.
+Variants for some PC compilers have names of the form makefile.* .
+All variants start (after legal disclaimers) with comments saying
+what compiler they are for and telling what "make" incantation to use.
+The makefile variants have rules for compiling Fortran files with f2c;
+f2cx == ftp://netlib.bell-labs.com/netlib/f2c/mdsos/f2cx.exe.gz is an
+extended-memory version of f2c.  The "rmcr" program invoked by the
+makefile variants removes \r (carriage-return) characters; you could
+make other arrangements.  It may be best to copy the relevant makefile.*
+variant to makefile and then edit the latter if necessary.
 
-See the comments in "makefile" about compiler flags and source for
+
+See the comments in "makefile.u" about compiler flags and source for
 the solvers (dmngb, dn2g, dn2gb, tn, v8, ve08) used in some of the
 examples.
 

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -25,4 +25,4 @@ THIS SOFTWARE.
 #define PSHVREAD
 #define pfg_read_ASL pfgh_read_ASL
 #include "pfg_read.c"
-/* Last update 19990630. */
+/* Last update 20000306. */

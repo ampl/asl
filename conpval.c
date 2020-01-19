@@ -302,6 +302,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 		if (*nerror = i)
 			return;
 		}
+	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known && xp_check_ASL(asl,X)
 	 || !(x0kind & ASL_have_conval)) {
 		want_deriv = 1;
@@ -309,7 +310,6 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
-	errno = 0;	/* in case f77 set errno opening files */
 	Adjoints = adjoints;
 	gr0 = Cgrad;
 	gre = gr0 + n_conjac[1];
@@ -488,6 +488,7 @@ objpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (*nerror = i)
 			return;
 		}
+	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		xp_check_ASL(asl,X);
 	if (!asl->i.noxval || asl->i.noxval[i] != asl->i.nxval) {
@@ -496,7 +497,6 @@ objpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
-	errno = 0;	/* in case f77 set errno opening files */
 	Adjoints = adjoints;
 	if (p->ng)
 		psgcomp(asl, p);
@@ -638,6 +638,7 @@ conpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (*nerror = i0)
 			return;
 		}
+	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known)
 		xp_check_ASL(asl, X);
 	if (!asl->i.ncxval || asl->i.ncxval[i] != asl->i.nxval) {
@@ -646,7 +647,6 @@ conpgrd(ASL *a, int i, real *X, real *G, fint *nerror)
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
-	errno = 0;	/* in case f77 set errno opening files */
 	Adjoints = adjoints;
 	p = asl->P.cps + i;
 	gr0 = Cgrad[i];

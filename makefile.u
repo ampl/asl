@@ -1,5 +1,5 @@
 # /****************************************************************
-# Copyright (C) 1997 Lucent Technologies
+# Copyright (C) 1997-2000 Lucent Technologies
 # All Rights Reserved
 #
 # Permission to use, copy, modify, and distribute this software and
@@ -22,10 +22,15 @@
 # THIS SOFTWARE.
 # ****************************************************************/
 
+# For making amplsolver.a on Unix systems.
+
 .SUFFIXES: .c .o
 CC = cc
 CFLAGS = -O
 SHELL=/bin/sh
+
+# Add -DNO_RUSAGE to the CFLAGS assignment if your system
+# lacks getrusage().  This only matters for compiling xectim.c.
 
 # Add -DKR_headers to CFLAGS if your C compiler does not
 # understand ANSI C function headers, e.g.
@@ -39,20 +44,31 @@ SHELL=/bin/sh
 # You may also need to add -D_SIZE_T to CFLAGS, or to
 # comment out the definition of size_t in nlp.h .
 
-# For SunOS systems, try
+# For non-Solaris SunOS systems (i.e., for SunOS 4.x but not 5.x), try
 # CFLAGS = -O -DKR_headers -D_SIZE_T
 
 # For the DEC Alpha, try
-# CFLAGS = -g -ieee_with_no_inexact
+# CFLAGS = -O -ieee_with_no_inexact
 
 # For HP, try
-# CFLAGS = -O -Aa
+# CFLAGS = -O -Aa -Ae
 # or (if the compiler does not recognize -Aa for ANSI syntax)
 # CFLAGS = -O -DKR_headers
 
 # For IBM RS6000 machines, add
 #	-qnomaf
-# to CFLAGS (to avoid surprises from fused mutiply-add instructions).
+# to CFLAGS (to avoid surprises from fused mutiply-add instructions),
+# and for AIX versions less than 4.3, remove funcadd1.c from the "a ="
+# assignment below.
+
+# On systems where compilation of stderr.c gives an error, such as at
+# least some versions of Linux, add
+#	-DNON_STDIO
+# to CFLAGS.
+
+# For Solaris on the i386 architecture, add fpsetprec.s to the "a ="
+# assignment below and modify the rule for making arith.h so
+# fpsetprec.o is compiled and linked with the other objects.
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
@@ -62,6 +78,7 @@ all: arith.h stdio1.h amplsolver.a funcadd0.o
 a = \
 	asldate.c \
 	atof.c \
+	auxinfo.c \
 	b_search.c \
 	basename.c \
 	bscanf.c \
@@ -74,18 +91,21 @@ a = \
 	conpval.c \
 	conscale.c \
 	conval.c \
-	der0prop.c \
 	derprop.c \
 	dtoa1.c \
 	duthes.c \
 	dynlink.c \
 	f_read.c \
 	fg_read.c \
+	fg_write.c \
 	fgh_read.c \
 	fpecatch.c \
+	fpinit.c \
 	fullhes.c \
 	func_add.c \
+	funcadd1.c \
 	g_fmt.c \
+	genrowno.c \
 	getenv.c \
 	getstub.c \
 	htcl.c \
@@ -118,9 +138,12 @@ a = \
 	repwhere.c \
 	rops.c \
 	rops2.c \
+	sigcatch.c \
 	sphes.c \
 	sscanf.c \
 	stderr.c \
+	studchk0.c \
+	suf_sos.c \
 	value.c \
 	writesol.c \
 	wrtsol_.c \
@@ -133,49 +156,53 @@ a = \
 
 amplsolver.a: $a
 	$(CC) -c $(CFLAGS) $?
-	x=`echo $? | sed 's/\.c/.o/g'` && ar ruv amplsolver.a $$x && rm $$x
+	x=`echo $? | sed 's/\.[cs]/.o/g'` && ar ruv amplsolver.a $$x && rm $$x
 	ranlib amplsolver.a || true
 # If your system lacks ranlib, add a dummy ranlib to your
 # search path, e.g.
 #	exec true
 # or just comment out the ranlib invocation above.
 
-Aslh = asl.h stdio1.h
-dtoa1.o ed2read.o edagread.o g_fmt.o mach.o pfg_read.o pfghread.o: arith.h
-dtoa1.o: dtoa.c
-conadj.o conscale.o conval.o con1ival.o jacdim.o jacinc.o names.o nqpcheck.o\
- objval.o qpcheck.o wrtsol_.o: nlp.h $(Aslh)
-com2eval.o rops2.o: nlp2.h $(Aslh)
-comeval.o ed0read.o edagread.o qp_read.o mip_pri.o rops.o: nlp.h $(Aslh)
-con2ival.o con2val.o ed2read.o obj2val.o x2check.o: jac2dim.h nlp2.h $(Aslh)
-conpval.o xp2known.o: jacpdim.h asl_pfg.h nlp2.h $(Aslh)
-der0prop.o derprop.o objval_.o repwhere.o: $(Aslh)
-duthes.o pfg_read.o pfghread.o: asl_pfg.h nlp2.h $(Aslh)
-dynlink.o: funcadd.h
-ed2read.o pfg_read.o: dvalue.hd op_type.hd opnos.hd
-ed0read.o edagread.o: nlp.h $(Aslh)
-ed0read.o: edagread.c
-edagread.o qp_read.o: op_type.hd dvalue.hd r_opn.hd
-funcadd.o: funcadd.h
-func_add.o getstub.o misc.o value.o: $(Aslh)
-objconst.o: $(Aslh) nlp.h nlp2.h asl_pfg.h
+Aslh = arith.h asl.h funcadd.h stdio1.h
+auxinfo.o: funcadd.h stdio1.h
+mach.o: arith.h
+bscanf.o conscale.o derprop.o dynlink.o func_add.o\
+ funcadd.o funcadd1.o funcaddk.o funcaddr.o funcadd0.o g_fmt.o\
+ genrowno.o jac0dim.o jacdim.o jacinc.o names.o obj_prec.o objval_.o\
+ repwhere.o sjac0dim.o studchk0.o suf_sos.o: $(Aslh)
+xp1known.o: asl_pfg.h psinfo.h nlp.h $(Aslh)
+duthes.o fullhes.o htcl.o sphes.o: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
+getstub.o value.o writesol.o wrtsol_.o: getstub.h $(Aslh)
+com2eval.o con2ival.o con2val.o obj2val.o\
+ x2check.o: jac2dim.h nlp2.h $(Aslh)
+conpval.o pshvprod.o xp2known.o:\
+	jacpdim.h asl_pfgh.h psinfo.h nlp2.h $(Aslh)
+comeval.o con1ival.o conval.o mip_pri.o objval.o qpcheck.o\
+ readsol.o: nlp.h $(Aslh)
+misc.o nl_obj.o: nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 op_type.o: op_type.hd
-pfg_read.o pfghread.o: r_opn0.hd
-pfghread.o: pfg_read.c
-readsol.o writesol.o: nlp.h $(Aslh)
-rops.o rops2.o: r_op.hd
-nqpcheck.o qpcheck.o: r_qp.hd
-printf.o: stdio1.h
-xp1known.o: asl_pfg.h nlp.h $(Aslh)
+fgh_read.o: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
+rops.o: nlp.h errchk.h $(Aslh)
+rops2.o: nlp2.h errchk.h $(Aslh)
+conadj.o fg_write.o qp_read.o: nlp.h r_opn.hd $(Aslh)
+f_read.o fg_read.o: nlp.h r_opn.hd dvalue.hd $(Aslh)
+objconst.o: r_opn0.hd nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
+pfg_read.o: asl_pfg.h r_opn0.hd dvalue.hd nlp.h $(Aslh)
+pfghread.o: jacpdim.h asl_pfgh.h opnos.hd r_opn0.hd dvalue.hd\
+	psinfo.h nlp2.h $(Aslh)
+nqpcheck.o: nlp.h r_qp.hd $(Aslh)
+printf.o punknown.o sscanf.o: stdio1.h
+dtoa1.o: dtoa.c arith.h stdio1.h
 
 # Use CFLAGS in compiling arithchk.c in case something in CFLAGS affects
 # the number of bits in integral data types.  (It's probably best not to
 # add such options to CFLAGS.)
 
-arith.h: arithchk.c
-	cc $(CFLAGS) arithchk.c
+arith.h: arithchk.c fpinit.c
+	$(CC) -c $(CFLAGS) fpinit.c
+	$(CC) $(CFLAGS) arithchk.c fpinit.o || $(CC) -DNO_LONG_LONG $(CFLAGS) arithchk.c fpinit.o
 	a.out >arith.h
-	rm -f a.out arithchk.o
+	rm -f a.out arithchk.o fpinit.o
 
 ### Alternative to arithchk.c: copy arith.h0 to arith.h, then edit
 ### arith.h to activate the appropriate #define line, as explained
@@ -240,11 +267,13 @@ xs0 = \
 	asl_pfgh.h \
 	asldate.c \
 	atof.c \
+	auxinfo.c \
 	b_search.c \
 	basename.c \
 	bscanf.c \
 	com2eval.c \
 	comeval.c \
+	comptry.bat \
 	con1ival.c \
 	con2ival.c \
 	con2val.c \
@@ -252,25 +281,32 @@ xs0 = \
 	conpval.c \
 	conscale.c \
 	conval.c \
-	der0prop.c \
 	derprop.c \
 	dtoa.c \
 	dtoa1.c \
 	duthes.c \
 	dvalue.hd \
 	dynlink.c \
+	errchk.h \
 	f_read.c \
 	fg_read.c \
+	fg_write.c \
 	fgh_read.c \
 	float.h0 \
 	fpecatch.c \
+	fpinit.c \
+	fpinitmt.c \
+	fpsetprec.s \
 	fullhes.c \
 	func_add.c \
 	funcadd.c \
 	funcadd.h \
 	funcadd0.c \
+	funcadd1.c \
 	funcaddk.c \
+	funcaddr.c \
 	g_fmt.c \
+	genrowno.c \
 	getenv.c \
 	getstub.c \
 	getstub.h \
@@ -282,8 +318,8 @@ xs0 = \
 	jacpdim.h \
 	mach.c \
 	mainexit.c \
-	makefile \
 	makefile.sy \
+	makefile.u \
 	makefile.vc \
 	makefile.wat \
 	mip_pri.c \
@@ -301,6 +337,7 @@ xs0 = \
 	objval_.c \
 	op_type.c \
 	op_type.hd \
+	opcode.hd \
 	opnos.hd \
 	pfg_read.c \
 	pfghread.c \
@@ -320,6 +357,7 @@ xs0 = \
 	rnd_prod.s \
 	rops.c \
 	rops2.c \
+	sigcatch.c \
 	sjac0dim.c \
 	sphes.c \
 	sprintf.c \
@@ -327,6 +365,8 @@ xs0 = \
 	stderr.c \
 	stdio1.h0 \
 	strerror.c \
+	studchk0.c \
+	suf_sos.c \
 	value.c \
 	writesol.c \
 	wrtsol_.c \
@@ -340,3 +380,6 @@ xs0 = \
 xsum.out: xsum0.out $(xs0)
 	xsum $(xs0) >xsum1.out
 	cmp xsum0.out xsum1.out && mv xsum1.out xsum.out || diff xsum[01].out
+
+clean:
+	rm -f amplsolver.a *.o arith.h

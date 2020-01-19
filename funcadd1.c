@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1998, 1999 Lucent Technologies
+Copyright (C) 1998, 1999, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -51,14 +51,15 @@ funcadd(AmplExports *ae)
 #define FUNCADD "funcadd_ASL"
 #endif
 
-typedef void Funcadd ANSI((AmplExports*));
-
 #ifdef __cplusplus
 extern "C" {
 extern int libload_ASL(AmplExports *ae, char *s, int ns, int warn);
 #endif
 
+typedef void Funcadd ANSI((AmplExports*));
+
 extern Char *mymalloc_ASL ANSI((size_t));
+#undef mymalloc
 #define mymalloc(x) mymalloc_ASL((size_t)(x))
 #ifndef KR_headers
 extern void free(void*);
@@ -156,6 +157,10 @@ typedef void *shl_t;
 #endif /* __hpux */
 #endif /* WIN32 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
  static shl_t
 #ifdef KR_headers
 dl_open(ae, name, warned) AmplExports *ae; char *name; int *warned;
@@ -195,12 +200,15 @@ dl_close(void *h)
 #ifdef CLOSE_AT_RESET
 	first = 1;
 #endif
-	dlclose(h);
+	if (*(void**)h) {
+		dlclose(*(void**)h);
+		*(void**)h = 0;
+		}
 	}
 
  int
 #ifdef KR_headers
-libload_ASL(ae, name, ns, warn) AmplExports *ae; char *name; int ns, warn;
+libload_ASL(ae, s, ns, warn) AmplExports *ae; char *s; int ns; int warn;
 #else
 libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 #endif
@@ -231,26 +239,28 @@ libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 	warned = 0;
 	if (h = dl_open(ae, buf, &warned)) {
  found:
+#ifdef CLOSE_AT_RESET
+		/* -DCLOSE_AT_RESET is for use in shared */
+		/* libraries, such as MATLAB mex functions, */
+		/* that may be loaded and unloaded several */
+		/* times during execution of the program. */
+		at_reset(dl_close, &h);
+#else
+		at_exit(dl_close, &h);
+#endif
 		if (find_dlsym(fa, h, FUNCADD)
 		 || find_dlsym(fa, h, "funcadd")) {
 			rc = 0;
 #ifdef CLOSE_AT_RESET
-			if (aflibname_ASL(ae,buf,s,ns,fa,0))
-				/* -DCLOSE_AT_RESET is for use in shared */
-				/* libraries, such as MATLAB mex functions, */
-				/* that may be loaded and unloaded several */
-				/* times during execution of the program. */
-				at_reset(dl_close, h);
+			if (!aflibname_ASL(ae,buf,s,ns,fa,0))
 #else
-			if (aflibname_ASL(ae,buf,s,ns,fa,1))
-				at_exit(dl_close, h);
+			if (!aflibname_ASL(ae,buf,s,ns,fa,1))
 #endif
-			else
-				dlclose(h);
+				dl_close(&h);
 			}
 		else {
 			fprintf(stderr, "Could not find funcadd in %s\n", buf);
-			dlclose(h);
+			dl_close(&h);
 			rc = 3;
 			}
 		}
@@ -319,5 +329,8 @@ funcadd(AmplExports *ae)
 			libload_ASL(ae, afdll+1, (int)sizeof(afdll)-2, 0);
 		}
 	}
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* NO_FUNCADD */

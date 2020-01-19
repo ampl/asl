@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1998 Lucent Technologies
+Copyright (C) 1997, 1998, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -23,6 +23,10 @@ THIS SOFTWARE.
 ****************************************************************/
 
 #include "jacpdim.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
  static void
 #ifdef KR_headers
@@ -1088,3 +1092,7 @@ funpset_ASL(ASL_pfgh *asl, register funnel *f)
 			while(cl = cl->next);
 		}
 	}
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -44,6 +44,13 @@ extern double strtod();
 #include "stdlib.h"
 #endif
 #include "errno.h"
+
+#ifdef __cplusplus
+#define Cextern extern "C"
+extern "C" {
+#else
+#define Cextern extern
+#endif
 
 #ifndef real
 #define real double
@@ -183,7 +190,7 @@ relo {
 EdRead_ASL {
 	ASL *asl;
 	FILE *nl;
-	void *S;	/* Static */
+	Char *S;	/* Static */
 	Long Line;
 	int lineinc;
 	int can_end;
@@ -485,7 +492,7 @@ Edaginfo {
 	char *memNext, *memLast;
 
 	/* for user-defined functions */
-	AmplExports ae;
+	AmplExports *ae;
 
 	/* for con_name(), obj_name(), var_name() */
 
@@ -650,7 +657,6 @@ NewVCO {
 #define badline		badline_ASL
 #define badread		badread_ASL
 #define bscanf		bscanf_ASL
-#define der0prop	der0prop_ASL
 #define derprop		derprop_ASL
 #define dynlink		dynlink_ASL
 #define edag_peek	edag_peek_ASL
@@ -676,13 +682,6 @@ NewVCO {
 #define scream		scream_ASL
 #define what_prog	what_prog_ASL
 
-#ifdef __cplusplus
-#define Cextern extern "C"
-extern "C" {
-#else
-#define Cextern extern
-#endif
-
  extern real Infinity, edagread_one, negInfinity;
  extern char g_fmt_E, *progname;
  extern int g_fmt_decpt;
@@ -698,10 +697,11 @@ enum { /* mode bits for ASLtype */
 
 enum { /* bits for x0kind */
 	ASL_have_conval	= 1,
-	ASL_have_objval	= 2,
+	ASL_have_objcom	= 2,
 	ASL_first_x	= 4,
 	ASL_have_funnel = 8,	/* in con[12]ival */
-	ASL_need_funnel	= 16	/* in pshvprod */
+	ASL_need_funnel	= 16,	/* in pshvprod */
+	ASL_have_concom = 32
 	};
 
 enum ASL_reader_flag_bits {	/* bits in flags arg */
@@ -762,6 +762,8 @@ enum ASL_writer_error_codes {
 	};
 
 #define f_OPNUM f_OPNUM_ASL
+#undef basename
+#define basename basename_ASL
 
  extern ASL *ASL_alloc ANSI((int));
  extern void ASL_free ANSI((ASL**));
@@ -781,6 +783,7 @@ enum ASL_writer_error_codes {
  extern void Suf_read_ASL ANSI((EdRead*, int));
  extern int already_ASL ANSI((char*));
  extern int ascanf ANSI((EdRead*, const char*, ...));
+ extern void auxinfo_ASL ANSI((AmplExports*));
  extern void *b_search_ASL ANSI((void *ow, int owsize, int n, char **sp, char **peq));
  extern void badasl_ASL ANSI((ASL*,int,char*));
  extern void badline ANSI((EdRead*));
@@ -814,6 +817,7 @@ enum ASL_writer_error_codes {
  extern int g_fmt ANSI((char*, double));
  extern int g_fmtop ANSI((char*, double));
  extern int g_fmtp ANSI((char*, double, int));
+ extern void gen_rownos_ASL ANSI((ASL*));
  extern char *getenv_ASL ANSI((const char*));
  extern int htcl_ASL ANSI((unsigned int));
  extern void hvcomp_ ANSI((real *hv, real *p, fint *nobj, real *ow, real *y));
@@ -884,7 +888,9 @@ enum ASL_writer_error_codes {
 
 #ifndef No_dtoa
  extern double strtod_ASL ANSI((Const char*, char**));
+#ifndef strtod	/* if not set by previous funcadd.h */
 #define strtod strtod_ASL
+#endif
 #endif
 
 #ifdef __cplusplus
@@ -902,6 +908,7 @@ enum ASL_writer_error_codes {
 #define fg_wread(a,b) fg_wread_ASL((ASL*)asl,a,b)
 #define fg_write(a,b,c) fg_write_ASL((ASL*)asl,a,b,c)
 #define fgh_read(a,b) fgh_read_ASL((ASL*)asl,a,b)
+#define gen_rownos() gen_rownos_ASL((ASL*)asl)
 #undef getenv
 #define getenv getenv_ASL
 #define jac0dim(stub,len) jac0dim_ASL((ASL*)asl,stub,len)

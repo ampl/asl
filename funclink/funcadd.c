@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 1998 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -44,9 +44,14 @@ ginv(arglist *al)	/* generalized inverse of a single argument */
  static char *
 sginv(arglist *al)	/* character-valued version of ginv */
 {
-	static char buf[32];
-	AmplExports *ae = al->AE;	/* for sprintf */
+	AmplExports *ae = al->AE;	/* for sprintf and TempMem */
 	real x = al->ra[0];
+	/* Get memory for the return value from TempMem. */
+	/* This memory is automatically freed after the return */
+	/* value has been processed. */
+	/* A nonreentrant alternative would be to declare */
+	/*	static char buf[32];	*/
+	char *buf = (char*)TempMem(al->TMI, 32);
 	sprintf(buf, "x%.g", x ? 1./x : 0);
 	return buf;
 	}
@@ -141,32 +146,66 @@ mean(register arglist *al)	/* mean of arbitrarily many arguments */
  static char *
 kth(register arglist *al)	/* kth(k,a1,a2,...,an) return ak */
 {
-	int i, j, k, n;
-	char *comma;
-	static char buf[32];
+	int j, k, n;
+	char *buf;
 	AmplExports *ae = al->AE;
 
 	k = al->at[0] ? atoi(al->sa[0]) : (int)al->ra[0];
 	n = al->n;
 	if (k < 0) {
-		fprintf(Stderr, "kth(");
-		comma = "";
-		for(i = 0; i < n; i++, comma = ", ")
-			if ((j = al->at[i]) >= 0)
-				fprintf(Stderr, "%s%.g", comma, al->ra[j]);
-			else
-				fprintf(Stderr, "%s%s", comma, al->sa[-(j+1)]);
-		fprintf(Stderr, ")\n");
-		fflush(Stderr);
-		k = -k;
+		al->Errmsg = buf = (char*)TempMem(al->TMI, 64);
+		sprintf(buf, "kth(k,...) has k = %d < 0", k);
+		return buf;
 		}
 	if (n <= 1 || k <= 0 || k >= n)
 		return "";
 	if ((j = al->at[k]) >= 0) {
+		buf = (char*)TempMem(al->TMI, 32);
 		sprintf(buf, "%.g", al->ra[j]);
 		return buf;
 		}
 	return al->sa[-(j+1)];
+	}
+
+/* Illustration of at_exit() and at_reset() processing */
+
+ typedef struct Aeinfo
+{
+	AmplExports *ae;
+	int n;
+	} Aeinfo;
+
+static Aeinfo AEI[10], *AEInext = AEI, *AEIlast = AEI + 10;
+
+ static void
+At_end(void *v)
+{
+	Aeinfo *aei = (Aeinfo *)v;
+	AmplExports *ae = aei->ae;
+	printf("Got to At_end: n = %d\n", aei->n);
+	}
+
+ static void
+At_reset(void *v)
+{
+	Aeinfo *aei = (Aeinfo *)v;
+	AmplExports *ae = aei->ae;
+	printf("Got to At_reset: n = %d\n", aei->n);
+	}
+
+static real
+ginvae(arglist *al)	/* like ginv, but enrolling At_reset and At_exit */
+{
+	static int nginv;
+	AmplExports *ae = al->AE;
+
+	if (AEInext < AEIlast) {
+		AEInext->n = ++nginv;
+		AEInext->ae = ae;
+		at_reset(At_reset, AEInext);
+		at_exit(At_end, AEInext++);
+		}
+	return ginv(al);
 	}
 
  void
@@ -186,6 +225,10 @@ funcadd(AmplExports *ae){
  * Arg 4, called nargs, is interpretted as follows:
  *	>=  0 ==> the function has exactly nargs arguments
  *	<= -1 ==> the function has >= -(nargs+1) arguments.
+ *
+ * Arg5, called funcinfo, is copied without change to the arglist
+ *	structure passed to the function; funcinfo is for the
+ *	function to use or ignore as it sees fit.
  */
 
 	/* Solvers quietly ignore kth, sginv, and rncall, since */
@@ -202,4 +245,6 @@ funcadd(AmplExports *ae){
 	addfunc("mean0", (rfunc)mean, 0, -1, 0);
 	addfunc("mean", (rfunc)mean, 1, -1, 0);
 	addfunc("kth", (rfunc)kth, 3, -2, 0);
+	addfunc("ginvae", (rfunc)ginvae, 0, 1, 0); /* demo at_exit, at_reset */
+	/* at_end() and at_reset() calls could appear here, too. */
 	}

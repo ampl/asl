@@ -1,12 +1,12 @@
 g3 0 1 0	# problem diet
- 8 4 1 4	# vars, constraints, objectives, ranges
+ 8 4 1 4 0	# vars, constraints, objectives, ranges, eqns
  0 0	# nonlinear constraints, objectives
  0 0	# network constraints: nonlinear, linear
- 0 0	# nonlinear vars in constraints, objectives
- 0 0	# linear network variables; functions
- 0 0	# discrete variables: binary, integer
+ 0 0 0	# nonlinear vars in constraints, objectives, both
+ 0 0 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0	# discrete variables: binary, integer, nonlinear (b,c,o)
  31 8	# nonzeros in Jacobian, gradients
- 10 9	# max name lengths: constraints, variables
+ 10 11	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
 C0
 n0

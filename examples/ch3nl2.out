@@ -1,4 +1,3 @@
-Ignoring 1 objectives.
 
      I     INITIAL X(I)        D(I)
 
@@ -23,7 +22,7 @@ Ignoring 1 objectives.
      I      FINAL X(I)        D(I)          G(I)
 
      1     .146447E+00      .250E+01     -.284E-11
-     2     .500000E+00      .200E+01      .389E-15
+     2     .500000E+00      .200E+01      .370E-15
      3     .853553E+00      .250E+01      .283E-11
 
     4 EXTRA FUNC. EVALS FOR COVARIANCE AND DIAGNOSTICS.
@@ -39,8 +38,8 @@ Ignoring 1 objectives.
  ROW  3      .194E-24    .565E-24    .512E-24
 
  REGRESSION DIAGNOSTIC = SQRT( G(I)**T * H(I)**-1 * G(I) / ABS(F) )...
-    .329E+00    .760E+04    .159E+01
-nl2:	Absolute Function Convergence; function = 1.1303689819568955e-24
+    .760E+04    .147E+01    .413E+00
+nl2:	Absolute Function Convergence; function = 1.1303689846531975e-24
 	RELDX = 3.11e-07; PRELDF = 1; NPRELDF = 1
 	5 func. evals + 4 for covariance
 	5 grad. evals + 4 for covariance

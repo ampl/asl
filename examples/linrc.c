@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -108,11 +108,12 @@ main(int argc, char **argv)
 	if (clen < 8)
 		clen = 8;
 	clen += 2;
-	printf("\nVariable%*slower bound\tupper bound\t%s\n",
-		clen - 8, "", n_obj ? obj_name(0) : "");
+	printf("\nVariable%*s%-16s%-16s%s\n",
+		clen - 8, "", n_obj ? obj_name(0) : "", "lower bound",
+		"upper bound");
 	for(i = 0; i < n_var; i++)
-		printf("%-*s%-8g\t%-8g\t%g\n", clen, var_name(i),
-			LUv[2*i], LUv[2*i+1], c[i]);
+		printf("%-*s%-16g%-16g%g\n", clen, var_name(i),
+			c[i], LUv[2*i], LUv[2*i+1]);
 
 	/* Print rows. */
 

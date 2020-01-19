@@ -2,18 +2,25 @@ Sometimes it is convenient to use user-defined functions (usually
 written in C, C++, or Fortran 77) within an AMPL session or in the
 optimization problems that AMPL sends to solvers.  On most systesm
 (including Windows 95 and Windows NT, but excluding MS-DOS), it is
-convenient to provide user-defined functions in a shared library (also
-known, on some systems, as a dynamic-link library or DLL).  This
-directory provides system-dependent details on creating suitable
+convenient to provide user-defined functions in a shared library
+(also known, on some systems, as a dynamic-link library or DLL).
+This directory provides system-dependent details on creating suitable
 shared libraries.
 
-The student versions of AMPL do not have facilities for getting
-user-defined functions from shared libraries.  Commercial versions of
-AMPL may offer these facilities -- to make them available, the AMPL
-vendor must link the AMPL binary appropriately.  Similarly, solvers
-must be appropriately linked to import functions from shared
-libraries.  The makefiles in this directory provide system-dependent
-details on linking solvers this way.
+Unless your AMPL vendor makes other arrangements, where possible,
+versions of AMPL >= 19980320 look in the directory that is current
+when execution begins for a shared library named "amplfunc.dll".
+If it exists, they try to import user-defined functions from it;
+otherwise they do not complain and do not attempt to import any
+user-defined functions.  This behavior can be modified by command-line
+option -i or shell variable AMPLFUNC.  If command-line option -i dir
+appears and dir is a directory, AMPL looks for amplfunc.dll in directory
+dir; if command-line option -i file appears and file is a shared library,
+AMPL tries to import functions from it; and if no -i command-line option
+appears, but shell variable AMPLFUNC is set when executions begins,
+AMPL behaves as though command-line option -i $AMPLFUNC were given.
+(Systems where this scheme is not possible include MSDOS and AIX
+versions prior to 4.3.)
 
 The same shared library can make user-defined functions available both
 to AMPL and to solvers.  Solvers currently can only use deterministic
@@ -24,6 +31,13 @@ arguments.  When a shared library that provides some deterministic
 numeric-valued functions and some symbolic or random functions is used
 with a solver, the symbolic or random functions are automatically
 ignored -- the solver does not see them.
+
+Solvers linked with versions >= 19980319 of the AMPL/solver interface
+library follow the same rules as AMPL for importing functions.  If AMPL
+finds a suitable shared library, it sets $AMPLFUNC to reflect the library,
+so suitably linked solvers should import functions from the same library.
+Many solvers report both their version and that of the interface library
+they were linked with when they are invoked with command-line option -v.
 
 File funcadd.c contains sample user-defined functions, both
 deterministic numeric functions (which can be used by both AMPL and
@@ -47,7 +61,7 @@ in a directory that has a suitable library of user-defined functions,
 they use that library.  Otherwise they use an installation-dependent
 default library that on many systems makes no user-defined functions
 available.  Source file funcadd0.c (in ampl/solvers) may be used in
-creating this dummy libarary.  The policy of looking in the current
+creating this dummy library.  The policy of looking in the current
 directory for a shared library seems convenient, but could be viewed
 as a security risk; feel free to make other arrangements.  Many
 systems have a shell variable that controls where the system looks
@@ -56,7 +70,10 @@ for shared libraries; comments in the makefiles give the details.
 For use with appropriately linked AMPL processors, silly.x is an AMPL
 input script that invokes the functions in funcadd.c .
 
-See the comments in funcadd.c, $S/funcadd.h, and silly.x.
+See the section on "User-defined functions" in "Hooking Your Solver to
+AMPL" (http://www.ampl.com/cm/cs/what/ampl/REFS/hooking2.ps.gz or
+http://www.ampl.com/cm/cs/what/ampl/REFS/HOOKING/index.html#userdefinedfuncs).
+Also see the comments in funcadd.c, $S/funcadd.h, and silly.x.
 
 After you have issued the appropriate make command to create a
 library of the sample user-defined functions linked in,
@@ -68,8 +85,7 @@ invoking
 in this directory should give sample output files silly.out and silly.2 .
 
 File htest.x illustrates using the user-defined function hypot (in the
-sample funcadd.c) with solver "minosu" (a minos variant that obtains
-imported functions from a shared library).  File htest.out is from
+sample funcadd.c) with solver "m55" (a minos variant linked with the
+current AMPL/solver interface library).  File htest.out is from
 
 	ampl htest.x >htest.out
-

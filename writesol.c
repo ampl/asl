@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997, 1999 Lucent Technologies
+Copyright (C) 1997, 1999, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -32,7 +32,16 @@ SufHead {
 	fint namelen;
 	fint tablen;
 	} SufHead;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef char *(*Name) ANSI((ASL*,int));
+
+#ifdef __cplusplus
+}
+#endif
 
  static void
 #ifdef KR_headers
@@ -181,14 +190,14 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 #endif
 {
 	FILE *f;
-	int N, binary, i, *ip, j, k, n, tail, wantsol, *zz;
+	int N, binary, i, i1, *ip, j, k, n, tail, wantsol, *zz;
 	char buf[80], *s, *s1, *s2;
 	static char *wkind[] = {"w", "wb"};
 	ftnlen L[6];
 	fint J[2], m, z[4];
 	size_t nn;
 	real *rp, *y1, *xycopy;
-	SufDesc *d, *de;
+	SufDesc *d;
 	SufHead sh;
 
 	if (!asl || asl->i.ASLtype < 1 || asl->i.ASLtype > 5)
@@ -232,21 +241,20 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 		}
 	if (!amplflag && !(wantsol & 1))
 		goto write_done;
-	d = asl->i.suffixes[0];
-	de = d + asl->i.nsuffixes;
 	tail = 0;
 	if (obj_no || solve_code != -1)
 		tail = 1;
 	else  {
-		for(; d < de; d++)
+		for(i1 = 0; i1 < 4; i1++)
+		    for(d = asl->i.suffixes[i1]; d; d = d->next)
 			if (d->kind & ASL_Sufkind_output
 			 && (d->kind & ASL_Sufkind_real
 					? (int*)d->u.r : d->u.i)) {
 				tail = 1;
-				break;
+				goto break2;
 				}
-		d = asl->i.suffixes[0];
 		}
+ break2:
 	binary = binary_nl & 1;
 	strcpy(stub_end, ".sol");
 	f = fopen(filename, wkind[binary]);
@@ -310,7 +318,8 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 			L[1] = obj_no;
 			L[2] = solve_code;
 			fwrite(L, sizeof(fint), 4, f);
-			for(; d < de; d++)
+			for(i1 = 0; i1 < 4; i1++)
+			  for(d = asl->i.suffixes[i1]; d; d = d->next)
 			    if (d->kind & ASL_Sufkind_output
 			     && (d->kind & ASL_Sufkind_real
 					? (int*)d->u.r : d->u.i)) {
@@ -397,7 +406,8 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 			break;
 		    case 1:
 			fprintf(f, "objno %d %d\n", obj_no, solve_code);
-			for(; d < de; d++)
+			for(i1 = 0; i1 < 4; i1++)
+			  for(d = asl->i.suffixes[i1]; d; d = d->next)
 			    if (d->kind & ASL_Sufkind_output
 			     && (d->kind & ASL_Sufkind_real
 					? (int*)d->u.r : d->u.i)) {

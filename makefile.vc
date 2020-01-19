@@ -1,5 +1,5 @@
 # /****************************************************************
-# Copyright (C) 1997-1999 Lucent Technologies
+# Copyright (C) 1997-2000 Lucent Technologies
 # All Rights Reserved
 #
 # Permission to use, copy, modify, and distribute this software and
@@ -27,13 +27,26 @@
 # Invoke with "nmake -f makefile.vc" .
 
 CC = cl
-CFLAGS = -Ot1
+CFLAGS = -nologo -Ot1
 # For DEC Alpha processors, use
-# CFLAGS = -QAieee -Ot1
-# and omit the special rule below for fpinit.obj.
+# CFLAGS = -nologo -QAieee -Ot1 -DNo_Control87
 # The math libraries associated with some (older?) versions of VC++
 # return NaN for, e.g., trig functions of large numbers.  If you have
 # such a library, add -DNANCHECK to the CFLAGS assignment.
+
+# This makefile creates a Win32 amplsolv.lib that provides for catching
+# "signals" from a scrolling-window shell, sw.exe, that is (or should
+# soon be) available in netlib's "ampl/student/mswin" directory.
+# For this purpose, most objects can be compiled in "single-threaded"
+# mode, while fpinitmt.obj, which catches the "signals", is
+# automatically compiled as a multi-threaded object.  To link a solver
+# with amplsolv.lib compiled in this way, it is necessary to link with
+# the multi-threaded C library while suppressing automatic linking with
+# the non-threaded library, by adding
+#	libcmt.lib /link /NODEFAULTLIB:libc.lib
+# to the end of the solver linking command.  This is illustrated in the
+# solvers/*/makefile.vc files, such as solvers/examples/makefile.vc,
+# solvers/minos/makefile.vc, and solvers/donlp2/makefile.vc.
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*.c
@@ -62,9 +75,10 @@ a = \
 	dynlink.obj \
 	f_read.obj \
 	fg_read.obj \
+	fg_write.obj \
 	fgh_read.obj \
 	fpecatch.obj \
-	fpinit.obj \
+	fpinitmt.obj \
 	fullhes.obj \
 	func_add.obj \
 	funcadd1.obj \
@@ -140,7 +154,7 @@ op_type.obj: op_type.hd
 fgh_read.obj: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
 rops.obj: nlp.h errchk.h $(Aslh)
 rops2.obj: nlp2.h errchk.h $(Aslh)
-conadj.obj qp_read.obj: nlp.h r_opn.hd $(Aslh)
+conadj.obj fg_write.obj qp_read.obj: nlp.h r_opn.hd $(Aslh)
 f_read.obj fg_read.obj: nlp.h r_opn.hd dvalue.hd $(Aslh)
 objconst.obj: r_opn0.hd nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 pfg_read.obj: asl_pfg.h r_opn0.hd dvalue.hd nlp.h $(Aslh)
@@ -162,9 +176,6 @@ arith.h: arithchk.c
 
 stdio1.h: stdio1.h0
 	copy stdio1.h0 stdio1.h
-
-fpinit.obj: fpinit.c
-	$(CC) -c $(CFLAGS) -DWIN32 fpinit.c
 
 funcadd1.obj: funcadd1.c
 	$(CC) -c $(CFLAGS) -DWIN32 funcadd1.c

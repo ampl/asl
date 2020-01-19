@@ -26,7 +26,7 @@ function [g,A,B] = evalg(x)
 
 global clb cub clu ceq mp0 n xlc xuc
 
-[g,cjac] = amplfunc(x, 2);
+[g,cjac] = amplfunc(x, 1);
 A = [ cjac(ceq,:) ];
 B = [ cjac(clb,:); -cjac(cub,:); kron(cjac(clu,:),[1;-1]);...
 	zeros(size(xlc,2)+size(xuc,2), n) ];

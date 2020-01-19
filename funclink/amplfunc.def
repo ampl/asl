@@ -2,4 +2,4 @@ LIBRARY		AMPLFUNC
 DESCRIPTION	'32 bit DLL version of funcadd'
 HEAPSIZE	8192
 EXPORTS
-	funcadd	@1
+	funcadd_ASL	@1
