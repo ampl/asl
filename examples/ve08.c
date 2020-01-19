@@ -570,7 +570,7 @@ MAIN__(void)
 		fflush(Stderr);
 		}
 	X0 = (real*)Malloc(N*sizeof(real));
-	fg_read(nl,ASL_GJ_zerodrop);
+	fg_read(nl,ASL_GJ_zerodrop|ASL_find_default_no_groups);
 #ifdef Timing
 	edagmem = sbrk(0) - sbrk0;
 #endif

@@ -110,8 +110,9 @@ showsol(ASL *asl, real *x, int n, int n0, int *z, Name name, char *what, char *p
 	if (!x || n <= 0)
 		return;
 	k0 = k = strlen(what);
-	for(i = 0; i < n; i++)
-		if ((j = strlen((*name)(asl,i))) > k)
+	for(i = 0; i < n0; i++)
+		if ((j = z ? z[i] : i) >= 0
+		 && (j = strlen((*name)(asl,j))) > k)
 			k = j;
 	k += 2;
 	printf("\n%s%*s%svalue\n", what, k-k0, "", pfix);
@@ -122,31 +123,36 @@ showsol(ASL *asl, real *x, int n, int n0, int *z, Name name, char *what, char *p
 
  static real *
 #ifdef KR_headers
-scale(x, s, y, n) real *x, *s, *y; int n;
+scale(x, s, yp, n) real *x, *s, **yp; int n;
 #else
-scale(real *x, real *s, real *y, int n)
+scale(real *x, real *s, real **yp, int n)
 #endif
 {
-	real *y0, *xe;
+	real *xe, *y, *y0;
 
-	y0 = y;
+	y0 = y = *yp;
 	xe = x + n;
 	while(x < xe)
 		*y++ = *s++ * *x++;
+	*yp = y;
 	return y0;
 	}
 
- static void
+ static real*
 #ifdef KR_headers
-copyup(n, z, x) int n; int *z; real *x;
+copy(n, x, yp, z) int n, *z; real *x, **yp;
 #else
-copyup(int n, int *z, real *x)
+copy(int n, real *x, real **yp, int *z)
 #endif
 {
 	int j;
+	real *y, *y0;
 
+	y = y0 = *yp;
 	while(--n >= 0)
-		x[n] = (j = z[n]) >= 0 ? x[j] : 0.;
+		*y++ = (j = *z++) >= 0 ? x[j] : 0.;
+	*yp = y;
+	return y0;
 	}
 
  static void
@@ -181,6 +187,29 @@ equ_adjust_ASL(ASL *asl, int *cstat, int *rstat)
 		equ_adjust1(rstat, LUrhs, Urhsx, n_con);
 	}
 
+ static long
+#ifdef KR_headers
+AMPL_version_ASL(asl) ASL *asl;
+#else
+AMPL_version_ASL(ASL *asl)
+#endif
+{
+	char *s;
+	if (ampl_options[0] >= 5)
+		return ampl_options[5];
+	if (!(s = getenv("version")))
+		return 0;
+	for(;;) {
+		switch(*s++) {
+		 case 0: return 0;
+		 case 'V': if (!strncmp(s,"ersion ", 7))
+				goto break2;
+		 }
+		}
+ break2:
+	return strtol(s+7,0,10);
+	}
+
  void
 #ifdef KR_headers
 write_sol_ASL(asl, msg, x, y, oi)
@@ -190,8 +219,8 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 #endif
 {
 	FILE *f;
-	int N, binary, i, i1, *ip, j, k, n, tail, wantsol, *zz;
-	char buf[80], *s, *s1, *s2;
+	int N, binary, i, i1, *ip, j, k, n, nlneed, tail, wantsol, *zz;
+	char *bsmsg, buf[80], *s, *s1, *s2;
 	static char *wkind[] = {"w", "wb"};
 	ftnlen L[6];
 	fint J[2], m, z[4];
@@ -203,40 +232,51 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 	if (!asl || asl->i.ASLtype < 1 || asl->i.ASLtype > 5)
 		badasl_ASL(asl,0,"write_sol");
 
+	bsmsg = 0;
+	if ((nlneed = need_nl) > 0) {
+		if (oi && oi->bsname && (i = nlneed-2) > 0
+		 && amplflag
+		 && !strncmp(msg,oi->bsname,i)
+		 && !strncmp(msg+i,": ",2)
+		 && AMPL_version_ASL(asl) >= 20020401L) {
+			bsmsg = Malloc(nlneed + strlen(msg) + 1);
+			memset(bsmsg, '\b', nlneed);
+			strcpy(bsmsg+nlneed, msg);
+			msg = bsmsg;
+			nlneed = 0;
+			}
+		}
 	xycopy = 0;
 	if ((wantsol = oi ? oi->wantsol : 1) || amplflag) {
 		k = 0;
-		if (x && (asl->i.vscale || asl->i.z[0]))
-			k = asl->i.n_var0;
-		if (y && (asl->i.cscale || asl->i.z[1]))
-			k += asl->i.n_con0;
+		if (x) {
+			if (asl->i.vscale)
+				k = n_var;
+			if (asl->i.z[0])
+				k += asl->i.n_var0;
+			}
+		if (y) {
+			if (asl->i.cscale)
+				k += n_con;
+			if (asl->i.z[1])
+				k += asl->i.n_con0;
+			}
 		if (k)
 			y1 = xycopy = (real*)Malloc(k*sizeof(real));
 		if (x) {
-			if (asl->i.vscale) {
-				x = scale(x, asl->i.vscale, y1, n_var);
-				y1 += asl->i.n_var0;
-				}
-			else if (asl->i.z[0]) {
-				memcpy(y1, x, n_var*sizeof(real));
-				x = y1;
-				y1 += asl->i.n_var0;
-				}
+			if (asl->i.vscale)
+				x = scale(x, asl->i.vscale, &y1, n_var);
 			if (asl->i.z[0])
-				copyup(asl->i.n_var0, asl->i.z[0], x);
+				x = copy(asl->i.n_var0, x, &y1, asl->i.z[0]);
 			}
 		z[0] = m = asl->i.n_con0;
 		if (!y)
 			m = 0;
 		else {
 			if (asl->i.cscale)
-				y = scale(y, asl->i.cscale, y1, n_con);
-			else if (asl->i.z[1]) {
-				memcpy(y1, y, n_con*sizeof(real));
-				y = y1;
-				}
+				y = scale(y, asl->i.cscale, &y1, n_con);
 			if (asl->i.z[1])
-				copyup(asl->i.n_con0, asl->i.z[1], y);
+				y = copy(asl->i.n_con0, y, &y1, asl->i.z[1]);
 			}
 		}
 	if (!amplflag && !(wantsol & 1))
@@ -448,7 +488,7 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 		}
 	fclose(f);
  write_done:
-	if (i = need_nl)
+	if (i = nlneed)
 		if (i > sizeof(buf)-1 || i < 0)
 			printf("\n");
 		else {
@@ -469,4 +509,8 @@ write_sol_ASL(ASL *asl, char *msg, double *x, double *y, Option_Info *oi)
 		}
 	if (xycopy)
 		free(xycopy);
+	if (bsmsg)
+		free(bsmsg);
 	}
+
+/* Affected by ASL update of 20020503 */

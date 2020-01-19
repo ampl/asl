@@ -78,6 +78,9 @@ xp1_check_ASL(ASL_pfg *asl, real *x)
 		dvsp0 = asl->P.dvsp0;
 		i0 = *dvsp0;
 		i = 0;
+		/* Normally v == var_ex here, but v < var_ex is possible if sos_add */
+		/* overestimated the number of new variables that sos_finish added. */
+		v = var_ex;
 		for(ce = c1 = c + asl->P.ncom; c < ce; c++) {
 			for(i1 = *++dvsp0; i0 < i1; i0++, c1++) {
 				cv_index = i0;

@@ -61,6 +61,7 @@ a = \
 	conscale.obj \
 	conval.obj \
 	derprop.obj \
+	details.obj \
 	dtoa1.obj \
 	duthes.obj \
 	dynlink.obj \
@@ -108,6 +109,7 @@ a = \
 	rops.obj \
 	rops2.obj \
 	sigcatch.obj \
+	sos_add.obj \
 	sphes.obj \
 	sscanf.obj \
 	stderr.obj \
@@ -132,7 +134,8 @@ mach.obj: arith.h
 bscanf.obj conscale.obj derprop.obj dynlink.obj func_add.obj\
  funcadd.obj funcadd1.obj funcaddk.obj funcaddr.obj funcadd0.obj g_fmt.obj\
  genrowno.obj jac0dim.obj jacdim.obj jacinc.obj names.obj obj_prec.obj\
- objval_.obj repwhere.obj sjac0dim.obj studchk0.obj: $(Aslh)
+ objval_.obj repwhere.obj sigcatch.obj sjac0dim.obj studchk0.obj:\
+ $(Aslh)
 xp1known.obj: asl_pfg.h psinfo.h nlp.h $(Aslh)
 duthes.obj fullhes.obj htcl.obj sphes.obj: asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 getstub.obj value.obj writesol.obj wrtsol_.obj: getstub.h $(Aslh)
@@ -142,7 +145,7 @@ conpval.obj pshvprod.obj xp2known.obj:\
 	jacpdim.h asl_pfgh.h psinfo.h nlp2.h $(Aslh)
 comeval.obj con1ival.obj conval.obj mip_pri.obj objval.obj qpcheck.obj\
  readsol.obj: nlp.h $(Aslh)
-misc.obj nl_obj.obj suf_sos.obj:\
+misc.obj nl_obj.obj sos_add.obj suf_sos.obj:\
 	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
 op_type.obj: op_type.hd
 fgh_read.obj: jac2dim.h opnos.hd op_type.hd dvalue.hd nlp2.h $(Aslh)
@@ -171,9 +174,6 @@ arith.h: arithchk.c
 stdio1.h: stdio1.h0
 	copy stdio1.h0 stdio1.h
 
-fpinit.obj: fpinit.c
-	$(CC) $(CFLAGS) -DWIN32 fpinit.c
-
 funcadd1.obj: funcadd1.c
 	$(CC) $(CFLAGS) -DWIN32 -DFUNCADD="funcadd_ASL_" funcadd1.c
 
@@ -182,3 +182,6 @@ stderr.obj: stderr.c
 
 xectim.obj: xectim.c
 	$(CC) $(CFLAGS) -DNO_RUSAGE xectim.c
+
+details.c: details.c0
+	echo create details.c by suitably editing details.c0
