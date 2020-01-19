@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999 Lucent Technologies
+Copyright (C) 1997-1999, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -220,7 +220,7 @@ f_OPPOW(expr *e A_ASL)
 		}
 	if (want_deriv) {
 		if (L > 0.) {
-			e->dL = (R/L) * rv;
+			e->dL = R * (rv/L);
 			e->dR = log(L) * rv;
 			}
 		else if (L != 0.) {
@@ -273,7 +273,7 @@ f_OP1POW(expr *e A_ASL) /* f_OPPOW for R = numeric constant */
 		}
 	if (want_deriv) {
 		if (L)
-			e->dL = (R/L) * rv;
+			e->dL = R * (rv/L);
 		else if (R > 1.)
 			e->dL = 0.;
 		else

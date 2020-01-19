@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -48,7 +48,7 @@ extern double strtod(const char*, char**);
 extern char *dtoa();
 extern double strtod();
 #endif
-#endif
+#endif /*__cplusplus*/
 #define No_leftright
 #define strtod strtod_ASL
 #ifndef MALLOC
@@ -80,9 +80,10 @@ dtoamalloc(size_t x)
 		}
 	return rv;
 	}
-#else
+#else /*MALLOC*/
 #include "dtoa.c"
-#endif
+/*Last dtoa.c change = 20010207.*/
+#endif /*MALLOC*/
 #else
 #ifdef KR_headers
  extern char *ecvt(), *fcvt();

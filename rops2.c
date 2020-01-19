@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999, 2000 Lucent Technologies
+Copyright (C) 1997-1999, 2000-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -261,7 +261,7 @@ f_OP1POW(expr *e A_ASL)
 		introuble2("pow",L,R K_ASL);
 	if (want_deriv) {
 		if (L) {
-			e->dL = (R/L) * rv;
+			e->dL = R * (rv/L);
 			e->dL2 = (R-1.)*(e->dL/L);
 			}
 		else if (R > 1.)

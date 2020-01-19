@@ -200,10 +200,8 @@ dl_close(void *h)
 #ifdef CLOSE_AT_RESET
 	first = 1;
 #endif
-	if (*(void**)h) {
-		dlclose(*(void**)h);
-		*(void**)h = 0;
-		}
+	if (h)
+		dlclose(h);
 	}
 
  int
@@ -239,28 +237,26 @@ libload_ASL(AmplExports *ae, char *s, int ns, int warn)
 	warned = 0;
 	if (h = dl_open(ae, buf, &warned)) {
  found:
-#ifdef CLOSE_AT_RESET
-		/* -DCLOSE_AT_RESET is for use in shared */
-		/* libraries, such as MATLAB mex functions, */
-		/* that may be loaded and unloaded several */
-		/* times during execution of the program. */
-		at_reset(dl_close, &h);
-#else
-		at_exit(dl_close, &h);
-#endif
 		if (find_dlsym(fa, h, FUNCADD)
 		 || find_dlsym(fa, h, "funcadd")) {
 			rc = 0;
 #ifdef CLOSE_AT_RESET
-			if (!aflibname_ASL(ae,buf,s,ns,fa,0))
+			if (aflibname_ASL(ae,buf,s,ns,fa,0))
+				/* -DCLOSE_AT_RESET is for use in shared */
+				/* libraries, such as MATLAB mex functions, */
+				/* that may be loaded and unloaded several */
+				/* times during execution of the program. */
+				at_reset(dl_close, h);
 #else
-			if (!aflibname_ASL(ae,buf,s,ns,fa,1))
+			if (aflibname_ASL(ae,buf,s,ns,fa,1))
+				at_exit(dl_close, h);
 #endif
-				dl_close(&h);
+			else
+				dl_close(h);
 			}
 		else {
 			fprintf(stderr, "Could not find funcadd in %s\n", buf);
-			dl_close(&h);
+			dl_close(h);
 			rc = 3;
 			}
 		}

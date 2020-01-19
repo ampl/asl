@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -90,7 +90,7 @@ psderprop(ASL_pfgh *asl, ps_func *f)
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
 	expr *e, *ee;
-	real *A, t, t2;
+	real *A, t, t1, t2;
 	ograd *og;
 
 	for(b = f->b, be = b + f->nb; b < be; b++)
@@ -115,16 +115,24 @@ psderprop(ASL_pfgh *asl, ps_func *f)
 				}
 				while(e != ee);
 			e = g->g;
-			if (g->g1 = t)
-				for(t2 = 0.;; e = e->L.e) {
-					t2 += t * e->dL2 / e->dL;
-					if (e == ee)
+			if (t != 0.) {
+				t1 = ee->dL;
+				t2 = ee->dL2 * (t / t1);
+				for(;;) {
+					ee = ee->R.e;
+					t2 += (t / ee->dL) * t1 * ee->dL2;
+					if (ee == e)
 						break;
+					t1 *= ee->dL;
 					}
+				}
 			else
 				for(L = 0, t2 = 1.;; e = e->L.e) {
-					if (e->dL)
+					if (e->dL) {
 						t2 *= e->dL;
+						if (L)
+							t2 *= e->dL;
+						}
 					else if (L++) {
 						t2 = 0;
 						break;

@@ -368,11 +368,9 @@ termdup(Static *S, term *T)
 	rv->Le = oge;
 	if (!(Q = T->Q))
 		return rv;
-	for(Q1 = 0; Q; Q = Q->next)
+	Q1 = rv->Qe = new_dyad(S, 0, ogdup(S, Q->Lq,0), ogdup(S, Q->Rq,0), 1);
+	while(Q = Q->next)
 		Q1 = new_dyad(S, Q1, ogdup(S, Q->Lq,0), ogdup(S, Q->Rq,0), 1);
-	rv->Qe = Q1;
-	while(Q = Q1->next)
-		Q1 = Q;
 	rv->Q = Q1;
 	return rv;
 	}
@@ -664,7 +662,7 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, fint **colqp, real **delsqp)
 {
 	expr *e;
 	term *T;
-	real *delsq, *delsq0, *delsq1, objadj, t, *x;
+	real *L, *U, *delsq, *delsq0, *delsq1, objadj, t, *x;
 	int arrays, pass;
 	fint ftn, i, icol, j, ncom, nelq, nz;
 	fint *colq, *colq1, *rowq, *rowq0, *rowq1, *s, *z;
@@ -915,6 +913,21 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, fint **colqp, real **delsqp)
 	if (arrays) {
 		en = (expr_n *)mem(sizeof(expr_n));
 		en->op = f_OPNUM_ASL;
+		if (cgp && objadj != 0.) {
+			if (Urhsx) {
+				L = LUrhs + co;
+				U = Urhsx + co;
+				}
+			else {
+				L = LUrhs + 2*co;
+				U = L + 1;
+				}
+			if (*L > negInfinity)
+				*L -= objadj;
+			if (*U < Infinity)
+				*U -= objadj;
+			objadj = 0;
+			}
 		en->v = objadj;
 		c->e = (expr *)en;
 		}

@@ -110,10 +110,10 @@ typedef real (ufunc) ANSI((arglist *));
 	FUNCADD_REAL_VALUED = 0,	/* real (double) valued function */
 	FUNCADD_STRING_VALUED = 2,	/* char* valued function */
 	FUNCADD_RANDOM_VALUED = 4,	/* real random valued */
-	FUNCADD_012ARGS = 6,		/* Special case: real valued, with */
-					/* 0 <= nargs <= 2 arguments passed */
-					/* directly, rather than in an  */
-					/* arglist structure. */
+	FUNCADD_012ARGS = 6,		/* Special case: real random valued */
+					/* with 0 <= nargs <= 2 arguments */
+					/* passed directly, rather than in */
+					/* an arglist structure. */
 
 	/* FUNCADD_TUPLE_VALUED = 8, */	/* possible later extension */
 
@@ -134,9 +134,9 @@ typedef real (ufunc) ANSI((arglist *));
  * require both the function value and its first derivatives.  Solvers
  * that expect Hessians to be supplied to them also set al->hes to a
  * nonzero value if they require second derivatives at the current
- * argument.  In this case, the function should set al->hes[i +
- * j*(j+1)/2] to the partial derivative of the function with respect to
- * al->ra[i] and al->ra[j] for all 0 <= i <= j < al->nr.
+ * argument.  In this case, the function should set
+ * al->hes[i + j*(j+1)/2] to the partial derivative of the function with
+ * respect to al->ra[i] and al->ra[j] for all 0 <= i <= j < al->nr.
  */
 
 typedef void AddFunc ANSI((

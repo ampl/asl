@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1992, 1999 Lucent Technologies
+Copyright (C) 1992, 1999, 2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -51,3 +51,4 @@ double atof(const char *s) { return strtod_ASL(s, 0); }
 #endif
 
 #endif /* No_dtoa */
+/*Last dtoa.c change = 20010207.*/

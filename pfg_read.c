@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -1634,6 +1634,10 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 				if (Laf->varno < 0 && !Laf->next) {
 					taf = Raf;
  scale:					t = Laf->coef;
+					if (t == 0.) {
+						ogfree(S, Raf);
+						return Laf;
+						}
 					do taf->coef *= t;
 						while(taf = taf->next);
 					ogfree(S, Laf);
@@ -2157,7 +2161,7 @@ colindvref(Static *S, expr *e, int ndv)
 #endif
 {
 	expr **a, **ae;
-	int k, rv = 0;
+	int j, k, rv = 0;
 
  top:
 	switch(Intcast e->op) {
@@ -2183,8 +2187,10 @@ colindvref(Static *S, expr *e, int ndv)
 				break;
 				}
 			zl[k] = 1;
-			if (k = colindvref(S, (S->cexps + k)->e, k))
-				rv |= k;
+			if (j = colindvref(S, (S->cexps + k)->e, k)) {
+				rv |= j;
+				zl[k] |= j;
+				}
 			break;
 		case f_OPMULT:
 			if (Intcast e->R.e->op == f_OPNUM) {
@@ -2341,23 +2347,23 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	if (zc[-1])
 		--nzc2;	/* ignore constant */
 	if (n <= 0)
-		r = 0;
-	else {
-		r->n = n;
-		r->nv = nzc2;
-		r->lap = lap1 = lap = (linarg**)
-			new_mblk(kl = htcl(n*sizeof(linarg*)));
-		for(tl = tlist; tl; tl = tl->tnext)
-			la_replace(S, *lap1++ = tl);
-		if (n > 1)
-			qsortv(lap, n, sizeof(linarg*), lacompar, NULL);
-		r->ui = ui = cp0 ? cp+1 : (int*)(r+1);
-		zcsort(S, zc, zci, 0, nzc2, nv0);
-		for(j = 0; j < nzc2; j++)
-			*ui++ = zci[j];
-		r = *(n >= nzc2 ? uhash(S,r) : rhash(S,r,1));
-		del_mblk(kl, lap);
-		}
+		goto done;
+
+	r->n = n;
+	r->nv = nzc2;
+	r->lap = lap1 = lap = (linarg**)
+		new_mblk(kl = htcl(n*sizeof(linarg*)));
+	for(tl = tlist; tl; tl = tl->tnext)
+		la_replace(S, *lap1++ = tl);
+	if (n > 1)
+		qsortv(lap, n, sizeof(linarg*), lacompar, NULL);
+	r->ui = ui = cp0 ? cp+1 : (int*)(r+1);
+	zcsort(S, zc, zci, 0, nzc2, nv0);
+	for(j = 0; j < nzc2; j++)
+		*ui++ = zci[j];
+	r = *(n >= nzc2 ? uhash(S,r) : rhash(S,r,1));
+	del_mblk(kl, lap);
+
 	e1 = *ep;
 	if (!r || (i = r->lasttermno) == -1 || r->lastgroupno != Groupno) {
 		bt = p->b;
@@ -2421,6 +2427,7 @@ termwalk(Static *S, expr **ep, PSfind *p)
 			e2->op = (efunc *)f_OPPLUS;
 		  }
 		}
+ done:
 	nzc = 0;
 	}
 
@@ -2569,9 +2576,16 @@ ltermwalk(Static *S, real scale, expr **ep, PSfind *p)
 			if (Intcast en->op == f_OPNUM) {
 				*ep = e->L.e;
 		case_opnum:
-				rv = af_sum(S, rv, ltermwalk(S, scale*en->v, ep, p));
-				*(expr_n **)&en->v = expr_n_free;
-				expr_n_free = en;
+				if (en->v == 0.) {
+					efree(S,*ep);
+					*ep = (expr*)en;
+					}
+				else {
+					rv = af_sum(S, rv, ltermwalk(S,
+							scale*en->v, ep, p));
+					*(expr_n **)&en->v = expr_n_free;
+					expr_n_free = en;
+					}
 				e->L.e = expr_free;
 				expr_free = e;
 				break;
@@ -2644,7 +2658,7 @@ getgroup(Static *S, real scale, expr *e, PSfind *p)
 {
 	ps_func *f, f1;
 	PSfind p1;
-	expr *e0, *e1;
+	expr *e0, *e1, *e2;
 	ograd *og, *og1;
 	psb_elem *b, *be;
 	psg_elem *g;
@@ -2671,6 +2685,10 @@ getgroup(Static *S, real scale, expr *e, PSfind *p)
 	g->scale = scale;
 	if (og = ltermwalk(S, 1., &e0->L.e, &p1))
 		og = compress(S, og, &g->g0, &i);
+	for(e1 = e; e1 != e0; e1 = e2) {
+		e2 = e1->L.e;
+		e2->R.e = e1;	/* back pointer, used in psderprop */
+		}
 	zc1 = S->zc1;
 	zci1 = S->zci1;
 	Groupno = nzc1 = 0;
@@ -2903,6 +2921,7 @@ ewalk(Static *S, expr *e, int deriv)
 {
 	int a0, a1, i, j, k, kf, numargs, op;
 	real *b;
+	unsigned int len;
 #ifdef PSHVREAD
 	ASL *asl;
 	argpair *da;
@@ -3143,17 +3162,16 @@ ewalk(Static *S, expr *e, int deriv)
 				}
 			dig = 0;
 			if (i) {
-				b = (real *)mem_ASL(S->a,
+				b = (real *)mem_ASL(S->a, len =
 #ifdef PSHVREAD
 					(numargs*(numargs+3) >> 1)
 #else
 					numargs
 #endif
 						*sizeof(real));
+				memset(b, 0, len);
 #ifdef PSHVREAD
-				memset(al->hes = b + numargs, 0,
-					(numargs*(numargs+1) >> 1)
-					*sizeof(real));
+				al->hes = b + numargs;
 #endif
 				if (kf < numargs) {
 					ASLTYPE *asl = S->asl;
@@ -3501,7 +3519,7 @@ comsubs(Static *S, int alen, cde *d)
 			k = varp[j-nv0]->a;
 			if (ce->funneled) {
 				if (j >= max_var)
-					imap[j] = a;
+					imap[((expr_vx*)varp[j-nv0])->a0] = a;
 				imap[k] = a++;
 				}
 			else {
@@ -3764,16 +3782,17 @@ cexp_walk(S, k) Static *S; int k;
 cexp_walk(Static *S, int k)
 #endif
 {
-	int a, *ap, fk, i, j, ka, la0, na, nlin;
-	funnel *f, **fp;
-	linpart *L, *Le;
-	linarg *la, **lap, **lape;
-	expr *e;
-	cplist *cl;
-	cexp *ce;
-	range *r;
-	dv_info *dvi;
 	ASLTYPE *asl = S->asl;
+	cexp *ce;
+	cplist *cl;
+	dv_info *dvi;
+	expr *e;
+	funnel *f, **fp;
+	int a, *ap, fk, i, j, ka, la0, na, nlin;
+	linarg *la, **lap, **lape;
+	linpart *L, *Le;
+	ograd *og;
+	range *r;
 
 	/* for now, assume all common exprs need to be differentiated */
 
@@ -3801,7 +3820,8 @@ cexp_walk(Static *S, int k)
 	if (ce->zlen = lasta - la0)
 		ce->z.i = la0;
 	else {
-		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k-Ncom])->a0;
+		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k])->a0;
+		/* was varp[k-Ncom] til 20001228 */
 		ce->zlen = 1;
 		}
 	j = ap ? *ap : ka;
@@ -3871,7 +3891,11 @@ cexp_walk(Static *S, int k)
 		lasta = lasta0;
 		}
 	lasta0 = lasta;
-	ce->d = last_d;
+	if (!(ce->d = last_d)
+	 && e->op == OPNUM
+	 && (og = asl->P.dv[k].ll)
+	 && og->varno < 0)
+		((expr_n*)e)->v = 0;
 	while(nzc > 0)
 		zc[zci[--nzc]] = 0;
 	--ncom_togo;
@@ -4210,8 +4234,8 @@ br_read(EdRead *R, int nc, real **Lp, real *U, int *Cvar, int nv)
 				if (xscanf(R, "%d %d", &k, &j) == 2
 				 && j > 0 && j <= nv) {
 					Cvar[i] = j;
-					*L = k & 1 ? 0. : negInfinity;
-					*U = k & 2 ? 0. : Infinity;
+					*L = k & 2 ? negInfinity : 0.;
+					*U = k & 1 ?    Infinity : 0.;
 					break;
 					}
 				}

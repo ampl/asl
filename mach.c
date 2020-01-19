@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997 Lucent Technologies
+Copyright (C) 1997, 2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -45,15 +45,23 @@ extern "C" void Mach_ASL();
 Mach_ASL(Void)
 {
 #ifdef IEEE_8087
-	Long *L = (Long *)&Infinity;
-	L[1] = 0x7ff00000;
-	L[0] = 0;
+	union {
+		double d;
+		Long L[2];
+		} u;
+	u.L[1] = 0x7ff00000;
+	u.L[0] = 0;
+	Infinity = u.d;
 /* would use #elif defined, but MIPS doesn't understand #elif */
 #else
 #ifdef IEEE_MC68k
-	Long *L = (Long *)&Infinity;
-	L[0] = 0x7ff00000;
-	L[1] = 0;
+	union {
+		double d;
+		Long L[2];
+		} u;
+	u.L[0] = 0x7ff00000;
+	u.L[1] = 0;
+	Infinity = u.d;
 #else
 #ifdef HUGE_VAL
 	Infinity = HUGE_VAL;

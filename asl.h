@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-2000 Lucent Technologies
+Copyright (C) 1997-2001 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -76,7 +76,9 @@ typedef Long ftnlen;
 #define Sizeof(x) (fint)sizeof(x)
 
 #ifndef FUNCADD_H_INCLUDED
+#ifndef Permit_AE_redefs
 #define No_AE_redefs
+#endif
 #include "funcadd.h"
 #endif
 #include "setjmp.h"

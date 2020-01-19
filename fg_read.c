@@ -345,8 +345,14 @@ eread(EdRead *R, int deriv)
 			symargs += ks;
 			if (symargs && !(fi->ftype & 1))
 				fscream(R, fi->name, symargs, "symbolic ");
-			kd = deriv && k ? numargs : 0;
-			rvf->a = kd ? lasta++ : nv1;
+			if (deriv && k) {
+				kd = numargs;
+				rvf->a = lasta++;
+				}
+			else {
+				kd = 0;
+				rvf->a = nv1;
+				}
 			ra = (real *)mem(sizeof(arglist)
 					+ (k+ks)*sizeof(argpair)
 					+ (numargs+kd)*sizeof(real)
@@ -355,12 +361,15 @@ eread(EdRead *R, int deriv)
 			dig = 0;
 			if (k < kd)
 				dig = (char*)mem(numargs);
-			b = kd ? ra + numargs : ra;
+			b = ra + kd;
 			al = rvf->al = (arglist *)(b + numargs);
 			al->n = numargs + symargs;
 			al->nr = numargs;
 			al->ra = ra;
-			al->derivs = kd ? b : 0;
+			if (kd)
+				memset(al->derivs = b, 0, kd*sizeof(real));
+			else
+				al->derivs = 0;
 			al->hes = 0;
 			al->dig = dig;
 			al->funcinfo = fi->funcinfo;
@@ -476,7 +485,7 @@ eread(EdRead *R, int deriv)
 			rva->L.d = d = (de *)mem(i*sizeof(de) + sizeof(expr *));
 			rva->next = varglist;
 			varglist = varg2list = rva;
-			if (!last_d) {
+			if (!last_d && deriv) {
 				new_derp(S, lasta, lasta, &edagread_one);
 				lasta++;
 				}
@@ -485,11 +494,11 @@ eread(EdRead *R, int deriv)
 			for(j = 0; i > 0; i--, d++) {
 				last_d = dsave;
 				d->e = L = eread(R, deriv);
-				if (L->op == f_OPNUM || L->a == nv1) {
+				if (L->op == f_OPNUM || L->a == nv1 || !deriv) {
 					d->d = dsave;
 					d->dv.i = nv1;
 					}
-				else if (deriv) {
+				else {
 					d->d = new_relo(S, L, dsave, &d->dv.i);
 					j++;
 					if (a1 < lasta)
@@ -556,7 +565,7 @@ eread(EdRead *R, int deriv)
 			rvif->op = r_ops[k];
 			rvif->next = iflist;
 			iflist = if2list = rvif;
-			if (!last_d) {
+			if (!last_d && deriv) {
 				new_derp(S, lasta, lasta, &edagread_one);
 				lasta++;
 				}
@@ -565,21 +574,21 @@ eread(EdRead *R, int deriv)
 			a0 = lasta;
 			rvif->T = L = eread(R, deriv);
 			j = 0;
-			if (L->op == f_OPNUM || L->a == nv1) {
+			if (L->op == f_OPNUM || L->a == nv1 || !(j = deriv)) {
 				rvif->dT = dsave;
 				rvif->Tv.i = nv1;
 				}
-			else if (j = deriv)
+			else
 				rvif->dT = new_relo(S, L, dsave, &rvif->Tv.i);
 			a1 = lasta;
 			lasta = a0;
 			last_d = dsave;
 			rvif->F = L = eread(R, deriv);
-			if (L->op == f_OPNUM || L->a == nv1) {
+			if (L->op == f_OPNUM || L->a == nv1 || !(j = deriv)) {
 				rvif->dF = dsave;
 				rvif->Fv.i = nv1;
 				}
-			else if (j = deriv)
+			else
 				rvif->dF = new_relo(S, L, dsave, &rvif->Fv.i);
 			if (lasta < a1)
 				lasta = a1;
@@ -1428,8 +1437,8 @@ br_read(EdRead *R, int nc, real **Lp, real *U, int *Cvar, int nv)
 				if (xscanf(R, "%d %d", &k, &j) == 2
 				 && j > 0 && j <= nv) {
 					Cvar[i] = j;
-					*L = k & 1 ? 0. : negInfinity;
-					*U = k & 2 ? 0. : Infinity;
+					*L = k & 2 ? negInfinity : 0.;
+					*U = k & 1 ?    Infinity : 0.;
 					break;
 					}
 				}

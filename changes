@@ -840,3 +840,143 @@ cases when asl->i.nlvog has been assigned a positive value.
 only minos/m55.c and snopt/snopt.c do this.)
   jac0dim.c jacinc.c: adjust x0len to only consider nonlinear
 variables when deciding whether nonlinear information must be updated.
+
+Tue Sep  5 13:17:01 EDT 2000
+  pfg_read.c, pfghread.c: fix a bug in computing derivatives that
+arose under complicated conditions:  a defined variable could be
+split into the sum of two or more defined variables and appeared
+in an expression complicated enough that "funneling" the expression
+led to more efficient derivative computations.  Example:
+	var x{1..2} >= .6 <= 1 := 1;
+	var y{i in 1..2} = .5*x[i] + 1;
+	var z{i in 1..2} = .25*y[i] + 3;
+	var w =   (1 + (y[1] - y[2])^2) / z[2]	# split
+		+ (y[1] - 7) / z[1];
+	s.t. zot: w + x[1] + x[2] == 0;	# first term of w funneled
+
+Tue Sep 12 15:38:38 EDT 2000
+  nqpcheck.c:  for constraints, when a quadratic form involves a
+constant term, update the constraint upper and lower bounds rather
+than adjusting the value of the constraint body.
+
+Mon Oct  2 15:45:39 EDT 2000
+  pfg_read.c, pfghread.c: fix bug only possible with inappropriate
+use of "option presolve 0" resulting in constant "defined variables".
+  All nonlinear .nl readers:  fix botch in computing bounds (LUrhs,
+Urhsx) on constraints involved in complementarity conditions.  The
+bounds were supposed to be redundant with those implied by the cvar
+array.  Solvers, such as PATH, that just used the variable bounds
+are unaffected by this bug fix.
+
+Fri Oct  6 10:21:04 EDT 2000
+  pfg_read.c, pfghread.c: cope with 0*variable, which prior to AMPL
+version 20001006 could arise from expressions of the form
+v1*sum{i in A} p[i]*v[i], where v and v1 are variables and p[i] == 0
+for all i.
+
+Mon Oct  9 17:03:24 EDT 2000
+  funcadd1.c: fix a possible fault with use of imported functions.
+The fault, if it occurred, happened at the end of execution (except
+under -DCLOSE_AT_RESET, when it happened when ASF_free was called).
+
+Wed Nov  1 17:27:49 EST 2000
+  mach.c:  tweak to prevent trouble with optimization by a very recent
+version of gcc.
+  dtoa.c: "invisible" tweaks (to be detailed in a forthcoming update
+to /netlib/fp/changes).
+
+Fri Nov  3 09:28:10 EST 2000
+  funcadd.h: correct comment describing FUNCADD_012ARGS, which is for
+*random* real valued functions; asldate.c not changed.
+  dtoa.c: sync with /netlib/fp/dtoa.c
+
+Fri Nov 10 17:43:07 EST 2000
+  pfg_read.c, pfghread.c:  fix glitch with constant-valued defined
+variables (which can arise with "option presolve 0" -- a bad
+idea in general):  they were evaluated at twice their correct value.
+  All nonlinear .nl readers:  in calls on imported functions with
+expressions involving variables in the argument list (so al->derivs
+and, if relevant, al->hes will be nonzero), initialize all components
+of al->derivs and al->hes to zero.  Previously, only the al->hes
+components were so initialized.
+
+Mon Nov 13 22:54:19 EST 2000
+  pfg_read.c, pfghread.c:  fix a performance bug with defined variables
+that sometimes resulted in explicit constant zeros in sparse Hessians.
+The bug bit when, say, the objective made linear reference to a defined
+variable that itself was the (possibly weighted) sum of defined
+variables.  Example:
+	param N default 3; set I := 1..N;
+	set T default 1..2; set P := {i in I, j in i+1..N};
+	var d{P,T} >= 0.01 := 1;
+	var p{(i,j) in P, k in T} = (i+j)/d[i,j,k];
+	var r{k in T} = 12*sum{(i,j) in P} p[i,j,k];
+	var t = sum{k in T} 2*r[k];
+	minimize zap: .05*t;
+The computed Hessian had explicit zeros in the (i,j) positions for
+all i < j.
+
+Wed Nov 15 17:40:13 EST 2000
+  nqpcheck.c: fix bug in handling defined variables that are the sum of
+two or more quadratic terms.  Example where the bug bit:
+	set I := 1..2; var x{i in I} := i;
+	var y = 7*sum{i in I} (x[i]/(i+1))^2;
+	minimize zot: 10*y;
+On this example, ampl/solvers/examples/qtest reported objective value
+17.5 rather than 48.6111111111111.
+  misc.c:  correct names in some error messages for incorrect usage
+(calls out of sequence).
+
+Fri Nov 17 16:57:18 EST 2000
+  fg_read.c: fix a bug that could only manifest itself under unusual
+circumstances:  calling fg_read() after assigning want_derivs = 0, with
+top-level "if" or "min" or "max" expressions, as in "nlc -1 foo", where
+foo.nl comes from
+	var x {1..3}; s.t. c: min (x[1],x[2],x[3]) = 5;
+  misc.c: banish register declarations ("invisible" tweak).
+
+Thu Dec 28 18:44:14 EST 2000
+  pfg_read.c, pfghread.c:  fix a bug in handling chains of defined
+variables of the form v[i+1] = v[i].  The smallest known example
+where the bug bit is the rather baroque
+	var v0 >= 0 := .02;
+	var v1 >= 0 := 13.23;
+	var v2 := -1.288;
+	var v3 := -1.288;
+	var v4 >= 0 := 13.23;
+	var v5 = .5*v0*(v2 - 1.288);
+	var v6 = v5 + .5*v0*(v2 + v3);
+	var v7 = v6 + .5*v0*(v3 - 1.288);
+	var v8 = v7;
+	var v9 = v8;
+	var v10 = v9;
+	minimize zot: v4;
+	s.t. c0: 60.536*v0 - v10 = 100;
+	s.t. c1: -.5*v0*(v1 + 13.23) = -.2646;
+When it bit, the bug caused incorrect Jacobian evaluations.
+
+Tue Jan  2 18:51:43 EST 2001
+  asl.h:  tweak to permit making Win32 DLLs that access stdio by
+starting with
+	#define NO_STDIO1
+	#define Permit_AE_redefs
+	#include "asl.h"
+and arranging separately to make "ae" visible; asldate.c not changed.
+
+Mon Jan 15 17:09:34 EST 2001
+  conpval.c, pfg_read.c, pfghread.c:  fix Hessian bug in handling
+	unary(unary(terms(x))
+where terms(x) is the sum of two or more terms involving different
+subsets of the variables x.  Example:
+
+	var x{1..2} := .5; minimize zot: sin(-(x[1] + x[2]));
+
+Note the -(), i.e., negation, is a unary function.
+
+Tue Jan 16 13:30:39 EST 2001
+  rops.c, rops2.c:  reorder partial derivative computations for
+x^y and x^c (constant power) to avoid trouble when x^y or x^c
+underflows to zero.
+
+Wed Feb  7 13:15:13 EST 2001
+  dtoa.c, dtoa1.c, atof.c: obscure bug fixes (see /netlib/fp/changes).

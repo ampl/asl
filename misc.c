@@ -1,5 +1,5 @@
 /****************************************************************
-Copyright (C) 1997-1999, 2000 Lucent Technologies
+Copyright (C) 1997-2000 Lucent Technologies
 All Rights Reserved
 
 Permission to use, copy, modify, and distribute this software and
@@ -42,7 +42,7 @@ ASL *cur_ASL;
 ASLhead ASLhead_ASL = {&ASLhead_ASL, &ASLhead_ASL};
 
  static char anyedag[] = "fg_read (or one of its variants)";
- static char psedag[] = "pfg_read, pfgh_read, or jacpdim_";
+ static char psedag[] = "pfg_read, pfgh_read, or jacpdim";
 
  void
 #ifdef KR_headers
@@ -194,7 +194,7 @@ hv0comp(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 	Not_Used(nobj);
 	Not_Used(ow);
 	Not_Used(y);
-	notread("hvcomp", "pshvread or ed2read");
+	notread("hvcomp", "pfgh_read or fgh_read");
 	}
 
  static void
@@ -209,7 +209,7 @@ hv0init(ASL *a, int n, int no, real *ow, real *y)
 	Not_Used(no);
 	Not_Used(ow);
 	Not_Used(y);
-	notread("hvinit", "edhvread");
+	notread("hvinit", "pfgh_read");
 	}
 
  static void
@@ -226,7 +226,7 @@ hes0set(ASL *a, int flags, int obj, int nobj, int con, int ncon)
 	Not_Used(nobj);
 	Not_Used(con);
 	Not_Used(ncon);
-	notread("duthes, fullhes, or sputhes", "pshvread or jacpdim_");
+	notread("duthes, fullhes, or sputhes", "pfgh_read or jacpdim");
 	}
 
  static void
@@ -254,7 +254,7 @@ dut0hes(ASL *a, real *H, int nobj, real *ow, real *y)
 	Not_Used(nobj);
 	Not_Used(ow);
 	Not_Used(y);
-	notread("duthes", "pshvread or jacpdim_");
+	notread("duthes", "pfgh_read or jacpdim");
 	}
 
  static void
@@ -270,7 +270,7 @@ ful0hes(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
 	Not_Used(nobj);
 	Not_Used(ow);
 	Not_Used(y);
-	notread("fullhes", "pshvread or jacpdim_");
+	notread("fullhes", "pfgh_read or jacpdim");
 	}
 
  static void
@@ -286,7 +286,7 @@ sut0hes(ASL *a, SputInfo **p, real *H, int nobj, real *ow, real *y)
 	Not_Used(nobj);
 	Not_Used(ow);
 	Not_Used(y);
-	notread("sputhes", "pshvread or jacpdim_");
+	notread("sputhes", "pfgh_read or jacpdim");
 	}
 
  static fint
@@ -303,7 +303,7 @@ sut0set(ASL *a, SputInfo **p, int nobj, int have_ow, int have_y, int both)
 	Not_Used(have_ow);
 	Not_Used(have_y);
 	Not_Used(both);
-	notread("sputset", "pshvread or jacpdim_");
+	notread("sputset", "pfgh_read or jacpdim");
 	return 0;
 	}
 
@@ -347,6 +347,20 @@ edag_peek(EdRead *R)
 	return c;
 	}
 
+ static void
+#ifdef KR_headers
+eatcr(nl) FILE *nl;
+#else
+eatcr(FILE *nl)
+#endif
+{
+	int c;
+
+	while((c = getc(nl)) == '\r');
+	if (c >= 0 && c != '\n')
+		ungetc(c, nl);
+	}
+
  char *
 #ifdef KR_headers
 read_line(R) EdRead *R;
@@ -354,8 +368,8 @@ read_line(R) EdRead *R;
 read_line(EdRead *R)
 #endif
 {
-	register char *s, *se;
-	register int x;
+	char *s, *se;
+	int x;
 	char *rv;
 	FILE *nl = R->nl;
 
@@ -370,26 +384,39 @@ read_line(EdRead *R)
 	rv = s;
 	for(;;) {
 		x = getc(nl);
-		if (x < 0)
-			break;
-		if (x == '\n') {
-			*s = 0;
-			return rv;
+		if (x < ' ') {
+			if (x < 0) {
+ eof:
+				if (R->can_end)
+					return 0;
+				fprintf(Stderr,
+				 "Premature end of file, line %ld of %s\n",
+					R->Line, R->asl->i.filename_);
+				exit_ASL(R,1);
+				}
+			if (x == '\n')
+				break;
+			if (x == '\r') {
+				eatcr(nl);
+				break;
+				}
 			}
 		*s++ = x;
 		if (s >= se) {
-			while((x = getc(nl)) != '\n' && x >= 0);
-			break;
+			for(;;) {
+				x = getc(nl);
+				if (x == '\r') {
+					eatcr(nl);
+					goto eol;
+					}
+				if (x == '\n')
+					goto eol;
+				if (x < 0)
+					goto eof;
+				}
 			}
 		}
-	if (x < 0) {
-		if (R->can_end)
-			return 0;
-		fprintf(Stderr,
-			"Premature end of file, line %ld of %s\n",
-			R->Line, R->asl->i.filename_);
-		exit_ASL(R,1);
-		}
+ eol:
 	*s = 0;
 	return rv;
 	}
@@ -649,12 +676,12 @@ mnnzchk_ASL(ASL *asl, fint *M, fint *N, fint *NZ, char *who1)
 
  void
 #ifdef KR_headers
-LUcopy_ASL(nv, L, U, LU) int nv; register real *L, *U, *LU;
+LUcopy_ASL(nv, L, U, LU) int nv; real *L, *U, *LU;
 #else
-LUcopy_ASL(int nv, register real *L, register real *U, register real *LU)
+LUcopy_ASL(int nv, real *L, real *U, real *LU)
 #endif
 {
-	register real *LUe;
+	real *LUe;
 	for(LUe = LU + 2*nv; LU < LUe; LU += 2) {
 		*L++ = LU[0];
 		*U++ = LU[1];
