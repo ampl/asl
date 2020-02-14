@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-1999, 2000 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017, 2018 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "nlp.h"
 #include "obj_adj.h"
@@ -303,6 +297,15 @@ comterm(Static *S, int i)
 	return T;
 	}
 
+ static void
+Comeval(Static *S, int i, int ie)
+{
+	term **Cterms;
+
+	for(Cterms = cterms; i < ie; ++i)
+		Cterms[i] = comterm(S, i);
+	}
+
  static term *
 termdup(Static *S, term *T)
 {
@@ -432,9 +435,12 @@ ewalk(Static *S, expr *e)
 		if ((i = (expr_v *)e - var_e) < n_var)
 			return new_term(S, new_og(S, 0, i, 1.));
 		i -= S->nvinc;
-		if (!(L = cterms[i -= n_var])
-		 && !(L = cterms[i] = comterm(S, i)))
-			return 0;
+		if (!(L = cterms[i -= n_var])) {
+			/* c_cexp1st and o_cexp1st may not have been allocated */
+			if (!(L = comterm(S,i)))
+				return L;
+			cterms[i] = L;
+			}
 		return termdup(S, L);
 		}
 	return 0; /* nonlinear */
@@ -596,8 +602,8 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 	expr *e;
 	expr_n *en;
 	fint *rowq, *rowq0, *rowq1, *s, *z;
-	fint ftn, i, icol, j, ncom, nv, nz;
-	int arrays, *cm, co0, pass, *vmi;
+	fint ftn, i, icol, j, ncom, nv, nz, nz1;
+	int *C1, C10, arrays, *cm, co0, dv0, dv1, pass, *vmi;
 	ograd *og, *og1, *og2, **ogp;
 	real *L, *U, *delsq, *delsq0, *delsq1, objadj, t, *x;
 	term *T;
@@ -611,22 +617,27 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 	if (co >= 0) {
 		if ((pod = asl->i.Or) && (od = pod[co])) {
 			co = od->ico;
+			if (!(cgp = asl->i.Cgrad0))
+				cgp = Cgrad;
 			goto use_Cgrad;
 			}
-		else {
-			c = obj_de + co;
-			ogp = Ograd + co;
-			cgp = 0;
-			}
+		dv0 = combc;
+		dv1 = dv0 + como;
+		C1 = o_cexp1st;
+		c = obj_de + co;
+		ogp = Ograd + co;
+		cgp = 0;
 		}
 	else {
 		co = -1 - co;
 		if ((cm = asl->i.cmap))
 			co = cm[co];
+		cgp = Cgrad;
  use_Cgrad:
+		dv0 = comb;
+		dv1 = combc;
+		C1 = c_cexp1st;
 		c = con_de + co;
-		if (!(cgp = asl->i.Cgrad0))
-			cgp = Cgrad;
 		cgp += co;
 		ogp = 0;
 		}
@@ -656,7 +667,8 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 	cd0 = 0;					/* ditto */
 	cdisp = cdisp0 = 0;				/* ditto */
 
-	if ((ncom = ncom0 + ncom1)) {
+	C10 = ncom0;
+	if ((ncom = C10 + ncom1)) {
 		cterms = (term **)Malloc(ncom*sizeof(term*));
 		memset(cterms, 0, ncom*sizeof(term*));
 		}
@@ -676,7 +688,15 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 		arrays = 0;
 
 	zerodiv = 0;
+	if (comb)
+		Comeval(S, 0, comb);
+	if (dv1 > dv0)
+		Comeval(S, dv0, dv1);
+	if (C1 && C1[co] < C1[co+1])
+		Comeval(S, C10 + C1[co], C10 + C1[co+1]);
 	if (!(T = ewalk(S, e)) || zerodiv) {
+		if (cterms)
+			free(cterms);
 		free_blocks(S);
 		free(x);
 		return T ? -2L : -1L;
@@ -685,32 +705,38 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 	if (cterms)
 		cterm_free(S, cterms + ncom);
 	if (od) {
-		od->cg = 0;
+		cgq = &od->cg;
 		for(i = 0, cg = *cgp; cg; cg = cg->next) {
 			if (cg->coef != 0.)
 				++i;
 			}
 		if (i) {
-			cgq = &od->cg;
-			cq = Malloc(i*sizeof(cgrad));
+			cq = (cgrad*)Malloc(i*sizeof(cgrad));
 			for(cg = *cgp; cg; cg = cg->next) {
-				*cgq = cq;
-				cgq = &cq->next;
-				*cq = *cg;
-				++cq;
+				if (cg->coef != 0.) {
+					*cgq = cq;
+					cgq = &cq->next;
+					*cq = *cg;
+					++cq;
+					}
 				}
-			*cgq = 0;
 			}
+		*cgq = 0;
 		}
 
 	q = (dyad **)Malloc(nv*sizeof(dyad *));
 	qe = q + nv;
 	objadj = dsort(S, T, (ograd **)q, cgp, ogp, arrays);
 
-	nelq = nz = 0;
+	nelq = nz = nz1 = 0;
+	/* In pass 0, we the count nonzeros in the lower triangle. */
+	/* In pass 1, we compute the lower triangle and use column dispatch */
+	/* (via the cdisp array) to copy the strict lower triangle to the */
+	/* strict upper triangle.  This ensures symmetry. */
 	for(pass = 0; pass < 2; pass++) {
 		if (pass) {
-			if (!nelq)
+			nelq += nelq - nz1;
+			if (!nelq || !arrays)
 				break;
 			free(q);
 			delsq1 = delsq = (double *)Malloc(nelq*sizeof(real));
@@ -730,41 +756,30 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 			}
 		memset(q, 0, nv*sizeof(dyad *));
 
-		if (pass)
-			for(d = T->Q; d; d = d->next) {
-				og = d->Rq;
-				og1 = d->Lq;
-				i = og->varno;
-				while(og1 && og1->varno < i)
-					og1 = og1->next;
-				if (og1) {
-					q1 = q + i;
-					*q1 = new_dyad(S, *q1, og, og1, 0);
-					}
-				og1 = d->Lq;
-				i = og1->varno;
-				while(og && og->varno < i)
-					og = og->next;
-				if (og) {
-					q1 = q + i;
-					*q1 = new_dyad(S, *q1, og1, og, 0);
-					}
-				}
-		else
-			for(d = T->Q; d; d = d->next) {
-				og = d->Rq;
-				og1 = d->Lq;
-				q1 = q + og->varno;
+		for(d = T->Q; d; d = d->next) {
+			og = d->Rq;
+			og1 = d->Lq;
+			i = og->varno;
+			while(og1 && og1->varno < i)
+				og1 = og1->next;
+			if (og1) {
+				q1 = q + i;
 				*q1 = new_dyad(S, *q1, og, og1, 0);
-				q1 = q + og1->varno;
+				}
+			og1 = d->Lq;
+			i = og1->varno;
+			while(og && og->varno < i)
+				og = og->next;
+			if (og) {
+				q1 = q + i;
 				*q1 = new_dyad(S, *q1, og1, og, 0);
 				}
-		icol = -1;
+			}
 		vmi = asl->i.vmap ? get_vminv_ASL((ASL*)asl) : 0;
-		for(q1 = q; q1 < qe; q1++) {
+		for(icol = 0, q1 = q; q1 < qe; ++icol, ++q1) {
 		    if (pass) {
 			*colq++ = nelq;
-			for(cd = cdisp[++icol]; cd; cd = cdnext) {
+			for(cd = cdisp[icol]; cd; cd = cdnext) {
 				cdnext = cd->next;
 				s[i = cd->i]++;
 				x[z[nz++] = i] = delsq0[cd->j++];
@@ -779,32 +794,24 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 			do {
 				og = d->Lq;
 				og1 = d->Rq;
-				switch(pass) {
-				  case 0:
-					for(; og1; og1 = og1->next)
-						if (!s[i = og1->varno]++)
-							z[nz++] = i;
-					break;
-				  case 1:
-					t = og->coef;
-					for(; og1; og1 = og1->next) {
-						if (!s[i = og1->varno]++)
-							x[z[nz++] = i] =
-								t*og1->coef;
-						else
-							x[i] += t*og1->coef;
-						}
-					if ((og1 = og->next)) {
-					  og2 = d->Rq;
-					  while (og2->varno < og1->varno)
-					    if (!(og2 = og2->next)) {
-						while((og1 = og->next))
-							og = og1;
-						break;
-						}
-					  d->Rq = og2;
-					  }
+				t = og->coef;
+				for(; og1; og1 = og1->next) {
+					if (!s[i = og1->varno]++)
+						x[z[nz++] = i] =
+							t*og1->coef;
+					else
+						x[i] += t*og1->coef;
 					}
+				if ((og1 = og->next)) {
+				  og2 = d->Rq;
+				  while (og2->varno < og1->varno)
+				    if (!(og2 = og2->next)) {
+					while((og1 = og->next))
+						og = og1;
+					break;
+					}
+				  d->Rq = og2;
+				  }
 				d1 = d->next;
 				if ((og = og->next)) {
 					i = og->varno;
@@ -830,17 +837,18 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 			if (pass) {
 				if (nz > 1)
 					qsortv(z, nz, sizeof(fint), lcmp, NULL);
-				for(i = 0; i < nz; i++) {
+				for(i = nz1 = 0; i < nz; i++) {
 					if ((t = x[j = z[i]])) {
 						*delsq++ = t;
 						if (vmi)
 							j = vmi[j];
 						*rowq++ = j + ftn;
 						nelq++;
+						z[nz1++] = j;
 						}
 					s[j] = 0;
 					}
-				for(i = 0; i < nz; i++)
+				for(i = 0; i < nz1; i++)
 				    if ((j = z[i]) > icol && x[j]) {
 					cd0->i = icol;
 					cd0->j = colq[-1] + i;
@@ -853,9 +861,14 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 				nz = 0;
 				}
 			else {
-				nelq += nz;
-				while(nz > 0)
-					s[z[--nz]] = 0;
+				while(nz > 0) {
+					s[i = z[--nz]] = 0;
+					if (x[i]) {
+						++nelq;
+						if (i == icol)
+							++nz1;
+						}
+					}
 				}
 			}
 		    }
@@ -872,11 +885,6 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 			*rowqp = rowq1;
 			*colqp = colq1;
 			*delsqp = delsq1;
-			}
-		else {
-			free(colq1);
-			free(rowq1);
-			free(delsq1);
 			}
 		nelq -= ftn;
 		}

@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017, 2018 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "jacpdim.h"
 
@@ -207,10 +201,9 @@ conpval_ASL(ASL *a, real *X, real *F, fint *nerror)
 	Jmp_buf err_jmp0;
 	cgrad *gr, **gr0;
 	expr_n *en;
-	expr_v *V;
-	int *cm, i, j, je, *ncxval, nx, useV;
+	int *cm, i, j, j1, je, kv, *ncxval, nx, *vmi;
 	ps_func *p, *p0;
-	real *cscale, f;
+	real *cscale, f, *vscale;
 
 	ASL_CHECK(a, ASL_read_pfgh, "conpval");
 	asl = (ASL_pfgh*)a;
@@ -222,17 +215,24 @@ conpval_ASL(ASL *a, real *X, real *F, fint *nerror)
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
-	if (!asl->i.x_known)
-		xp_check_ASL(asl, X);
-	x0kind |= ASL_have_conval;
 	je = n_conjac[1];
 	j = n_conjac[0];
+	if (!asl->i.x_known) {
+		co_index = j;
+		xp_check_ASL(asl, X);
+		}
 	if (!(gr0 = asl->i.Cgrad0))
 		asl->i.Cgrad0 = gr0 = asl->i.Cgrad_;
 	p0 = asl->P.cps;
 	cscale = asl->i.cscale;
-	useV = asl->i.vscale || asl->i.vmap;
-	V = var_e;
+	kv = 0;
+	vmi = 0;
+	if ((vscale = asl->i.vscale))
+		kv = 2;
+	if (asl->i.vmap) {
+		vmi = get_vminv_ASL(a);
+		++kv;
+		}
 	cm = asl->i.cmap;
 	nx = a->i.nxval;
 	ncxval = asl->i.ncxval;
@@ -255,21 +255,37 @@ conpval_ASL(ASL *a, real *X, real *F, fint *nerror)
 			en = (expr_n*)con_de[i].e;
 			f = en->v;
 			}
+		ncxval[i] = nx;
+		if (!F)
+			continue;
 		gr = gr0[i];
-		if (useV)
+		switch(kv) {
+		  case 3:
+			for(; gr; gr = gr->next) {
+				j1 = vmi[gr->varno];
+				f += X[j1] * vscale[j1] * gr->coef;
+				}
+			break;
+		  case 2:
+			for(; gr; gr = gr->next) {
+				j1 = gr->varno;
+				f += X[j1] * vscale[j1] * gr->coef;
+				}
+			break;
+		  case 1:
 			for(; gr; gr = gr->next)
-				f += V[gr->varno].v * gr->coef;
-		else
+				f += X[vmi[gr->varno]] * gr->coef;
+			break;
+		  case 0:
 			for(; gr; gr = gr->next)
 				f += X[gr->varno] * gr->coef;
-		if (F) {
-			if (cscale)
-				f *= cscale[j];
-			*F++ = f;
-			}
-		ncxval[i] = nx;
+		  }
+		if (cscale)
+			f *= cscale[j];
+		*F++ = f;
 		}
 	err_jmp = 0;
+	x0kind |= ASL_have_conval;
 	}
 
  void
@@ -300,6 +316,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
+	co_index = j = n_conjac[0];
 	if ((!asl->i.x_known && xp_check_ASL(asl,X))
 	 || !(x0kind & ASL_have_conval)) {
 		xksave = asl->i.x_known;
@@ -317,7 +334,6 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 	vmi = 0;
 	if (asl->i.vmap)
 		vmi = get_vminv_ASL(a);
-	j = n_conjac[0];
 	k = n_conjac[1];
 	if (asl->i.Derrs)
 		deriv_errchk_ASL(a, nerror, j, k-j);
@@ -380,7 +396,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 	}
 
  int
-jacpdim_ASL(ASL *asl, char *stub, fint *M, fint *N, fint *NO, fint *NZ,
+jacpdim_ASL(ASL *asl, const char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 	fint *MXROW, fint *MXCOL, ftnlen stub_len)
 {
 	FILE *nl;
@@ -412,11 +428,10 @@ objpval_ASL(ASL *a, int i, real *X, fint *nerror)
 	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
 	expr_n *en;
-	expr_v *V;
-	int ij;
+	int ij, j1, kv, *vmi;
 	ograd *gr;
 	ps_func *p;
-	real f;
+	real f, *vscale;
 
 	NNOBJ_chk(a, i, "objpval");
 	asl = (ASL_pfgh*)a;
@@ -428,9 +443,9 @@ objpval_ASL(ASL *a, int i, real *X, fint *nerror)
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
+	co_index = -(i + 1);
 	if (!asl->i.x_known)
 		xp_check_ASL(asl,X);
-	co_index = -(i + 1);
 	p = asl->P.ops + i;
 	if (p->nb) {
 		f = copeval(p C_ASL);
@@ -445,12 +460,35 @@ objpval_ASL(ASL *a, int i, real *X, fint *nerror)
 		}
 	asl->i.noxval[i] = asl->i.nxval;
 	gr = Ograd[i];
-	if (asl->i.vmap || asl->i.vscale)
-		for(V = var_e; gr; gr = gr->next)
-			f += gr->coef * V[gr->varno].v;
-	else
+	kv = 0;
+	vmi = 0;
+	if ((vscale = asl->i.vscale))
+		kv = 2;
+	if (asl->i.vmap) {
+		vmi = get_vminv_ASL(a);
+		++kv;
+		}
+	switch(kv) {
+	  case 3:
+		for(; gr; gr = gr->next) {
+			j1 = vmi[gr->varno];
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 2:
+		for(; gr; gr = gr->next) {
+			j1 = gr->varno;
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 1:
 		for(; gr; gr = gr->next)
-			f += gr->coef * X[gr->varno];
+			f += X[vmi[gr->varno]] * gr->coef;
+		break;
+	  case 0:
+		for(; gr; gr = gr->next)
+			f += X[gr->varno] * gr->coef;
+	  }
 	err_jmp = 0;
 	return f;
 	}
@@ -482,6 +520,7 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
+	co_index = -(i + 1);
 	if (!asl->i.x_known)
 		xp_check_ASL(asl,X);
 	if (!asl->i.noxval || asl->i.noxval[i] != asl->i.nxval) {
@@ -561,8 +600,9 @@ INchk(ASL *asl, const char *who, int i, int ix)
 cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
+	expr *e;
 	expr_n *en;
-	int L;
+	int L, nc;
 	ps_func *p;
 	real f;
 
@@ -574,14 +614,14 @@ cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
+	co_index = i;
 	if (!asl->i.x_known)
 		xp_check_ASL(asl, X);
-	if (i >= asl->i.n_con0) {
-		f = 0.;
+	if (i >= (nc = asl->i.n_con0)) {
+		e = lcon_de[i-nc].e;
+		f = (*e->op)(e C_ASL);
 		goto done;
 		}
-	co_index = i;
-	asl->i.ncxval[i] = asl->i.nxval;
 	p = asl->P.cps + i;
 	if (p->nb) {
 		f = copeval(p C_ASL);
@@ -595,29 +635,71 @@ cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
 		f = en->v;
 		}
  done:
+	asl->i.ncxval[i] = asl->i.nxval;
 	err_jmp = 0;
 	return f;
+	}
+
+ static real
+Conivalp(ASL_pfgh *asl, int i, real *X, fint *nerror)
+{
+	cgrad *gr;
+	int j1, kv, *vmi;
+	real f, *vscale;
+
+	if (i < asl->i.n_con0)
+		f = cpval(asl, i, X, nerror);
+	else
+		f = 0.;
+	kv = 0;
+	vmi = 0;
+	if ((vscale = asl->i.vscale))
+		kv = 2;
+	if (asl->i.vmap) {
+		vmi = get_vminv_ASL((ASL*)asl);
+		++kv;
+		}
+	gr = asl->i.Cgrad0[i];
+	switch(kv) {
+	  case 3:
+		for(; gr; gr = gr->next) {
+			j1 = vmi[gr->varno];
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 2:
+		for(; gr; gr = gr->next) {
+			j1 = gr->varno;
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 1:
+		for(; gr; gr = gr->next)
+			f += X[vmi[gr->varno]] * gr->coef;
+		break;
+	  case 0:
+		for(; gr; gr = gr->next)
+			f += X[gr->varno] * gr->coef;
+	  }
+	return f;
+	}
+
+ real
+conpival_nomap_ASL(ASL *a, int i, real *X, fint *nerror)
+{
+	INchk(a, "conpival_nomap", i, a->i.n_con0);
+	return  Conivalp((ASL_pfgh*)a, i, X, nerror);
 	}
 
  real
 conpival_ASL(ASL *a, int i, real *X, fint *nerror)
 {
-	ASL_pfgh *asl;
-	cgrad *gr;
-	expr_v *V;
-	real f;
+	int *cm;
 
-	INchk(a, "conpival", i, a->i.n_con0);
-	asl = (ASL_pfgh*)a;
-	f = cpval(asl, i, X, nerror);
-	gr = asl->i.Cgrad0[i];
-	if (asl->i.vmap || asl->i.vscale)
-		for(V = var_e; gr; gr = gr->next)
-			f += V[gr->varno].v * gr->coef;
-	else
-		for(; gr; gr = gr->next)
-			f += X[gr->varno] * gr->coef;
-	return f;
+	INchk(a, "conpival", i, a->i.n_con_);
+	if ((cm = a->i.cmap))
+		i = cm[i];
+	return  Conivalp((ASL_pfgh*)a, i, X, nerror);
 	}
 
  int
@@ -630,10 +712,9 @@ lconpval(ASL *a, int i, real *X, fint *nerror)
 	return f != 0.;
 	}
 
- void
-conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+ static void
+Congrdp(ASL_pfgh *asl, int i, real *X, real *G, fint *nerror)
 {
-	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
 	cgrad *gr, *gr0;
 	fint ne0;
@@ -644,12 +725,7 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	psb_elem *b, *be;
 	range *U;
 	real *Adjoints, t, *vscale;
-	static char who[] = "conpgrd";
 
-	INchk(a, who, i, a->i.n_con0);
-	asl = (ASL_pfgh*)a;
-	if (!want_derivs)
-		No_derivs_ASL(who);
 	ne0 = -1;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
@@ -658,20 +734,22 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
-	if (!asl->i.x_known)
+	if (!asl->i.x_known) {
+		co_index = i;
 		xp_check_ASL(asl, X);
+		}
 	if ((!asl->i.ncxval || asl->i.ncxval[i] != asl->i.nxval)
 	 && (!(x0kind & ASL_have_conval)
 	     || i < n_conjac[0] || i >= n_conjac[1])) {
 		xksave = asl->i.x_known;
 		asl->i.x_known = 1;
-		conpival_ASL(a,i,X,nerror);
+		conpival_ASL((ASL*)asl,i,X,nerror);
 		asl->i.x_known = xksave;
 		if (ne0 >= 0 && *nerror)
 			return;
 		}
 	if (asl->i.Derrs)
-		deriv_errchk_ASL(a, nerror, i, 1);
+		deriv_errchk_ASL((ASL*)asl, nerror, i, 1);
 	Adjoints = adjoints;
 	p = asl->P.cps + i;
 	p->nxval = asl->i.nxval;
@@ -708,7 +786,7 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 
 	vmi = 0;
 	if (asl->i.vmap)
-		vmi = get_vminv_ASL(a);
+		vmi = get_vminv_ASL((ASL*)asl);
 	if ((vscale = asl->i.vscale)) {
 		gr = gr0;
 		if (vmi)
@@ -758,11 +836,40 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	err_jmp = 0;
 	}
 
+ void
+conpgrd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+{
+	ASL_pfgh *asl;
+	static char who[] = "conpgrd_nomap";
+
+	INchk(a, who, i, a->i.n_con0);
+	asl = (ASL_pfgh*)a;
+	if (!want_derivs)
+		No_derivs_ASL(who);
+	Congrdp(asl, i, X, G, nerror);
+	}
+
+ void
+conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+{
+	ASL_pfgh *asl;
+	int *cm;
+	static char who[] = "conpgrd";
+
+	INchk(a, who, i, a->i.n_con_);
+	asl = (ASL_pfgh*)a;
+	if (!want_derivs)
+		No_derivs_ASL(who);
+	if ((cm = asl->i.cmap))
+		i = cm[i];
+	Congrdp(asl, i, X, G, nerror);
+	}
+
  static void
 xpsgchk(ASL_pfgh *asl, ps_func *f0, int *xv, int n, int nx,
 	real (*ev)(ASL *a, int i, real *X, fint *nerror),
 	void (*gv)(ASL *a, int i, real *X, real *G, fint *nerror),
-	real *y, int oxk)
+	real *y, int oxk, int isobj)
 {
 	int i, i1, i2;
 	ps_func *f;
@@ -786,7 +893,7 @@ xpsgchk(ASL_pfgh *asl, ps_func *f0, int *xv, int n, int nx,
 			if (y[i]) {
 				while(i1 <= i2 && y[i1])
 					++i1;
-				deriv_errchk_ASL((ASL*)asl, 0, i, i1-i);
+				deriv_errchk_ASL((ASL*)asl, 0, isobj ? -(i+1) : i, i1-i);
 				}
 			}
 		asl->i.x_known = 1;
@@ -796,25 +903,111 @@ xpsgchk(ASL_pfgh *asl, ps_func *f0, int *xv, int n, int nx,
  void
 xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
 {
-	int nx, oxk, *xv;
+	int i, nc, no, nx, nz, oxk, tno, *xv;
 	ps_func *f;
-	real *x;
+	real t, *x;
 
+	nc = nlc;
+	no = nlo;
 	if (x0kind == ASL_first_x) {
 		if (!(x = X0))
 			memset(x = Lastx, 0, n_var*sizeof(real));
+		if (y) {
+			for(i = 0; i < nc; ++i) {
+				if (y[i]) {
+					co_index = i;
+					goto chk;
+					}
+				}
+			}
+		if (ow) {
+			for(i = 0; i < no; ++i) {
+				if (ow[i]) {
+					co_index = -(i+1);
+					goto chk;
+					}
+				}
+			}
+		if (nobj >= 0 && nobj < no)
+			co_index = -(nobj + 1);
+		else if (no)
+			co_index = -1;
+		else
+			co_index = 0;
+ chk:
 		xp_check_ASL(asl, x);
 		}
-	nx = asl->i.nxval;
+	tno = -1;
+	if (!no) {
+		if (!nc)
+			return;
+		ow = 0;
+		}
+	else if (ow) {
+		for(i = 0; i < no; ++i) {
+			if ((t = ow[i])) {
+				if (t != 1. || tno >= 0) {
+					tno = -2;
+					break;
+					}
+				tno = i;
+				}
+			}
+		}
+	else if (nobj >= 0 && nobj < no)
+		tno = nobj;
+	if (!(x = asl->P.oyow))
+		asl->P.oyow = x = (real*)M1alloc((nc + no)*sizeof(real));
+	else {
+		if (asl->P.onxval != asl->i.nxval
+		 || asl->P.onobj != tno)
+			goto work;
+		if (tno == -2 && memcmp(ow, x, no*sizeof(real)))
+			goto work;
+		if (nc) {
+			if (y) {
+				if (memcmp(y, x+no, nc*sizeof(real)))
+					goto work;
+				}
+			else if (asl->P.nynz)
+				goto work;
+			}
+		return;
+		}
+ work:
+	if (asl->P.ihdcur)
+		ihd_clear_ASL(asl);
+	asl->P.onxval = nx = asl->i.nxval;
+	asl->P.onobj = tno;
+	if (no) {
+		if (ow)
+			memcpy(x, ow, no*sizeof(real));
+		else
+			memset(x, 0, no*sizeof(real));
+		x += no;
+		}
+	nz = 0;
+	if (nc) {
+		if (y) {
+			for(i = 0; i < nc; ++i)
+				if ((x[i] = y[i]))
+					++nz;
+			}
+		else
+			memset(x, 0, nc*sizeof(real));
+		}
+	else
+		y = 0;
+	asl->P.nynz = nz;
 	oxk = asl->i.x_known;
 	asl->i.x_known = 1;
 	if (y)
-		xpsgchk(asl, asl->P.cps, asl->i.ncxval, nlc,
-			nx, conpival_ASL, conpgrd_ASL, y, oxk);
+		xpsgchk(asl, asl->P.cps, asl->i.ncxval, nc,
+			nx, conpival_ASL, conpgrd_ASL, y, oxk, 0);
 	f = asl->P.ops;
 	xv = asl->i.noxval;
 	if (nobj >= 0 && nobj < n_obj) {
-		if (nobj >= nlo)
+		if (nobj >= no)
 			goto done;
 		if (ow) {
 			ow += nobj;
@@ -829,9 +1022,10 @@ xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
 		if (f->nxval != nx)
 			objpgrd_ASL((ASL*)asl, nobj, Lastx, 0, 0);
 		}
-	else if (ow && nlo)
-		xpsgchk(asl, f, xv, nlo,
-			nx, objpval_ASL, objpgrd_ASL, ow, oxk);
+	else if (ow && no)
+		xpsgchk(asl, f, xv, no,
+			nx, objpval_ASL, objpgrd_ASL, ow, oxk, 1);
  done:
 	asl->i.x_known = oxk;
+	return;
 	}

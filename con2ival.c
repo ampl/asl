@@ -1,28 +1,29 @@
-/****************************************************************
-Copyright (C) 1997, 1999-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017, 2018 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "jac2dim.h"
+
+#ifdef __cplusplus
+ extern "C" {
+ extern  real con2ival_nomap_ASL(ASL *a, int i, real *X, fint *nerror);
+ extern void con2grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror);
+	}
+#endif
 
  static void
 INchk(ASL *asl, const char *who, int i, int ix)
@@ -40,7 +41,7 @@ c2ival(ASL_fgh *asl, int i, real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	expr *e;
-	int ij;
+	int ij, nc;
 	real f;
 
 	if (nerror && *nerror >= 0) {
@@ -51,6 +52,7 @@ c2ival(ASL_fgh *asl, int i, real *X, fint *nerror)
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
+	co_index = i;
 	if (!asl->i.x_known)
 		x2_check_ASL(asl,X);
 	if (!asl->i.ncxval)
@@ -62,33 +64,76 @@ c2ival(ASL_fgh *asl, int i, real *X, fint *nerror)
 			com1eval(asl, 0, comc1);
 		x0kind |= ASL_have_concom;
 		}
-	asl->i.ncxval[i] = asl->i.nxval;
-	co_index = i;
-	e = con_de[i].e;
+	if (i >= (nc = asl->i.n_con0))
+		e = lcon_de[i-nc].e;
+	else
+		e = con_de[i].e;
 	f = (*e->op)(e C_ASL);
+	asl->i.ncxval[i] = asl->i.nxval;
 	err_jmp = 0;
 	return f;
+	}
+
+ static real
+Conival2(ASL_fgh *asl, int i, real *X, fint *nerror)
+{
+	cgrad *gr;
+	int j1, kv, *vmi;
+	real f, *vscale;
+
+	if (i < asl->i.n_con0)
+		f = c2ival(asl, i, X, nerror);
+	else
+		f = 0.;
+	kv = 0;
+	vmi = 0;
+	if ((vscale = asl->i.vscale))
+		kv = 2;
+	if (asl->i.vmap) {
+		vmi = get_vminv_ASL((ASL*)asl);
+		++kv;
+		}
+	gr = asl->i.Cgrad0[i];
+	switch(kv) {
+	  case 3:
+		for(; gr; gr = gr->next) {
+			j1 = vmi[gr->varno];
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 2:
+		for(; gr; gr = gr->next) {
+			j1 = gr->varno;
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 1:
+		for(; gr; gr = gr->next)
+			f += X[vmi[gr->varno]] * gr->coef;
+		break;
+	  case 0:
+		for(; gr; gr = gr->next)
+			f += X[gr->varno] * gr->coef;
+	  }
+	return f;
+	}
+
+ real
+con2ival_nomap_ASL(ASL *a, int i, real *X, fint *nerror)
+{
+	INchk(a, "con2ival_nomap", i, a->i.n_con0);
+	return  Conival2((ASL_fgh*)a, i, X, nerror);
 	}
 
  real
 con2ival_ASL(ASL *a, int i, real *X, fint *nerror)
 {
-	ASL_fgh *asl;
-	cgrad *gr;
-	expr_v *V;
-	real f;
+	int *cm;
 
-	INchk(a, "con2ival", i, a->i.n_con0);
-	asl = (ASL_fgh*)a;
-	f = c2ival(asl, i, X, nerror);
-	gr = asl->i.Cgrad0[i];
-	if (asl->i.vmap || asl->i.vscale)
-		for(V = var_e; gr; gr = gr->next)
-			f += gr->coef * V[gr->varno].v;
-	else
-		for(; gr; gr = gr->next)
-			f += gr->coef * X[gr->varno];
-	return f;
+	INchk(a, "con2ival", i, a->i.n_con_);
+	if ((cm = a->i.cmap))
+		i = cm[i];
+	return  Conival2((ASL_fgh*)a, i, X, nerror);
 	}
 
  int
@@ -101,22 +146,16 @@ lcon2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	return f != 0.;
 	}
 
- void
-con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+ static void
+Congrd2(ASL_fgh *asl, int i, real *X, real *G, fint *nerror)
 {
-	ASL_fgh *asl;
 	Jmp_buf err_jmp0;
 	cde *d;
 	cgrad *gr, *gr1;
 	int i0, ij, j, *vmi, xksave;
 	real *Adjoints, *vscale;
 	size_t L;
-	static char who[] = "con2grd";
 
-	INchk(a, who, i, a->i.n_con0);
-	asl = (ASL_fgh*)a;
-	if (!want_derivs)
-		No_derivs_ASL(who);
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
@@ -124,20 +163,22 @@ con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
-	if (!asl->i.x_known)
+	if (!asl->i.x_known) {
+		co_index = i;
 		x2_check_ASL(asl,X);
+		}
 	if ((!asl->i.ncxval || asl->i.ncxval[i] != asl->i.nxval)
 	 && (!(x0kind & ASL_have_conval)
 	     || i < n_conjac[0] || i >= n_conjac[1])) {
 		xksave = asl->i.x_known;
 		asl->i.x_known = 1;
-		con2ival_ASL(a,i,X,nerror);
+		con2ival_nomap_ASL((ASL*)asl,i,X,nerror);
 		asl->i.x_known = xksave;
 		if (nerror && *nerror)
 			return;
 		}
 	if (asl->i.Derrs)
-		deriv_errchk_ASL(a, nerror, i, 1);
+		deriv_errchk_ASL((ASL*)asl, nerror, i, 1);
 	if (!(x0kind & ASL_have_funnel)) {
 		if (f_b)
 			funnelset(asl, f_b);
@@ -156,7 +197,7 @@ con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 		}
 	vmi = 0;
 	if (asl->i.vmap)
-		vmi = get_vminv_ASL(a);
+		vmi = get_vminv_ASL((ASL*)asl);
 	if ((vscale = asl->i.vscale)) {
 		if (vmi)
 			for(gr = gr1; gr; gr = gr->next) {
@@ -203,4 +244,33 @@ con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			G[i0++] = 0;
 	  }
 	err_jmp = 0;
+	}
+
+ void
+con2grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+{
+	ASL_fgh *asl;
+	static char who[] = "con2grd_nomap";
+
+	INchk(a, who, i, a->i.n_con0);
+	asl = (ASL_fgh*)a;
+	if (!want_derivs)
+		No_derivs_ASL(who);
+	Congrd2(asl, i, X, G, nerror);
+	}
+
+ void
+con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+{
+	ASL_fgh *asl;
+	int *cm;
+	static char who[] = "con2grd";
+
+	INchk(a, who, i, a->i.n_con_);
+	asl = (ASL_fgh*)a;
+	if (!want_derivs)
+		No_derivs_ASL(who);
+	if ((cm = asl->i.cmap))
+		i = cm[i];
+	Congrd2(asl, i, X, G, nerror);
 	}

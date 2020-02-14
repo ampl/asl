@@ -23,6 +23,8 @@ THIS SOFTWARE.
 ****************************************************************/
 
 #include "nlp.h"
+#undef con1ival
+#undef con1grd
 
 #define Egulp 400
 #define GAP_MAX 10
@@ -34,8 +36,12 @@ THIS SOFTWARE.
 #define who "fg_read"
 #ifdef __cplusplus
 extern "C" {
+#endif
  static real Missing_func(arglist*);
  static int compar(const void*, const void*, void*);
+ extern real con1ival_nomap_ASL(ASL*, int, real*, fint*);
+ extern void con1grd_nomap_ASL(ASL*, int, real *, real*, fint*);
+#ifdef __cplusplus
 	}
 #endif /* __cplusplus */
 #endif /* Just_Linear */
@@ -538,6 +544,14 @@ eread(EdRead *R, int deriv)
 				*b++ = r;
 				}
 				while(--j > 0);
+			if (b[-2] <= 0.)
+				p->z = 2*i - 2;
+			else {
+				b = p->bs + 1;
+				while(*b <= 0.)
+					b += 2;
+				p->z = (b - p->bs) - 1;
+				}
 			rv = (expr *)mem(sizeof(expr));
 			rv->op = f_OPPLTERM;
 			rv->L.p = p;
@@ -755,6 +769,7 @@ derpcopy(Static *S, cexp *ce, derp *dnext)
 imap_alloc(Static *S)
 {
 	int i, *r, *re;
+	size_t L;
 
 	if (imap) {
 		imap_len += lasta;
@@ -763,7 +778,8 @@ imap_alloc(Static *S)
 		}
 	imap_len = amax1 > lasta ? amax1 : lasta;
 	imap_len += 100;
-	r = imap = (int *)Malloc(imap_len*Sizeof(int));
+	r = imap = (int *)Malloc(L = imap_len*Sizeof(int));
+	S->a->i.temp_rd_bytes += L;
 	for(i = 0, re = r + nv1+1; r < re;)
 		*r++ = i++;
 	}
@@ -1513,9 +1529,9 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 		SS.nvar0 += ncom0 + ncom1;
 #endif /* Just_Linear */
 	if (X0)
-		memset(X0, 0, nv1*sizeof(real));
+		memset(X0, 0, nvr*sizeof(real));
 	if (havex0)
-		memset(havex0, 0, nv1);
+		memset(havex0, 0, nvr);
 	e = var_e = (expr_v *)M1zapalloc(x);
 	con_de = (cde *)(e + nv);
 	lcon_de = con_de + nc;
@@ -1588,12 +1604,13 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Objgrd  = a->p.Objgrd_nomap  = obj1grd_ASL;
 			a->p.Conval  = con1val_ASL;
 			a->p.Jacval  = jac1val_ASL;
-			a->p.Conival = a->p.Conival_nomap = con1ival_ASL;
-			a->p.Congrd  = a->p.Congrd_nomap  = con1grd_ASL;
+			a->p.Conival = con1ival_ASL;
+			a->p.Conival_nomap = con1ival_nomap_ASL;
+			a->p.Congrd  = con1grd_ASL;
+			a->p.Congrd_nomap = con1grd_nomap_ASL;
 			a->p.Lconval = lcon1val_ASL;
 			a->p.Xknown  = x1known_ASL;
 #endif /* Just_Linear */
-			a->i.err_jmp_ = 0;
 			return prob_adj_ASL(a);
 			}
 		ER.can_end = 0;

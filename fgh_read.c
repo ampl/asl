@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "jac2dim.h"
 #include "opnos.hd"
@@ -28,6 +22,9 @@ THIS SOFTWARE.
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern real con2ival_nomap_ASL(ASL*, int, real*, fint*);
+extern void con2grd_nomap_ASL(ASL*, int, real *, real*, fint*);
 
 #define Egulp 400
 
@@ -205,6 +202,7 @@ new_expr(int opcode, expr *L, expr *R, int deriv)
 					case PLUS:	i = Hv_plusLR;	break;
 					case MINUS:	i = Hv_minusLR;	break;
 					case MULT:	i = Hv_timesLR;	break;
+					case DIV:	i = Hv_divLR;	break;
 					default:	i = Hv_binaryLR;
 					}
 			    else switch(opcode) {
@@ -536,6 +534,14 @@ eread(EdRead *R, int deriv)
 				*b++ = r;
 				}
 				while(--j > 0);
+			if (b[-2] <= 0.)
+				p->z = 2*i - 2;
+			else {
+				b = p->bs + 1;
+				while(*b <= 0.)
+					b += 2;
+				p->z = (b - p->bs) - 1;
+				}
 			if (edag_peek(R) != 'v'
 			 || Xscanf(R, "%d", &k) != 1
 			 || k < 0 || k >= max_var)
@@ -1371,6 +1377,9 @@ bholread(EdRead *R)
 	return (expr *)rvh;
 	}
 
+ static void
+hv2init_ignore(ASL *asl, int hid_limit, int nobj, real *ow, real *y) {}
+
  int
 fgh_read_ASL(ASL *a, FILE *nl, int flags)
 {
@@ -1461,9 +1470,9 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			memset(havepi0, 0, nc);
 		}
 	if (X0)
-		memset(X0, 0, nv0*sizeof(real));
+		memset(X0, 0, nvr*sizeof(real));
 	if (havex0)
-		memset(havex0, 0, nv0);
+		memset(havex0, 0, nvr);
 	e = var_e = (expr_v *)M1zapalloc(x);
 	var_ex = e + nv0;
 	var_ex1 = var_ex + ncom0;
@@ -1512,12 +1521,16 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Objgrd  = a->p.Objgrd_nomap  = obj2grd_ASL;
 			a->p.Conval  = con2val_ASL;
 			a->p.Jacval  = jac2val_ASL;
-			a->p.Hvcomp  = hv2comp_ASL;
-			a->p.Conival = a->p.Conival_nomap = con2ival_ASL;
-			a->p.Congrd  = a->p.Congrd_nomap  = con2grd_ASL;
+			a->p.Hvcomp  = a->p.Hvcomp_nomap  = hv2comp_ASL;
+			a->p.Hvcompd = hv2compd_ASL;
+			a->p.Hvcomps = hv2comps_ASL;
+			a->p.Hvinit  = a->p.Hvinit_nomap  = hv2init_ignore;
+			a->p.Conival = con2ival_ASL;
+			a->p.Conival_nomap = con2ival_nomap_ASL;
+			a->p.Congrd  = con2grd_ASL;
+			a->p.Congrd_nomap = con2grd_nomap_ASL;
 			a->p.Lconval = lcon2val_ASL;
 			a->p.Xknown  = x2known_ASL;
-			a->i.err_jmp_ = 0;
 			return prob_adj_ASL(a);
 			}
 		ER.can_end = 0;

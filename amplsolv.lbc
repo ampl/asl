@@ -14,6 +14,7 @@ conadj.obj
 conpval.obj
 conscale.obj
 conval.obj
+degree.obj
 derprop.obj
 details.obj
 dtoa1.obj
@@ -45,6 +46,7 @@ mainexit.obj
 mip_pri.obj
 misc.obj
 mpec_adj.obj
+mqpcheckv.obj
 mypow.obj
 names.obj
 nl_obj.obj

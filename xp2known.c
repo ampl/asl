@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997, 1999-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "jacpdim.h"
 
@@ -32,8 +26,8 @@ extern void funpset_ASL ANSI((ASL_pfgh*, funnel*));
 #undef funnelset
 #define funnelset(x) funpset_ASL(asl, x)
 
- static void
-ihd_clear(ASL_pfgh *asl)
+ void
+ihd_clear_ASL(ASL_pfgh *asl)
 {
 	Ihinfo *ihi;
 	int i = asl->P.ihdcur;
@@ -56,6 +50,10 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 	ograd *og;
 	real t, *vscale, *xe;
 
+	if (x0len == 0) {
+		x0kind = 0;
+		return 0;
+		}
 	if (x0kind != ASL_first_x && !memcmp(Lastx, x, x0len))
 		return 0;
 
@@ -65,9 +63,9 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 	memcpy(Lastx, x, x0len);
 	asl->i.nxval++;
 	if (asl->P.ihdcur)
-		ihd_clear(asl);
+		ihd_clear_ASL(asl);
 	x0kind = asl->I.x0kind_init;
-	xe = x + n_var;
+	xe = (real*)((char*)x + x0len);
 	v = v0 = var_e;
 	vscale = asl->i.vscale;
 	if ((vm = asl->i.vmap)) {
@@ -94,6 +92,7 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 			t += var_e[og->varno].v*og->coef;
 		la->v->v = t;
 		}
+	errno = 0;
 	if (asl->P.ncom) {
 		c = cexps;
 		dvsp0 = asl->P.dvsp0;
@@ -135,15 +134,16 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 	return 1;
 	}
 
- void
+ int
 xp2known_ASL(ASL* asl, real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
-	int ij;
+	int ij, rc;
 
 	ASL_CHECK(asl, ASL_read_pfgh, "xp2known");
+	rc = 1;
 	if (asl->i.xknown_ignore)
-		return;
+		goto ret;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
@@ -151,10 +151,13 @@ xp2known_ASL(ASL* asl, real *X, fint *nerror)
 			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
-	xp_check_ASL((ASL_pfgh*)asl, X);
+	cv_index = nlo ? -1 : 0;
+	rc = xp_check_ASL((ASL_pfgh*)asl, X);
 	asl->i.x_known = 1;
  done:
 	err_jmp = 0;
+ ret:
+	return rc;
 	}
 
  static real *
@@ -235,18 +238,20 @@ hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
 
 	ASL_CHECK(a, ASL_read_pfgh, "xvpinit");
 	asl = (ASL_pfgh*)a;
+	xpsg_check_ASL(asl, nobj, ow, y);
 	asl->P.nhvprod = 0;
 	if (!asl->P.hes_setup_called)
 		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc);
+	ihc = 0;
+	if (ndhmax > asl->P.ihdmax)
+		ndhmax = asl->P.ihdmax;
+	if ((asl->P.ndhmax = ndhmax) <= 0)
+		goto done;
 	if (!(ihi = asl->P.ihi1) || ndhmax < asl->P.ihdmin)
 		return;
 	if (nobj < 0 || nobj >= n_obj)
 		nobj = -1;
 	s = asl->P.dOscratch;
-	if (asl->P.ihdcur)
-		ihd_clear(asl);
-	if (ndhmax > asl->P.ihdmax)
-		ndhmax = asl->P.ihdmax;
 	for(ihc = 0; ihi->ihd <= ndhmax; ihi = ihi->next) {
 		ihc = ihi->ihd;
 		ihi->hest = h = (real *)new_mblk(ihi->k);
@@ -272,6 +277,7 @@ hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
 				h = bigUmult(asl, h, r, nobj, ow, y);
 			}
 		}
+ done:
 	asl->P.ihdcur = ihc;
 	}
 

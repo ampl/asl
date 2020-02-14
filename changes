@@ -1877,7 +1877,7 @@ library and anything using its headers must be recompiled.
   New files mpec_adj.c, mpec_adj0.c, obj_adj.c obj_adj0.c.  When
 ASL_cc_simplify is not used, linking with mpec_adj0.o will give a
 slightly smaller program, and when neither ASL_obj_replace_ineq nor
-ASL_obj_replace_eq is used, linking with mpec_adj0.o will give s
+ASL_obj_replace_eq is used, linking with mpec_adj0.o will give a
 slightly smaller program.
 
 20110811
@@ -2232,3 +2232,956 @@ nqpcheck.c.
 
 20131209
   dtoa.c, dtoa1.c: minor performance improvement; see netlib/fp/changes.
+
+20140131
+  indic_cons.c:  generalize to handle linear_expr op linear_expr,
+e.g., b == 1 ==> linear_expression == linear_expression, rather
+than just constant op linear_expr or linear_expr op constant,
+with op one of ==, !=, >=, <=.
+
+20140205
+  obj_adj.c: fix a glitch (missed adjustment of nZc) with 64-bit
+binaries and problems read with flag ASL_use_Z to the .nl reader.
+
+20140305
+  obj_adj.c: fix missing initialization of od->cg (to 0).  In many
+cases, the value would already have been 0, but a fault was otherwise
+possible.
+
+20140313
+  nl_obj.c: adjust function nl_obj(ASL *asl, int n) to work properly
+reader flag ASL_obj_replace_ineq or ASL_obj_replace_eq results in a
+modified objective.
+  obj_adj.c: correctly update primal and dual initial guesses (X0 and
+pi0) when reader flag ASL_obj_replace_ineq or ASL_obj_replace_eq
+results in a modified objective.
+  obj_adj.[ch]: new field cg0 used, e.g., with drivers for MINOS and
+SNOPT.
+  sscan.f.c:  fix a bug with %D that affects the value nZo provided by
+jac0dim().
+  nqpcheck.c, nqpcheckZ.c: "invisible" tweaks.
+  makefile.u, makefile.vc: tweaks for obj_adj.h
+
+20140612
+  amplsolv.sy, makefile.lc, makefile.sy, makefile.wat: apply updates
+missed in the changes of 20110809.  (I no longer have a way to test
+these files.)
+
+20140617
+  asl.h com2eval.c conpval.c fgh_read.c jac2dim.h jacpdim.h misc.c
+pfg_read.c pshvprod.c psinfo.h xp2known.c:  new functions with
+apparent signatures
+    void hvcompd(real *hv, real *p, int co);
+    varno_t hvcomps(real *hv, real *p, int co, varno_t nz, varno_t *z);
+For -n_obj <= co < 0, hvcompd has the same effect as
+	hvcomp(hv, p, -1-co, 0, 0)
+and for 0 <= co, it has the same effect as
+	hvcomp(hv, p, -1, 0, y)
+with y[co] = 1 and other components = 0.  Function hvcomps is similar
+to hvcompd, but it stores the structural nonzeros of Hessian(co)*p
+in hv and their indices in z and returns the number of nonzeros.
+Only the first nz values are actually stored; then hv and/or z can be
+NULL.  Type varno_t is int unless the ASL is compiled with
+-DASL_big_goff, in which case varno_t is ssize_t.  (For the latter,
+you could add "#define ASL_big_goff" to arith.h or stdio1.h.)
+  Previously after a call on hvcomp(hv, p, nobj, ow, y), another call
+at the same x (primal variables vector) but different (nobj, ow, y)
+sometimes required an intervening call on hvinit(nobj, ow, y) to
+function correctly.  This is no longer necessary.
+  Because of new components in struct ASL, the entire library needs
+to be recompiled.
+
+20140618
+  obj_adj.c:  fix a possible fault.
+
+20140709
+  fg_write.c pfg_read.c qp_read.c stderr.c: change some (long), (Long)
+or (unsigned long) casts to (ssize_t) or (size_t).  Should be invisible.
+
+20140711
+  printf.c:  fix a glitch whereby
+	printf "%x\n", 0xabcd1234;
+printed "ffffffffabcd1234" rather than "abcd1234" on 64-bit MS Windows
+systems.
+
+20140718
+  asl.h fgh_read.c fg_read.c getstub.c jac0dim.c misc.c pfghread.c
+pfg_read.c writesol.c:  add command-line options "-b boundsfile" for
+a file that supplies primal bounds and an initial guess, overriding
+those in the .nl file, and "-o solfile" to specify the name of the
+.sol file.  (Compiling getstub.c and misc.c with
+-DNO_BOUNDSFILE_OPTION disables the new options.)
+  Because of changes to asl.h, the whole library needs to be
+recompiled.
+  Some of the above, plus con2val.c conpval.c jac2dim.c jacdim.c:
+argument stub to the jac*dim functions changed from char* to
+const char*, a change that should be invisible.
+
+20140723
+  readsol.c:  update to reflect AMPL changes over the years.
+
+20140826
+  getstub.[ch]: suppress echoing options when $solver_msg == 0; add
+Option_Info.option_echo flag ASL_OI_defer_bsname to print an initial
+"bsname:  " only if options are present (in $solver_options or on the
+command line).  Recognize variants -AMPLln and -AMPLls of -AMPL:
+-AMPLln assumes ASL_OI_never_echo and -AMPLls assumes
+ASL_OI_defer_bsname.
+
+20140924
+  writesol.c: if argument oi to write_sol_ASL, write_solf_ASL,
+and write_solx_ASL is not NULL and the amplflag is 0, honor
+the "8" bit of oi->wantsol:  echo the solution message only if
+oi->wantsol & 8 is zero.
+
+20140929
+  pfg_read.c, pfghread.c:  fix a rarely seen bug in pfgh_read() that
+could cause Jacobians and Hessians to be miscomputed.
+
+20141003
+  pfg_read.c, pfghread.c:  fix trouble introduced in 20140929.
+The changes of 20140929 worked with some examples, but broke others.
+
+20141004
+  pfg_read.c, pfghread.c:  minor efficiency tweaks, which should
+eliminate some unnecessary operations under unusual conditions.
+
+20141017
+  suf_sos.c: update nZc as well as nzc and use size_t variables
+rather than int variables to update A_colstartsZ.
+
+20141024
+  conpval.c: fix a bug in lconval() that made it always return 0.
+  dvalue.hd, op_type.hd, op_typeb.hd, opcode.hd, r_op.hd, r_opn.hd,
+r_opn0.hd, r_qp.hd, rops.c, rops2.c: add logical function
+f_OPSOMESAME.  AMPL versions >= 20141024 can emit logical expressions
+for constraint programs that involve this operator.  The entire
+library needs to be recompiled.
+
+20141102
+  repwhere.c, rops.c, rops2.c:  make error handling of imported
+functions behave like that of builtin functions.  For example,
+if an imported function is involved with objval(no, x, nerror)
+with nerror not NULL, then *nerror should be set appropriately.
+  funcadd.h: adjust comments on Errmsg to say that for errors on
+first derivative computations, Errmsg should contain a single-
+quote (') character, and for errors on second derivative
+computations, Errmsg should contain a double-quote (") character
+(among others).
+
+20141105
+  funcadd.h: adjust comments in funcadd.h to say that the text
+in Errmsg for a failed derivative evaluation should start with
+a single quote ('), followed by the actual error message text,
+and similarly, for a failed Hessian evaluation, the text in Errmsg
+should start with a double quote ("), followed by the actual
+error message text.
+
+20141106
+  asl.h:  move Stderr declaration below #ifdef __cplusplus lines.
+This only matters when compiling in C++ mode and does not matter
+to some compilers, such as g++, but does matter for at least one
+of the Microsoft compilers.  No change to asldate.c.
+
+20141111
+  repwhere.c, rops.c, rops2.c:  fix a glitch that could cause an error
+message of the form "Error in function %s ...  %s" rather than the
+intended error message in which %s was replaced by something helpful.
+
+20141121
+  psinfo.h, pfghread.c, pfg_read.c:  adjust hashing to work faster
+on large instances.
+  q_hd.hd: new #define OPPLTERM to be used in updated Gurobi driver.
+  fg_read.c fgh_read.c, pfg_read.c, pfghread.c, asl.h, rops.c, rops2.c:
+new field "z" in struct plterm to simplify f_OPPLTERM().  (Should be
+invisible except for slightly faster operation of f_OPPLTERM().)
+  New source file mpqcheckv.c and new type QPinfo in asl.h provide
+routines
+
+	ssize_t mqpcheckv_ASL(ASL*, int co, QPinfo **QPIp, void **vp);
+	void mqpcheckv_free_ASL(ASL*, void **vp);
+
+which (via #define in asl.h and with asl in scope) can be invoked as
+
+	ssize_t mqpcheckv(int co, QPinfo **QPIp, void **vp);
+	mpqcheckv_free(void **vp);
+
+mqpcheckv() works similarly to mqpcheck(), but may be more efficient
+when called several times with different values of co.  With variables
+	int co; QPinfo *qpi; void *v = 0;
+in scope, before calling mqpcheckv(co, &qpi, &v) or mqpcheckv(co, 0, &v)
+the first time, one sets v to 0 (i.e., NULL); mqpcheckv sets v to a
+value containing temporary arrays useful in subsequent calls on
+mpqcheckv.  After all desired calls on mqpcheckv, one calls
+mqpcheckv_free(&v) to dispose of the temporary arrays; upon return from
+mqpcheckv_free(&v), v = 0 again.  If the QPIp argument to mqpcheckv()
+is not NULL, i.e., one invokes mqpcheckv(co, &qpi, &v), qpi is set to
+NULL when mqpcheckv() returns a value <= 0 and otherwise to a QPinfo
+structure declared in asl.h:
+
+   typedef struct
+  QPinfo {
+    int nc;         /* number of nonempty columns */
+    int nz;         /* number of nonzeros */
+    int *colno;     /* column numbers of nonempty columns */
+    size_t *colbeg; /* nonzeros for column colno[i]: */
+    int *rowno;     /* (rowno[j], delsq[j]) for */
+    real *delsq;    /* colbeg[i] <= j < colbeg[i+1], except that */
+                    /* values in colno, colbeg, and rowno are */
+                    /* incremented by Fortran */
+    } QPinfo;
+
+After using the qpi returned by mqpcheckv(co, &qpi, &v), one invokes
+free(qpi) to dispose of qpi.
+  nqpcheck.c: minor update; should be invisible.
+  makefile* files: updated for mqpcheckv.c.
+
+20141202
+  mqpcheckv.c: fix a glitch (missed zeroing of an array element) that
+somehow escaped earlier testing.
+
+20141223
+  mqpcheckv.c: fix a bug (possible invalid free() call) with problems
+where ASL_obj_replace_eq or ASL_obj_replace_ineq matters.
+
+20141229
+ objconst.c:  adjust objconst() to work correctly after qp_read().
+
+20150101
+ funcadd1.c: tweaks to error messages.
+
+20150107
+ funcadd.h: change line 271 from "#ifdef _WIN32" to
+"#if defined(_WIN32) && !defined(__MINGW32__)"; no change to asldate.c.
+
+20150108
+  obj_adj.c:  fix a glitch that caused some solvers (e.g., minos and
+snopt) to fault on models with a single constraint that obj_adj()
+folds into the objective, such as
+	var x{1..2}; var t; minimize obj: t;
+	s.t. c: x[1]^2 + x[2]^2 + x[1]*x[2] - 4*x[1] - 5*x[2] <= t;
+
+20150112
+  asl.h, dtoa.c, dtoa1.c, misc.c:  changes for "ifdef MULTIPLE_THREADS".
+Now ASSUME_OPENMP implies MULTIPLE_THREADS, and when ASSUME_OPENMP is
+#defined, dtoa1.c provides suitable definitions of ACQUIRE_DTOA_LOCK
+and FREE_DTOA_LOCK, under the assumption that each thread will use a
+different ASL* value, so ACQUIRE_DTOA_LOCK(n) and FREE_DTOA_LOCK(n)
+can be ignored for n >= 2.  In this case dtoa1.c also defines
+	void init_dtoa_locks(void);
+which on some systems (e.g., MS Windows, but not Linux) needs to
+be called once before the first call on ACQUIRE_DTOA_LOCK(n).
+The updated misc.c now provides such a call in ASL_alloc().
+   When MULTIPLE_THREADS is #defined, dtoa.c defines function
+	void set_max_dtoa_threads(unsigned int n);
+and expects
+	unsigned int dtoa_get_threadno(void);
+to be available to return the current thread number.
+After set_max_dtoa_threads(n), calls on strtod and dtoa by
+threads with thread numbers < n avoid calls on ACQUIRE_DTOA_LOCK
+and FREE_DTOA_LOCK by keeping thread-specific copies of entities
+for which changes by other threads would otherwise cause trouble.
+See the updated comments in dtoa.c about MULTIPLE_THREADS.
+
+20150114
+  dtoa.c, dtoa1.c: fix a glitch (possible fault) in the updates
+of 20140112.
+
+20150122
+  jac0dim.c x2check.c xp1known.c xp2known.c conscale.c con2ival.c
+con1ival.c con2val.c conpval.c conval.c obj2val.c objval.c:
+adjustments so after varscale(...) or a problem adjustment that
+changes the number of variables, objectives and constraints that
+involve linear variables will be correctly computed by objval(),
+conval(), and conival() in the unlikely event that only some relevant
+linear variables have changed but no nonlinear variables have changed.
+This only affects some solvers (not, e.g., minos or snopt, which treat
+linear variables separately).
+  names.c: make lon_name() and obj_name() work correctly after problem
+adjustments that affect the number of constraints the solver sees.
+
+20150126
+  printf.c:  Fix a glitch with format %.0e that caused
+	printf("%.e\n", 4.7);
+to print "4e+00" rather than "5e+00".
+
+20150129
+  fpinit.c:  Adjustments suggested by Victor Zverovich for Linux on ARM
+and s390x systems.  No change to asldate.c.
+
+20150204
+  rops.c, rops2.c:  fix a glitch with OPREM:  the right partial should
+always be zero.
+
+20150208
+  fg_read.c, fgh_read.c, pfg_read.c, pfghread.c:  fix a bug that could
+affect solvers that call sos_add() before calling the .nl reader or
+that specify ASL_cc_simplify in the flags to the .nl reader.  Problems
+with some nonlinear defined variables might sometimes have been
+mishandled when either some nonzero .sosno or .ref suffixes or certain
+kinds of complementarity constraints appear in the problem.
+
+20150210
+  fg_read.c, fgh_read.c, pfg_read.c, pfghread.c:  recant most of the
+changes of 20150208; the "nvinc" logic had made them unnecessary.
+One change retained:  if the incoming X0 or havex0 (i.e., asl->i.X0_
+or asl->i.havex0_) are nonzero, only the first n_var components are
+zeroed initially, rather than the first
+n_var + asl->i.nsufext[ASL_Sufkind_var] components.
+
+20150216
+ con1ival.c, con2ival.c, repwhere.c: fix bugs in lconval() and in
+the objective name shwon in error messages on problems with adjustments
+due to suf_sos() or reader flags ASL_cc_simplify, ASL_obj_replace_ineq,
+or ASL_obj_replace_eq.
+
+20150318
+ misc.c, mpec_adj.c, obj_adj.c: fix a bug that bit when reader flags
+ASL_cc_simplify caused changes after flags ASL_obj_replace_ineq or
+ASL_obj_replace_eq had caused changes.
+ objval.c, x2check.c xp1known.c xp2known.c: only copy nonlinear variable
+values to expr_v structures (saving a bit of time on some problems).
+ pfg_read.c, pfghread.c:  fix a possible fault; fix a minor memory leak.
+
+20150427
+  asl.h, obj_adj.c, qp_read.c:  fix a bug (possible fault under some
+conditions) in some solver interfaces that call qp_read() and allow
+objective modifications on problems with quadratic constraints and
+linear objectives.  The entire library should be recompiled.
+  mqpcheckv.c, nqpcheck.c, nqpcheckZ.c:  for the benefit of interfaces
+to cplex, gurobi, and xpress, use Cgrad rather than asl->i.Cgrad0,
+which matters when there are objective modifications.
+
+20150506
+  New source file degree.c providing function
+
+	int degree_ASL(ASL*, int co, void **pv);
+
+that, after qp_read() or fg_wread(), can quickly tell whether a
+specified objective or constraint is quadratic.  Argument co indicates
+the desired objective or constrain, as with nqpcheck():  co >= 0 means
+objective co (0 <= co < n_obj) and co < 0 means constraint -(co+1),
+0 <= -(co+1) < n_con.  Possible return values:
+
+	-1 ==> invalid co value
+	 0 ==> constant
+	 1 ==> linear
+	 2 ==> quadratic
+	 3 ==> more general nonlinear
+
+The pv argument (of type void **pv) should be NULL if degree_ASL(...)
+is to be called just once (e.g., to see if the objective is quadratic).
+If multiple calls are expected (e.g., for objectives and constraints),
+it may save time to use the pattern
+
+	void *v = 0;
+	for(...) { ... degree(asl, co, &v); ... }
+	if (v) free(v);
+
+20150509
+  pfg_read.c, pfghread.c:  fix a bug in new_range() -- missing copy of
+chksum in changes of 20141121 -- that affected problems with more than
+256 ranges.
+
+20150512
+  fpinitmt.c: tweak for gcc 5.0; no change to asldate.c.
+
+20150602
+  pfg_read.c, pfghread.c:  fix a bug in setting the al->dig array
+passed to imported functions.
+
+20150814
+  arithchk.c: omit possible generation of "#define NANCHECK" in favor of
+possibly generating "#define ALSO_CHECK_ERRNO" or "#define CHECK_ERRNO",
+for use with updated errchk.h.  CHECK_ERRNO only arises when none of the
+library functions now tested returns an Infinity or NaN (when it should);
+ALSO_CHECK_ERRNO arises when some of the tested library functions set
+errno but do not return an Infinity or NaN when they should.
+  errchk.h:  adjust so on IEEE-arithmetic machines (i.e., most current
+machines), errchk() will test values returned by library functions to
+see if they are an Infinity or NaN.  The updated errno.h also responds
+to ALSO_CHECK_ERRNO or CHECK_ERRNO when appropriate.  These changes
+mainly matter for MacOSX and Solaris.
+  mypow.c: when setting errno to EDOM is appropriate, also return a
+quiet NaN rather than 0.
+  repwhere.c:  omit KR_headers stuff (should be invisible).
+
+20150820
+  stdio1.h0:  when _WIN32 is #defined, include stdlib.h before
+defining perror, to bypass the Microsoft bug (with Visual Studio 2015)
+that perror may be declared in stdlib.h as well as in stdio.h (where
+it should appear).  No change to asldate.c.
+
+20150828
+  mqpcheckv.c, nqpcheck.c:  fix bugs with columns that are empty due
+to cancellation.
+
+20150829
+  mqpcheckv.c, nqpcheck.c:  make sparsity computation exact, rather
+than initially overestimating it and allocating oversize arrays when
+cancellations reduce the number of nonzeros.
+
+20151005
+  mqpcheckv.c:  fix a bug that caused qpi->nc to be miscomputed on
+some problems, which could lead to a fault.
+  nqpcheck.c:  fix a bug that sometimes caused mqpcheck(asl,co,0,0,0)
+to return too small a value.
+
+20151007
+  errchk.h, rops.c, rops2.c:  adjust to bypass a gcc bug seen with
+older gcc versions on x86_64.
+  nqpcheckZ.c: adjust comment (to force recompilation with some
+makefiles after changes of 20151005).
+
+20151020
+  dtoa.c: adjustment to dtoa mode 4 that should be invisible to ASL.
+
+20151021
+  mpec_adj.c: update n_con1 and n_var1 for use in names.c.
+  names.c: use updated n_con1 and n_var1.
+  dtoa1.c: reflect update of 20151020 (to avoid possible confusion
+with debuggers).
+
+20151026:
+  asl.h: omit the unused #define of CgradZ.
+  con1ival.c, con2ival.c, conpval.c, fgh_read.c, fg_read.c,
+makefile.*, misc.c, mpec_adj.c, names.c, obj_adj.c, objconst.c,
+pfghread.c, pfg_read.c:  adjust conval() and congrd() to reflect
+results of flags ASL_obj_replace_eq and ASL_obj_replace_ineq to the
+.nl reader.  Fix bugs with the interaction of these flags and
+ASL_cc_simplify.  Arrange for var_name() to return _svar_aux[...] for
+variables added by problem adjustments, such as ASL_cc_simplify.
+  comeval.c, derprop.c, duthes.c, fullhes.c, g_fmt.c, htcl.c,
+qsortv.c, sigcatch.c, wrtsol_.c:  trivial changes to quiet pedantic
+warnings by misguided compilers.
+
+20151209
+  mqpcheckv.c:  fix a bug with diagonal elements that sum to zero and
+whose rows contain nonzeros to the left but not to the right of the
+diagonal:  the number of columns was miscomputed and a memory
+overwrite was possible.
+
+20160219
+  arithchk.c, dtoa.c:  sync with netlib/fp; should have no affect on
+ASL; asldate.c not changed.
+
+20160302
+  fpinit.c:  on non-Windows systems, #include "fenv.h", which helps
+on at least one kind of system (and should be harmless elsewhere).
+Thanks to Victor Zverovich for suggesting this; asldate.c not changed.
+
+20160303
+  funcadd1.c: on most Unix-like systems, give a better error message
+when a shared library cannot be loaded.
+
+20160307:
+  dtoa.c (and dtoa1.c):  Fix glitches with floating-point values in
+hexadecimal notation (use of which is supported but very unlikely):
+some values that should overflow to (appropriately signed) Infinity,
+such as 0x1p1025, were mishandled, and values greater than 0x1p-1075
+and less than 0x1.0000000000001p-1075 where treated as zero rather
+than the smallest denormal number.  AMPL does not use hexadecimal
+notation for floating-point numbers in .nl files, so solvers should
+not be affected.
+
+20160311
+  funcadd1.c:  when __sun__ is #defined, also #define __EXTENSIONS__
+(to avoid compilation troubles).  No changes to asldate.c.
+
+20160317
+  rops.c, rops2.c: fix a bug in the partial w.r.t. y of x mod y.
+
+20160325, 20160429, 20160502, 20160503
+  dtoa.c, dtoa1.c:  sync with netlib/fp; should have no visible effect.
+
+20160504
+  dtoa.c, dtoa1.c:  sync with netlib/fp to fix rare rounding errors
+in binary-->decimal conversions.  With recent changes, starting
+20160429, decimal <--> binary conversions are often much faster,
+though the overall effect on solver performance is likely to be minimal.
+
+20160505
+  dtoa.c, dtoa1.c:  sync with netlib/fp to fix obscure corner
+cases with directed roundings.  Should have no effect on solvers.
+
+20160506
+  dtoa.c, dtoa1.c:  sync with netlib/fp to fix obscure corner cases
+with denormals and directed roundings.  Should not affect solvers.
+
+20160507
+  dtoa.c, dtoa1.c:  sync with netlib/fp to fix strtod overflow tests.
+Should not affect solvers.
+
+20160508
+  dtoa.c: strtod: fix rounding bugs with some denormals and with some
+strings of more than 19 digits; dtoa: fix rarely seen off-by-one bug
+in the final digit with modes 2 and 3.  Should not affect solvers.
+
+20160510
+  dtoa.c: strtod: fix a glitch that caused some values less than the
+half smallest denormal not to round to zero, and adjust a test that
+in rare cases incorrectly avoided a longer computation; dtoa: fix a
+glitch with -DNO_BF96 -DHonor_FLT_ROUNDS.  Should not affect solvers.
+
+20160513
+  dtoa.c: tighten a test that occasionally falsely indicated
+sufficiency of an approximate computation.  In some difficult but
+unlikely cases, the value returned by strtod was off by one bit.
+Fix some tests used with directed roundings that sometimes caused
+(and dota_r) modes 2 and 3 to return off-by-one values.  Thanks
+to Albert Chan for providing examples.  Should not affect solvers.
+
+20160514
+  dtoa.c:  strtod:  tighten a variant, missed yesterday, of a test
+that occasionally falsely indicated sufficiency of an approximate
+computation.  Also apply to denormals a test hitherto only applied to
+normal numbers for sufficiency of an approximate computation.
+Should not affect solvers.
+
+20160516
+  dtoa.c (versions >= 20160429, without -DNO_BF96):  fix more glitches
+with directed roundings.  Should not affect solvers.
+
+20160518, 20160521, 20160523, 20160607
+  dtoa.c: sync with netlib.  Very unlikely to affect solvers.
+
+20160608
+  pfg_read.c, pfghread.c, rops2.c:  fix a bug (in a "group partially-
+separable" context) with x^c for constant c other than c = 2.  Wrong
+values were computed.  This only affects solvers that use Hessians
+explicitly or via Hessian-vector products.
+
+20160611
+  dtoa.c: sync with netlib.  Should not affect solvers.
+
+20160716
+  pfg_read.c, pfghread.c: adjust to skip looking for "ranges" in the
+test part of an "if test then a else b" expression and in counting
+functions (whose derivatives vanish).  This is an obscure efficiency
+improvement.
+  rops2.c: minor cleanup of f_OPPOW; should be invisible.
+  pshvprod.c: fix an obscure bug not not known to affect results.
+  fpinit.c:  change __linux__ to __GLIBC__ (which reportedly more
+portable).
+
+20160831
+  pshvprod.c:  Fix a bug in computing Hessians or Hessian-vector
+products when the same variable appears alone as the "then" or "else"
+part of two or more if-then-else expressions.  Wrong values were
+sometimes computed.
+
+20160915
+  com2eval.c fgh_read.c nlp2.h pfghread.c pfg_read.c pshvprod.c sphes.c:
+Add case Hv_divLR for division operations when both operands involve
+variables.  On some problems, this gives a slightly sparser Hessian.
+
+20160922
+  degree.c:  enable return 1.  (Had forgotten to check for linear terms
+when no nonlinear expressions are present.)
+  com2eval.c, fgh_read.c, nlp2.h, pfg_read.c, pfghread.c, pshvprod.c,
+sphes.c:  change copyright notice to that in degree.c; code not changed.
+
+20161025
+  degree.c:  fix a bug handling linear defined variables used linearly:
+degree() could return 0 rather than 1 if nothing else contributed to
+the objective or constraint being assessed.
+  con1ival.c, con2ival.c, dtoa.c, dtoa1.c, ind_cons.c mqpcheckv.c,
+nqpcheck.c:  tweaks for C++ compilation.
+  xectim.c:  adjust to use clock_gettime() unless compiled with
+-DNO_CLOCK_GETTIME or -DNO_RUSAGE.
+
+20161107
+  dtoa.c: sync with netlib (at least as seen in http://ampl.com/netlib).
+No change to asldate.c.
+
+20161118
+  xectim.c:  change "#ifndef NO_CLOCKGETTIME" to
+"#ifndef NO_CLOCK_GETTIME" (to accord with a comment about compiling
+with -DNO_CLOCK_GETTIME).  No change to asldate.c.
+
+20161208
+  asl.h, jac2dim.h, jacpdim.h, misc.c, nlp.h, objval.c, psinfo.h,
+x2check.c, xp1known.c, xp2known.c:  change return type of xknown(x)
+and xknowne(x,ne) from void to int, with return 0 meaning x is the
+same as before and return 1 meaning x has changed.
+  obj_adj.c:  when readers pfg_read(nl,flags) or pfgh_read(nl,flags)
+were called with ASL_find_co_class in flags, and when an objective
+is adjusted, also adjust [co]_class and [co]_class_max.
+
+20161228
+  asl.h, misc.c, fg_read.c: added to Edaginfo (type size_t):
+	temp_rd_bytes = bytes temporarily allocated during .nl read
+	tot_M1z_bytes = total allocated by M1alloc and M1zapalloc
+	rd_M1z_bytes  = tot_M1z_bytes after reading the .nl file
+The whole ASL library needs to be recompiled.
+
+20170429
+  mqpcheckv.c, nqpcheck.c, objconst.c:  fix bugs converting
+
+	var o;
+	minimize O: o;
+	s.t. c: o = q(x);
+
+to
+
+	minimize O: q(x);
+
+where q(x) is quadratic.  Linear and constant terms were sometimes
+mishandled.  This only affects some solvers with an "objrep" keyword,
+such as cplex, gurobi, and xpress.
+  con1ival.c, con2ival.c: fix a possible erroneous error message about
+an argument being out of range.
+  makefile.u: fix a glitch in the rule for arith.h: change
+"-DNO_SSIZE_T -DNO_SSIZE_T" to "-DNO_LONG_LONG -DNO_SSIZE_T".
+
+20170509
+  con1ival.c con2ival.c con2val.c conpval.c conval.c obj2val.c objval.c
+pshvprod.c repwhere.c x2check.c xp1known.c xp2known.c:  fix a bug with
+defined variables shared by several constraints or objectives:  under
+complicated conditions, it was possible for derivative evaluation errors
+to be ignored.
+  README: update to describe both the hitherto available "solvers"
+directory and a new "solvers2" directory designed to be a drop-in
+replacement for "solvers" for use by solvers that do not make explicit
+use of expression graphs.  For large nonlinear problems, less memory
+is needed and evaluations are usually faster.  With minor changes,
+solvers that use multiple threads can read the .nl file just once,
+rather than once per thread.
+
+20170511
+  getstub.c:  tweak so show_version_ASL() always prints a final empty
+line.
+
+20170515
+  solvers2.tgz: fix a glitch that caused an error message of the form
+"bad *o = ... in hfg_fwd".
+
+20170519
+  fg_write.c: fix an obscure glitch: set want_derivs rather than
+want_deriv to 0.
+  psinfo.h: add #define for hvpinit(), needed before calling
+hvcomp(...,no,ow,y) with changed (no,ow,y) at the same x.
+  sphes.c:  allow calling sphsetup(no,...) with no >= 0 and later
+calling sphes(-1,...) when a Hessian only involving constraints
+is desired.  Thus one can sometimes call sphes(no,...) and other
+times call sphes(-1,...).
+
+20170522
+  solvers2.tgz: fix a glitch causing "bad *o = 16 in heswork".
+
+20170619
+  nlp2.h, nlp.h, pfghread.c, pfg_read.c, pshvprod.c, sphes.c:
+fix a bug with Hessian computations seen in the following example:
+
+	var x{1..3};
+	var y9 = 96.82/x[1] + x[2]+x[3];
+	minimize obj: 1e6/y9;
+	data; var x := 1 900  2 80  3 115;
+
+  Fix a bug with "Hessian funnels" when defined variables were
+involved.  For now, such Hessian funnels are disallowed.
+  Fix a bug with some very simple "if" expressions as objectives
+or constraint bodies, e.g.,
+	minimize o: if x >= 1 then x^2 else x;
+and
+	minimize o: if x < 1 then x else x^2;
+  Fix some obscure bugs in solvers2.tgz, including possible trouble
+(mis-diagnosis of "nonquadratic" forms) on large enough examples.
+
+20170622
+  pfg_read.c, pfghread.c:  fix an apparently rarely-encountered bug
+computing first and second derivatives with complicated uses of
+defined variables, seen, e.g., in Bob Vanderbei's formulation of Hock
+& Schittkowski test problem 85.  The bug was not present in
+solvers2.tgz, which uses somewhat different logic.
+
+20170623
+  asl.h: add some ASL_write_flags values for use in fg_write().
+  fg_write.c:  reorder output to accord with the ordering change
+in AMPL version 20160519, and honor the new ASL_write_flags values.
+  nlp2.h: reorder struct cexp2 to save 8 bytes with 64-bit compilation.
+It is safest to recompile the entire library.
+  solver2.tgz: fix a typo in asl.h and fg_write.c.
+
+20170628
+  pfg_read.c, pfghread.c: fix a bug (introduced 20170623) that caused
+wrong derivatives to be computed with certain uses of defined variables.
+The bug did not appear in solvers2.tgz.
+
+20170629
+  pfg_read.c, pfghread.c: fix a bug (introduced 20170619) that caused
+wrong derivatives to be computed with certain uses of defined variables.
+The bug did not appear in solvers2.tgz.
+
+20170722
+  mpec_adj.c: fix a bug with ASL_cc_simplify (in the flags argument to
+.nl readers) that bit on problems with integer (or binary) variables.
+
+20170723:
+  asl.h in solvers2.tgz: add field void* dbuginfo to struct EvalWorkspace.
+
+20170801
+  solvers2.tgz: fix a bug in pfgh_read() with computing first derivatives
+for the abs() function.  The bug only bit for negative arguments.
+
+20170802
+  solvers2.tgz: fix a bug with fg_read()'s handling of the example
+	var x; minimize o: if x < 3 then 3 else if x > 6 then 6 else x;
+and (for debugging) add field stats to EvalWorkspace for accumulating
+various evaluation counts.
+
+20170803
+  solvers2.tgz: fix a glitch with obj_adj() (for the "objrep" keyword
+in various solvers) that could bite when the constraint defining the
+objective is the last constraint.
+
+20170809
+  solvers2.tgz: fix a glitch in obj_adj.c that could cause a fault.
+
+20170831
+  solvers2.tgz: degree.c: fix some bugs with use of reader pfgh_read().
+  *qpcheck*.c: allow use with reader pfgh_read().
+
+20170925
+  printf.c: have printf format %q quote ".".
+
+20171006
+  The *qpcheck*.c change of 20170831 made it to solvers2 but not
+solvers; fixed.
+
+20171011
+  readsol.c:  new variant fread_sol_ASL of read_sol_ASL with signature
+
+  char* fread_sol_ASL(ASL*, const char *fname, real**xp, real **yp);
+
+which adds argument fname to specify the full name of the ".sol" file
+to read.  (This name need not end in ".sol".)  This is used in today's
+updated solvers/examples/et.c, via a corresponding new #define of
+fread_sol() in asl.h.
+
+20171107
+  mqpcheckv.c, nqpcheck.c in solvers2.tgz:  fix bugs with
+ASL_read_pfgh when "new" linear defined variables are introduced while
+finding partially separable structure.  Updates only to solvers2.tgz.
+
+20171113
+  mqpcheckv.c, nqpcheck.c in solvers2.tgz:  fix a bug with
+ASL_read_pfgh when squared terms are scaled.  Updates only to
+solvers2.tgz.
+
+20171129
+  nl_obj.c in solvers2.tgz: fix a bug with objectives of the form
+"minimize foo: v;" where v is a defined variable.  On such objectives,
+nl_obj(...) returned 0.  This affected, e.g., minos and snopt on
+unconstrained problems.
+
+20171202
+  asl.h, jac0dim.c, sphes.c, mqpcheck.c, nqpcheck.c:  add and use
+cells nlc0 and nlo0 for the number of nonlinear constraints and
+objectives before adjustments due to reader flags ASL_obj_replace_eq
+and ASL_obj_replace_ineq.  The whole library should be recompiled.
+This fixes possible trouble with Hessian computations and qpcheck
+calls when ASL_obj_replace_eq or ASL_obj_replace_ineq causes problem
+adjustments.
+
+20171211
+  mqpcheckv.c: fix a memory leak in mqpcheckv_free_ASL() and a
+possible fault (or worse) with defined variables.
+
+20171215
+  mqpcheckv.c, nqpcheck.c:  fix some possible trouble with defined
+variables.
+
+20171218
+  mqpcheckv.c: fix a possible fault.
+
+20180121
+  degree.c in solvers2.tgz:  fix a bug that could bite degree_ASL()
+after sos_add() or modifications due to the ASL_cc_simplify,
+ASL_obj_replace_ineq, or ASL_obj_replace_eq bits in the .nl reader
+flags.  The bug only bit on problems with defined variables used only
+in one constraint or objective.
+  pfghread.c in solvers2.tgz: fix a possible out-of-bounds array
+assignment.
+  nqpcheck.c: fix a possible memory leak.
+  misc.c: add recognition of bits "8" and "16" of want_xpi0:  if bit
+8 is set and X0 is NULL (e.g., the "1" bit is on and no primal initial
+guess appeared in the .nl file), set X0 to a vector of n_var zeros;
+if bit 16 is set and pi0 is NULL and n_con > 0, set pi0 to a vector
+of n_con zeros.
+
+20180123
+  degree.c in solvers2.tgz:  fix a bug in the 20180121 update.
+
+20180209
+  con1ival.c, con2ival.c, con2val.c, conpval.c, conval.c in
+solvers.tgz and eval2.c in solvers2.tgz:  do not set
+"x0kind |= ASL_have_conval;" in conval() computations until all
+relevant constraints have been evaluated.  Otherwise, after a failed
+conval() call, a jacval() call could erroneously proceed, possibly
+leading to a fault on some problems.  Now the jacval() call will fail,
+setting *nerror to 1.
+
+20180220
+ eval1.c, eval2.c, fg_read.c, pfghread.c in solvers2.tgz:  handle OPNOT.
+
+20180302
+ eval2.c, pshvprod.c, sphes.c in solvers2.tgz:  fix rarely seen bugs
+giving error messages of the form "Bad *o = 159 ..." or "... 127 ...".
+ indic_cons.c in solvers2.tgz: fix a bug with indicator constraints
+having an "else" clause.
+ pfghread.c in solvers2.tgz:  fix a bug with large .nl files.
+
+20180305
+ indic_cons.c in solvers2.tgz: fix another (rarely seen) bug with
+indicator constraints.
+
+20180310
+ eval2.c in solvers2.tgz:  fix a bug with Hessian and Hessian-vector
+computations with non-null ow (objective weight vector) or y
+arguments:  changes to ow or y at the same x were not correctly
+handled, which led to incorrect Hessians or Hessian-vector products on
+some problems.
+
+20180312
+ pfghread.c: fix a glitch that caused objconst(...) always to return 0
+when pfgh_read() was used to read the .nl file.  This function always
+returns 0 for nonlinear objective functions.  The glitch did not affect
+the objval() function.
+
+20180314
+ pfghread.c, pshvprod.c in solvers2.tgz:  fix a bug that gave error
+message "bad *o = ... in heswork".
+
+20180402
+ pfghread.c in solvers2.tgz:  fix a bug with nonlinear "if"
+expressions.  Wrong derivatives were sometimes possible.
+
+20180411
+ dtoa.c: fix glitches (compile errors) with compilation under
+-DSudden_Underflow, which should not be used with ASL; asldate.c
+not changed.
+
+20180421
+ indic_cons.c in solvers2.tgz:  fix bugs that could cause some
+indicator constraints to be rejected.
+
+20180430
+ mqpcheckv.c in solvers.tgz (but not solvers2.tgz):  fix a bug with
+defined variables used in just one objective or constraint.
+
+20180503
+ fg_read.c in solvers2.tgz: fix a bug (wrong derivatives) with some
+uses of defined variables.
+
+20180519
+  rops, rops2.c and eval1.c, eval2.c in solvers2.tgz:  compute tanh(x)
+for large x without complaint.
+
+20180522
+  degree.c, eval2.c, pfghread.c, pshvprod.c, sphes.c in solvers2.tgz:
+fix bugs (possible faults) in handling in handling split defined
+variables and imported functions.
+
+20180525
+  rops, rops2.c in solvers.tgz and eval1.c, eval2.c in solvers2.tgz:
+compute tanh(x) for large |x| without complaint.
+
+20180528
+  pfg_read.s, pfghread.c in solvers.tgz: initialize two fields for use
+with bogus .nl files (e.g., written by pyomo).
+  sphes.c in solvers.tgz: test for f_OPNUM in nonlinear "if" expressions
+in hv_fwd (as is done many other places).  This quiets a valgrind
+complaint.
+
+20180609
+  mqpcheckv.c, nqpcheck.c, sphes.c in solvers2.tgz: fix faults seen in
+an example with option presolve 0 (a bad idea) when
+ASL_alloc(ASL_read_pfgh) is used.
+
+20180624
+  printf.c: honor field widths accompanying %c conversions.  They were
+previously quietly ignored.
+
+20180709
+  indic_cons.c in solvers2.tgz:  fix a bug with defined variables used
+in indicator constraints.  The bug caused a fault with the example
+behind this fix.
+
+20180816
+  degree.c, mqpcheckv.c in solvers2.tgz:  fix bugs in chaining code
+blocks.  The bugs could have caused some quadratic forms in large .nl
+files to be treated as general nonlinear expressions.
+
+20181012
+  README:  add a note about bypassing a compiler bug in Microsoft
+Visual Studion 2017.
+
+20181031
+  fpinit.c:  add #ifdef __ARM_ARCH lines.  Should be invisible on
+non-ARM systems.  No change to asldate.c.
+
+20181129
+  pfg_read.c and pfghread.c in solvers.tgz, pfghread.c in solvers2.tgz:
+tweak to bypass a valgrind bug.  No visible change to observed behavior.
+
+20181210
+  pfghread.c in solvers2.tgz: fix a bug that might bite with "and" and
+"or" operators under 64-bit addressing.
+
+20181221
+  eval2.c, ewalloc2.c, pfghread.c, psinfo.h in solvers2.tgz:  fix
+trouble occasionally seen with imported functions under reader
+pfgh_read().  The entire library should be recompiled.
+
+20181222
+  makefile.u, makefile.vc in solvers2.tgz: update dependency rules.
+No change to asldate.c.
+
+20190225
+  eval2.c in solvers2.tgz:  fix a bug in evaluating piecewise-linear
+terms when the .nl file is generated with "option pl_linearize 0;".
+This only matters with reader pfgh_read().
+
+20190314
+  obj_adj.c:  fix bugs when several objectives can be adjusted.
+
+20190315
+  pfghread.c in solvers2.tgz: fix a bug that occasionally affected
+sparsity computations.
+
+20190522
+  indic_cons.c in solvers2.tgz: fix a bug that caused a diagnosis of
+"not an indicator constraint" when irrelevant defined variables were
+nonlinear.
+
+20190605
+  New file arith.h1.  On many systems, it may suffice to use arith.h1
+as arith.h (by copying or linking arith.h1 to arith.h).
+  mach.c, stderr.c:  add simple tests of whether the ASL was compiled
+with the right arith.h, assuming IEEE arithmetic.  The tests can pass
+with the wrong arith.h without preventing faults if, e.g., Double_Align
+needed to be #defined in arith.h.  It is best to "make clean; make"
+in the solvers directory after changing compiler options or compilers
+for compiling the ASL.  People using cross-compilers must take suitable
+care to get arith.h right, ideally using an arith.h derived on the
+target system, with the target compiler options and compiler, though
+using arith.h1 as arith.h may often work.
+
+20190611
+  Correct a comment about AMPLFUNC_STROUT in funcadd.h; asldate.c not
+changed.
+
+20190702
+  arith.h1: add conditional specification of "Long".  No change to
+asldate.c.
+
+20190815
+  indic_cons.c in solvers2.tgz: fix a bug (e.g., fault) in detecting
+some invalid indicator constraints.
+
+20191219
+  solvers2.tgz:  fix a bug in degree.c; degree.c eval1.c eval2.c
+fg_read.c fg_write.c indic_cons.c mqpcheckv.c nqpcheck.c opno.hd
+opno2.h pfghread.c pshvprod.c sphes.c:  new cases in opno.hd and
+opno2.h in part for forthcoming new source file nl1vcount.c.

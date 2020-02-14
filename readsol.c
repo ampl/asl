@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997, 1999,2000 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "nlp.h"
 
@@ -58,10 +52,10 @@ msgput(msginfo *m, const char *b, int n)
 	}
 
  static void
-badnumber(ASL *asl, fint a, fint b, const char *what)
+badnumber(ASL *asl, fint a, fint b, const char *fname, const char *what)
 {
 	fprintf(Stderr, "%s indicates %ld rather than %ld %s\n",
-		filename, (long)a, (long)b, what);
+		fname, (long)a, (long)b, what);
 	fflush(Stderr);
 	}
 
@@ -76,22 +70,21 @@ decstring(char *buf, real *val)
 	}
 
  char *
-read_sol_ASL(ASL *asl, real **xp, real **yp)
+fread_sol_ASL(ASL *asl, const char *fname, real **xp, real **yp)
 {
 	int binary, flag1, i, j, je, n, need_vbtol;
 	FILE *f;
 	char buf[512], *s, *se;
 	real vbtol, *y;
 	ftnlen L, L1, L2;
-	fint Objno[2], nOpts, *z;
+	fint Objno[2], Options[14], nOpts, *z;
 	msginfo mi;
 
 	if (!asl || asl->i.ASLtype < 1 || asl->i.ASLtype > 5)
-		badasl_ASL(asl,0,"read_soln");
-	strcpy(stub_end, ".sol");
-	f = fopen(filename, "rb");
+		badasl_ASL(asl,0,"fread_soln");
+	f = fopen(fname, "rb");
 	if (!f) {
-		fprintf(Stderr, "Can't open %s\n", filename);
+		fprintf(Stderr, "Can't open %s\n", fname);
 		fflush(Stderr);
 		return 0;
 		}
@@ -103,7 +96,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 		 || !fread(&L, sizeof(ftnlen), 1, f)
 		 || L != 6) {
  badbinary:
-			fprintf(Stderr, "bad binary file %s\n", filename);
+			fprintf(Stderr, "bad binary file %s\n", fname);
 			fflush(Stderr);
 			goto done;
 			}
@@ -149,30 +142,32 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 		L1 = n_con * sizeof(real);
 		if (!fread(&L, sizeof(ftnlen), 1, f))
 			goto badbinary;
-		if (L == 8*sizeof(fint) + 7
-		 || L == 9*sizeof(fint) + 7
-		 || L == 8*sizeof(fint) + 7 + sizeof(real)
-		 || L == 9*sizeof(fint) + 7 + sizeof(real)) {
+		if (L >= 3*sizeof(fint) + 7) {
 			/* check for Options */
 			if (!fread(buf, 7, 1, f))
 				goto badbinary;
 			if (strncmp(buf, "Options", 7))
 				goto badbinary;
-			if (!fread(&nOpts, sizeof(fint), 1, f))
+			if (!fread(&Options, sizeof(fint), 3, f))
 				goto badbinary;
-			if (nOpts < 3 || nOpts > 6) {
+			nOpts = Options[0];
+			if (nOpts < 3 || nOpts > 9) {
  bad_nOpts:
 				fprintf(Stderr,
-				"expected nOpts between 3 and 6; got %ld: ",
+				"expected nOpts between 3 and 9; got %ld: ",
 					(long)nOpts);
 				goto badbinary;
 				}
-			if (nOpts > 4) {
+			if (Options[2] == 3) {
 				nOpts -= 2;
 				need_vbtol = 1;
 				}
-			if (!fread((ampl_options+1), sizeof(fint),
-					(size_t)(nOpts+4), f))
+			L2 = (nOpts + 5)*sizeof(fint) + 7;
+			if (need_vbtol)
+				L2 += sizeof(real);
+			if (L != L2)
+				goto badbinary;
+			if (!fread(Options+3, sizeof(fint), nOpts + 2, f))
 				goto badbinary;
 			if (need_vbtol
 			 && !fread(&vbtol, sizeof(real), 1, f))
@@ -189,8 +184,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 			if (!fgets(buf, sizeof(buf), f)) {
  early_eof:
 				fprintf(Stderr,
-					"early end of file reading %s\n",
-					filename);
+					"early end of file reading %s\n", fname);
 				fflush(Stderr);
  done:
 				fclose(f);
@@ -207,22 +201,25 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 			if (!fgets(buf, sizeof(buf), f))
 				goto early_eof;
 			if (!strncmp(buf, "ptions", 6)) {
-				if (!fgets(buf, sizeof(buf), f))
-					goto early_eof;
-				nOpts = strtol(buf,&se,10);
-				if (se == buf)
-					goto badline;
-				if (nOpts < 3 || nOpts > 6)
+				for(j = 0; j <3; j++) {
+					if (!fgets(buf, sizeof(buf), f))
+						goto early_eof;
+					Options[j] = strtol(buf,&se,10);
+					if (se == buf)
+						goto badline;
+					}
+				nOpts = Options[0];
+				if (nOpts < 3 || nOpts > 9)
 					goto bad_nOpts;
-				if (nOpts > 4) {
+				if (Options[2] == 3) {
 					nOpts -= 2;
 					need_vbtol = 1;
 					}
 				je = (int)nOpts + 4;
-				for(j = 1; j <= je; j++) {
+				for(j = 3; j <= je; j++) {
 					if (!fgets(buf, sizeof(buf), f))
 						goto early_eof;
-					ampl_options[j] = strtol(buf,&se,10);
+					Options[j] = strtol(buf,&se,10);
 					if (se == buf)
 						goto badline;
 					}
@@ -233,21 +230,22 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 				}
 			}
 		}
+	memcpy(ampl_options, Options, (nOpts+1)*sizeof(fint));
 	msgput(&mi, "", 1);	/* add null to end */
 
 	if (i)
 		fflush(stdout);
 
-	if ((ampl_options[0] = nOpts)) {
-		z = ampl_options + nOpts + 1;
+	if (nOpts) {
+		z = Options + nOpts + 1;
 		j = (int)z[3];
 		if (j > n_var || j < 0) {
-			badnumber(asl, j, n_var, "variables");
+			badnumber(asl, j, n_var, fname, "variables");
 			goto done;
 			}
 		j = (int)z[1];
 		if (j > n_con || j < 0) {
-			badnumber(asl, j, n_con, "constraints");
+			badnumber(asl, j, n_con, fname, "constraints");
 			goto done;
 			}
 		if (binary) {
@@ -278,7 +276,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 		if (!decstring(buf, y++))
 			continue;
  badline:
-		fprintf(Stderr, "bad line in %s: %s", filename, buf);
+		fprintf(Stderr, "bad line in %s: %s", fname, buf);
 		fflush(Stderr);
 		goto done;
 		}
@@ -328,7 +326,7 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
 			if (strncmp(buf,"objno ",6)) {
  extra_line:
 				fprintf(Stderr, "Bug: extra line in %s:\n%s",
-					filename, buf);
+					fname, buf);
 				fflush(Stderr);
 				}
 			else {
@@ -353,4 +351,11 @@ read_sol_ASL(ASL *asl, real **xp, real **yp)
  ret:
 	fclose(f);
 	return (char*)Realloc(mi.msg0, mi.msglen);
+	}
+
+ char *
+read_sol_ASL(ASL *asl, real **xp, real **yp)
+{
+	strcpy(stub_end, ".sol");
+	return fread_sol_ASL(asl, filename, xp, yp);
 	}

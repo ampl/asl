@@ -145,7 +145,6 @@ Sscanf
 				Ll = c - '0';
 				while((c = *++s) >= '0' && c <= '9')
 					Ll = 10*Ll + c - '0';
-				--s;
 				++rc;
 				if (sgn)
 					Ll = -Ll;

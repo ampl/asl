@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "jac2dim.h"
 
@@ -46,10 +40,9 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	Jmp_buf err_jmp0;
 	cde *d;
 	expr *e1;
-	expr_v *V;
-	int ij;
+	int ij, j1, kv, *vmi;
 	ograd *gr, **gr0;
-	real f;
+	real f, *vscale;
 
 	NNOBJ_chk(a, i, "obj2val");
 	asl = (ASL_fgh*)a;
@@ -63,10 +56,10 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
+	co_index = -(i + 1);
 	x2_check(X);
 	if (!asl->i.noxval)
 		asl->i.noxval = (int*)M1zapalloc(n_obj*sizeof(int));
-	co_index = -(i + 1);
 	if (!(x0kind & ASL_have_objcom)) {
 		if (ncom0 > combc)
 			comeval(asl, combc, ncom0);
@@ -79,13 +72,36 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	e1 = d->e;
 	f = (*e1->op)(e1 C_ASL);
 	asl->i.noxval[i] = asl->i.nxval;
+	kv = 0;
+	vmi = 0;
+	if ((vscale = asl->i.vscale))
+		kv = 2;
+	if (asl->i.vmap) {
+		vmi = get_vminv_ASL(a);
+		++kv;
+		}
 	gr = *gr0;
-	if (asl->i.vscale || asl->i.vmap)
-		for(V = var_e; gr; gr = gr->next)
-			f += gr->coef * V[gr->varno].v;
-	else
+	switch(kv) {
+	  case 3:
+		for(; gr; gr = gr->next) {
+			j1 = vmi[gr->varno];
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 2:
+		for(; gr; gr = gr->next) {
+			j1 = gr->varno;
+			f += X[j1] * vscale[j1] * gr->coef;
+			}
+		break;
+	  case 1:
 		for(; gr; gr = gr->next)
-			f += gr->coef * X[gr->varno];
+			f += X[vmi[gr->varno]] * gr->coef;
+		break;
+	  case 0:
+		for(; gr; gr = gr->next)
+			f += X[gr->varno] * gr->coef;
+	  }
  done:
 	err_jmp = 0;
 	return f;
@@ -116,8 +132,10 @@ obj2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			goto done;
 		}
 	errno = 0;	/* in case f77 set errno opening files */
-	if (!asl->i.x_known)
+	if (!asl->i.x_known) {
+		co_index = -(i + 1);
 		x2_check(X);
+		}
 	if (!asl->i.noxval || asl->i.noxval[i] != asl->i.nxval) {
 		xksave = asl->i.x_known;
 		asl->i.x_known = 1;

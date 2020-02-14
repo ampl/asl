@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997, 1998, 2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #ifdef PSHVREAD
 #ifndef PSINFO_H2_included
@@ -103,6 +97,7 @@ range {
 				/* Set to least variable (1st = 0) in this */
 				/* range at the end of psedread. */
 	int	lastgroupno;	/* groupno at last use of this term */
+	unsigned int chksum;	/* for hashing */
 	psb_elem *refs;		/* constraints and objectives with this range */
 	int	*ui;		/* unit vectors defining this range */
 				/* (for n >= nv) */
@@ -256,7 +251,7 @@ ps_info {
 	int nmax;	/* max{r in ranges} r->n */
 	int ihdcur;	/* Current max internal Hessian dimension, */
 			/* set by hvpinit. */
-	int ihdmax;	/* max possible ihd (limited by ihe_limit) */
+	int ihdmax;	/* max possible ihd */
 	int ihdmin;	/* min possible ihd > 0 and <= ihdmax, or 0 */
 	int khesoprod;	/* used in new_Hesoprod in sputhes.c */
 	int pshv_g1;	/* whether pshv_prod should multiply by g1 */
@@ -271,6 +266,11 @@ ps_info {
 	expr_va *valist;	/* for sphes_setup */
 	expr_if *iflist;	/* for sphes_setup */
 	int *zlsave;	/* for S->_zl */
+	real *oyow;	/* for xpsg_check */
+	int onobj;	/* for xpsg_check */
+	int onxval;	/* for xpsg_check */
+	int nynz;	/* for xpsg_check */
+	int ndhmax;	/* set by hvpinit_ASL */
 #endif /* PSHVREAD */
 	split_ce *Split_ce;	/* for sphes_setup */
 	} ps_info;
@@ -312,13 +312,14 @@ typedef unsigned Long Ulong;
  extern void duthes_ASL(ASL*, real *H, int nobj, real *ow, real *y);
  extern void fullhes_ASL(ASL*, real*H, fint LH, int nobj, real*ow, real*y);
  extern void hvpinit_ASL(ASL*, int ndhmax, int nobj, real *ow, real *y);
+ extern void ihd_clear_ASL(ASL_pfgh*);
  extern ASL_pfgh *pscheck_ASL(ASL*, const char*);
  extern void pshv_prod_ASL(ASL_pfgh*, range*r, int nobj, real*ow, real*y);
  extern fint sphes_setup_ASL(ASL*, SputInfo**, int nobj, int ow, int y, int ul);
  extern void sphes_ASL(ASL*, SputInfo**, real *H, int nobj, real*ow, real *y);
  extern void xpsg_check_ASL(ASL_pfgh*, int nobj, real *ow, real *y);
 #else /* PSHVREAD */
- extern void xp1known_ASL(ASL*, real*, fint*);
+ extern int xp1known_ASL(ASL*, real*, fint*);
 #endif /* PSHVREAD */
 
 #ifdef __cplusplus
@@ -326,5 +327,6 @@ typedef unsigned Long Ulong;
 #endif
 
 #define pshv_prod(r,no,ow,y) pshv_prod_ASL(asl,r,no,ow,y)
+#define hvpinit(hx, no, ow, y) hvpinit_ASL((ASL*)asl, hx, no, ow, y)
 
 #endif /* PSINFO_H_included */

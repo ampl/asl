@@ -48,6 +48,8 @@ int isatty_ASL; /* for use with "sw" under NT */
 #ifdef _WIN32
 #undef WIN32
 #define WIN32
+#else
+#include "fenv.h"
 #endif
 
 #ifdef WIN32
@@ -95,8 +97,12 @@ fpinit_ASL(Void)
 #endif /* __i386 */
 #endif /*APPLE*/
 
+#ifdef __ARM_ARCH
+#define ASL_NO_FP_INIT
+#endif
+
 #ifndef ASL_NO_FP_INIT
-#ifdef __linux__ /*{*/
+#ifdef __GLIBC__ /*{*/
 #ifndef NO_fpu_control /*{*/
 #define FP_INIT_DONE
 #include "fpu_control.h"
@@ -125,18 +131,26 @@ fpinit_ASL(Void)
 	_FPU_GETCW(__fpu_control);
 	__fpu_control &= ~_FPU_EXTENDED;	/* clear rounding precision bits */
 	__fpu_control |= _FPU_DOUBLE;		/* set the ones we want set */
+	_FPU_SETCW(__fpu_control);
 #else
-#ifdef _FPU_IEEE
+#if defined(_FPU_IEEE) && defined(_FPU_EXTENDED) && defined(_FPU_DOUBLE)
 	__fpu_control = _FPU_IEEE - _FPU_EXTENDED + _FPU_DOUBLE;
-#else
+	_FPU_SETCW(__fpu_control);
+#elif defined(__i386__) || defined(__x86_64__)
 	__fpu_control = 0x27f;
+	_FPU_SETCW(__fpu_control);
+#elif defined(FE_ALL_EXCEPT)
+	fedisableexcept(FE_ALL_EXCEPT);
+#else
+	!!!! How does this system work?
+	!!!! Either figure it out (and modify this text),
+	!!!! or compile fpinit.c with -DNO_fpu_control .
 #endif
 #endif /* ASL_FPINIT_KEEP_TRAPBITS */
-	_FPU_SETCW(__fpu_control);
 #endif
 	}
 #endif /*} NO_fpu_control */
-#endif /*} __linux__ */
+#endif /*} __GLIBC__ */
 
 #ifdef sgi /*{*/
 #ifndef _ABIO32

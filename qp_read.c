@@ -39,9 +39,11 @@ qp_read_ASL(ASL *asl, FILE *nl, int flags)
 
 	ASL_CHECK(asl, ASL_read_fg, "edqpread");
 	for(i = 0; i < N_OPS; i++)
-		rops[i] = (efunc*)(unsigned long)i;
+		rops[i] = (efunc*)(size_t)i;
 	((ASL_fg*)asl)->I.r_ops_ = rops;
+	asl->i.opify = qp_opify_ASL;
 	i = fg_read_ASL(asl, nl, flags);
+	asl->i.opify = 0;
 	((ASL_fg*)asl)->I.r_ops_ = 0;
 	return i;
 	}

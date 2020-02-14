@@ -26,7 +26,7 @@
 
 .SUFFIXES: .c .o
 CC = cc
-CFLAGS = -O
+CFLAGS = -g -O
 SHELL=/bin/sh
 
 # Add -DNO_RUSAGE to the CFLAGS assignment if your system
@@ -105,6 +105,7 @@ a = \
 	conpval.c \
 	conscale.c \
 	conval.c \
+	degree.c \
 	derprop.c \
 	details.c \
 	dtoa1.c \
@@ -136,6 +137,7 @@ a = \
 	mip_pri.c \
 	misc.c \
 	mpec_adj.c \
+	mqpcheckv.c \
 	mypow.c \
 	names.c \
 	nl_obj.c \
@@ -204,7 +206,7 @@ com2eval.o con2ival.o con2val.o obj2val.o\
  x2check.o: jac2dim.h nlp2.h $(Aslh)
 conpval.o pshvprod.o xp2known.o:\
 	jacpdim.h asl_pfgh.h psinfo.h nlp2.h $(Aslh)
-comeval.o con1ival.o conval.o mip_pri.o objval.o qpcheck.o\
+comeval.o con1ival.o conval.o degree.o mip_pri.o objval.o qpcheck.o\
  qpcheckZ.o readsol.o: nlp.h $(Aslh)
 indic_cons.o misc.o mpec_adj.o nl_obj.o obj_adj.o sos_add.o suf_sos.o:\
 	nlp.h nlp2.h asl_pfg.h asl_pfgh.h psinfo.h $(Aslh)
@@ -221,7 +223,8 @@ pfghread.o: pfg_read.c jacpdim.h asl_pfgh.h opnos.hd r_opn0.hd dvalue.hd\
 nqpcheck.o nqpcheckZ.o: nlp.h r_qp.hd $(Aslh)
 printf.o punknown.o sscanf.o: stdio1.h
 dtoa1.o: dtoa.c arith.h stdio1.h
-nqpcheck.o nqpcheckZ.o obj_adj.o: obj_adj.h
+nl_obj.o nqpcheck.o nqpcheckZ.o obj_adj.o objconst.o: obj_adj.h
+mqpcheckv.o: mqpcheckv.c avltree.h nlp.h obj_adj.h r_qp.hd
 
 # Use CFLAGS in compiling arithchk.c in case something in CFLAGS affects
 # the number of bits in integral data types.  (It's probably best not to
@@ -232,7 +235,7 @@ arith.h: arithchk.c fpinit.c
 	$(CC) $(CFLAGS) arithchk.c fpinit.o -lm ||\
 	 $(CC) -DNO_LONG_LONG $(CFLAGS) arithchk.c fpinit.o -lm ||\
 	 $(CC) -DNO_SSIZE_T $(CFLAGS) arithchk.c fpinit.o -lm ||\
-	 $(CC) -DNO_SSIZE_T -DNO_SSIZE_T $(CFLAGS) arithchk.c fpinit.o -lm
+	 $(CC) -DNO_LONG_LONG -DNO_SSIZE_T $(CFLAGS) arithchk.c fpinit.o -lm
 	./a.out >arith.h
 	rm -f a.out arithchk.o fpinit.o
 
@@ -302,6 +305,7 @@ xs0 = \
 	amplsolv.sy \
 	arith.ibm \
 	arith.h0 \
+	arith.h1 \
 	arithchk.c \
 	asl.h \
 	asl_pfg.h \
@@ -326,6 +330,7 @@ xs0 = \
 	conpval.c \
 	conscale.c \
 	conval.c \
+	degree.c \
 	derprop.c \
 	details.c0 \
 	dtoa.c \
@@ -378,6 +383,7 @@ xs0 = \
 	misc.c \
 	mpec_adj.c \
 	mpec_adj0.c \
+	mqpcheckv.c \
 	mypow.c \
 	names.c \
 	nl_obj.c \

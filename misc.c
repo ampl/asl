@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2016, 2018 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 /* include vararg/stdarg stuff first to avoid trouble with C++ */
 #include "stddef.h"
@@ -70,6 +64,7 @@ scream(EdRead *R, int n, const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(Stderr, fmt, ap);
+	va_end(ap);
 	exit_ASL(R, n);
 	}
 
@@ -187,6 +182,29 @@ hv0comp(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 	}
 
  static void
+hv0compd(ASL *a, real *hv, real *p, int co)
+{
+	Not_Used(a);
+	Not_Used(hv);
+	Not_Used(p);
+	Not_Used(co);
+	notread("hvcompd", "pfgh_read or fgh_read");
+	}
+
+ static varno_t
+hv0comps(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
+{
+	Not_Used(a);
+	Not_Used(hv);
+	Not_Used(p);
+	Not_Used(co);
+	Not_Used(nz);
+	Not_Used(z);
+	notread("hvcomps", "pfgh_read or fgh_read");
+	return 0;
+	}
+
+ static void
 hv0init(ASL *a, int n, int no, real *ow, real *y)
 {
 	Not_Used(a);
@@ -209,13 +227,14 @@ hes0set(ASL *a, int flags, int obj, int nobj, int con, int ncon)
 	notread("duthes, fullhes, or sputhes", "pfgh_read or jacpdim");
 	}
 
- static void
+ static int
 x0known(ASL *a, real *x, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(x);
 	Not_Used(nerror);
 	notread("xknown", psedag);
+	return 1;
 	}
 
  static void
@@ -292,6 +311,8 @@ Edagpars edagpars_ASL = {
 	con0grd,
 	hv0comp,
 	hv0comp,
+	hv0compd,
+	hv0comps,
 	hv0init,
 	hv0init,
 	hes0set,
@@ -496,7 +517,9 @@ M1alloc_ASL(Edaginfo *I, size_t n)
 {
 	Mblock *mb;
 
+	I->tot_M1z_bytes += n;
 	if (I->Mbnext >= I->Mblast) {
+		I->tot_M1z_bytes += sizeof(Mblock);
 		mb = (Mblock *)Malloc(sizeof(Mblock));
 		mb->next = (Mblock*)I->Mb;
 		I->Mb = (void*)mb;
@@ -620,7 +643,7 @@ ASL_free(ASL **aslp)
 {
 	ASL *a;
 	ASLhead *h;
-	extern void at_end_ASL ANSI((Exitcall*));
+	extern void at_end_ASL(Exitcall*);
 
 	if (!(a = *aslp))
 		return;
@@ -669,13 +692,21 @@ ASL_alloc(int k)
 		sizeof(ASL_pfg),
 		sizeof(ASL_pfgh)
 		};
+	static int first = 1;
 	ASL *a;
 	ASLhead *h;
 	int n;
 
-	if (!Stderr)
-		Stderr_init_ASL();	/* set Stderr if necessary */
-	Mach_ASL();
+	if (first) {
+		first = 0;
+		if (!Stderr)
+			Stderr_init_ASL();	/* set Stderr if necessary */
+		Mach_ASL();
+#ifdef MULTIPLE_THREADS
+		init_dtoa_locks();
+		set_max_dtoa_threads(1);
+#endif
+		}
 	if (k < 1 || k > 5)
 		return 0;
 	a = (ASL*) mymalloc(n = msize[k-1]);
@@ -999,16 +1030,75 @@ adjust_zerograds_ASL(ASL *asl, int nnv)
 		}
 	}
 
+
+#ifndef NO_BOUNDSFILE_OPTION /*{*/
+ extern void bswap_ASL(void *, size_t);
+
+ static void
+bad_bounds(ASL *asl, const char *fmt, ...)
+{
+	Jmp_buf *J;
+	va_list ap;
+	va_start(ap, fmt);
+	if (progname)
+		fprintf(Stderr, "\n%s: ", progname);
+	else
+		fprintf(Stderr, "\n");
+	vfprintf(Stderr, fmt, ap);
+	fprintf(Stderr, "\n");
+	va_end(ap);
+	if ((J = asl->i.err_jmp_))
+		longjmp(J->jb, 1);
+	exit(1);
+	}
+#endif /*}*/
+
+ static expr_n Zero = { f_OPNUM_ASL, 0. };
+
  int
 prob_adj_ASL(ASL *asl)
 {
+#undef cde
+	cde *d, *de;
+	cde2 *d2, *d2e;
 	cgrad *cg, **pcg, **pcge;
 	int flags, k;
+#ifndef NO_BOUNDSFILE_OPTION /*{*/
+	FILE *f;
+	char *bf, buf[4096], *s, *s1, *se;
+	int a, i, n1, nr, nv, swap;
+	real *L, *U, *x;
+	size_t inc, m, n;
+#endif /*}*/
 
 	if (n_obj)
 		adjust_zerograds_ASL(asl, 0);
 	flags = asl->i.rflags;
 	asl->i.Cgrad0 = asl->i.Cgrad_;
+	if ((k = asl->i.nsufext[ASL_Sufkind_con])) {
+		switch(asl->i.ASLtype) {
+		  case ASL_read_f:
+		  case ASL_read_fg:
+			d = ((ASL_fg*)asl)->I.con_de_;
+			goto have_d;
+		  case ASL_read_fgh:
+			d2 = ((ASL_fgh*)asl)->I.con2_de_;
+			goto have_d2;
+		  case ASL_read_pfg:
+			d = ((ASL_pfg*)asl)->I.con_de_;
+ have_d:
+			d += n_con;
+			for(de = d + k; d < de; ++d)
+				d->e = (expr*)&Zero;
+			break;
+		  case ASL_read_pfgh:
+			d2 = ((ASL_pfgh*)asl)->I.con2_de_;
+ have_d2:
+			d2 += n_con;
+			for(d2e = d2 + k; d2 < d2e; ++d2)
+				d2->e = (expr2*)&Zero;
+		  }
+		}
 	if (flags & (ASL_obj_replace_eq | ASL_obj_replace_ineq))
 		obj_adj_ASL(asl);
 	if (!A_vals) {
@@ -1025,6 +1115,146 @@ prob_adj_ASL(ASL *asl)
 		}
 	if (n_obj)
 		zerograd_chk(asl);
+#ifndef NO_BOUNDSFILE_OPTION /*{*/
+	if ((bf = asl->i.boundsfile)) {
+		if (!(f = fopen(bf, "rb")))
+			bad_bounds(asl, "Cannot open boundsfile \"%s\".", bf);
+		m = sizeof(buf);
+		if ((n = fread(buf, 1, m, f)) < 24
+		 || strncmp(buf, "Bounds, x; arith ", 17)) {
+ badmagic:
+			bad_bounds(asl, "Bad magic in boundsfile \"%s\".", bf);
+			}
+		a = (int)strtol(s = buf+17, &se, 10);
+		if (se <= s || a < 0 || a > 2 || *se >= ' ')
+			goto badmagic;
+		if (a == 0 && *se == '\r')
+			++se;
+		if (*se++ != '\n')
+			goto badmagic;
+		nv = n_var;
+		L = LUv;
+		if ((U = Uvx))
+			inc = 1;
+		else {
+			U = L + 1;
+			inc = 2;
+			}
+		if (!(x = X0))
+			X0 = x = (real*)M1alloc(nv*sizeof(real));
+		swap = 0;
+		if (a) {
+			if (a != Arith_Kind_ASL)
+				swap = 1;
+			s = buf + 20;
+			n1 = *(int*)s;
+			if (swap)
+				bswap_ASL(&n1, sizeof(n1));
+			if (n1 != nv) {
+ bad_n1:
+				bad_bounds(asl, "Expected %d bounds triples in boundsfile"
+					" \"%s\"; got %d.", nv, bf, n1);
+				}
+			s += sizeof(int);
+			se = buf + n;
+			for(i = 1; i <= nv; ++i) {
+				if (se-s < 3*sizeof(real)) {
+					for(s1 = buf; s < se; ++s, ++s1)
+						*s1 = *s;
+					m = s1 - buf;
+					m  += n = fread(s1, 1, sizeof(buf) - m, f);
+					se = buf + m;
+					if (m < 3*sizeof(real)) {
+ too_few:
+						bad_bounds(asl, "%d too few bound triples "
+							"in boundsfile \"%s\".",
+							nv - i + 1, bf);
+						}
+					s = buf;
+					}
+				*L = *(real*)s;
+				s += sizeof(real);
+				*x = *(real*)s;
+				s += sizeof(real);
+				*U = *(real*)s;
+				s += sizeof(real);
+				if (swap) {
+					bswap_ASL(L, sizeof(real));
+					bswap_ASL(x, sizeof(real));
+					bswap_ASL(U, sizeof(real));
+					}
+				if (*L > *U || *x < *L || *x > *U) {
+ bad_triple:
+					bad_bounds(asl, "bad bound triple %d in bounds file "
+						"\"%s\":\n\tL = %.g\n\tx = %.g\n\tU = %.g",
+						i, bf, *L, *x, *U);
+					}
+				L += inc;
+				U += inc;
+				++x;
+				}
+			}
+		else {
+			n1 = (int)strtol(se, &s, 10);
+			if (n1 != nv)
+				goto bad_n1;
+			se = buf + n;
+			for(i = 1; i <= nv; ++i) {
+				nr = 0;
+ tryagain:
+				while(s < se && *s <= ' ')
+					++s;
+				s1 = s;
+				for(k = 0; k < 3 && s1 < se; ++k) {
+					while(s1 < se && *s1 > ' ')
+						++s1;
+					while(s1 < se && *s1 <= ' ')
+						++s1;
+					}
+				if (k < 3) {
+					if (nr)
+						goto too_few;
+					for(s1 = buf; s < se; ++s, ++s1)
+						*s1 = *s;
+					m = sizeof(buf) - (s1 - buf);
+					n = fread(s1, 1, m, f);
+					se = s1 + n;
+					s = buf;
+					nr = 1;
+					goto tryagain;
+					}
+				*L = strtod(s, &s1);
+				if (s1 <= s || *s1 > ' ') {
+ badnumber:
+					while(s1 < se && *s1 > ' ')
+						++s1;
+					bad_bounds(asl, "Bound triple %d: bad number \"%.*s\""
+						" in boundsfile \"%s\".", i,
+						(int)(s1-s), s, bf);
+					}
+				*x = strtod(s = s1, &s1);
+				if (s1 <= s || *s1 > ' ')
+					goto badnumber;
+				*U = strtod(s = s1, &s1);
+				if (s1 <= s || *s1 > ' ')
+					goto badnumber;
+				if (*L > *U || *x < *L || *x > *U)
+					goto bad_triple;
+				L += inc;
+				U += inc;
+				++x;
+				s = s1;
+				}
+			}
+		fclose(f);
+		}
+#endif /*}*/
+	asl->i.err_jmp_ = 0;
+	if (want_xpi0 & 8 && !X0)
+		X0 = M1zapalloc(n_var*sizeof(real));
+	if (want_xpi0 & 16 && !pi0 && n_con > 0)
+		pi0 = M1zapalloc(n_con*sizeof(real));
+	asl->i.rd_M1z_bytes = asl->i.tot_M1z_bytes;
 	return 0;
 	}
 
@@ -1131,7 +1361,7 @@ get_vcmap_ASL(ASL *asl, int k)
  int *
 get_vminv_ASL(ASL *asl)
 {
-	int i, j, n, *vm, *x;
+	int i, j, n, nv, *vm, *x;
 
 	if ((x = asl->i.vminv))
 		return x;
@@ -1141,14 +1371,16 @@ get_vminv_ASL(ASL *asl)
 	x = (int*)M1alloc(n*sizeof(int));
 	for(i = 0; i < n; ++i)
 		x[i] = -1;
-	n = n_var;
-	for(i = 0; i < n; ++i) {
+	nv = n_var;
+	for(i = 0; i < nv; ++i) {
 		if ((j = vm[i]) >= 0)
 			x[j] = i;
 		}
-	for(i = 0, j = n; i < n; ++i)
+	j = n;
+	for(i = 0; i < n; ++i) {
 		if (x[i] < 0)
 			x[i] = j++;
+		}
 	return asl->i.vminv = x;
 	}
 

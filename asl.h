@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #ifndef ASL_included
 #define ASL_included
@@ -28,9 +22,6 @@ THIS SOFTWARE.
 #include "arith.h"	/* for Long and Double_Align */
 #include "math.h"
 #include "stdio1.h"
-#ifndef Stderr
-extern FILE *Stderr;
-#endif
 #include "string.h"
 
 #ifdef KR_headers
@@ -50,6 +41,10 @@ extern double strtod();
 extern "C" {
 #else
 #define Cextern extern
+#endif
+
+#ifndef Stderr
+extern FILE *Stderr;
 #endif
 
 #ifndef real
@@ -148,6 +143,7 @@ ograd {
 	ograd *next;
 	ssize_t varno;
 	};
+typedef ssize_t varno_t;
 #else	/*}{ less memory */
  struct
 cgrad {
@@ -163,6 +159,7 @@ ograd {
 	ograd *next;
 	int varno;
 	};
+typedef int varno_t;
 #endif /*}}*/
 
  struct
@@ -206,6 +203,7 @@ linpart {
  struct
 plterm {
 	int	n;	/* number of slopes */
+	int	z;	/* bs[z] == slope at 0 */
 	real	bs[1];	/* slope 1, bkpt 1, slope 2, bkpt 2, ..., slope n */
 	};
 
@@ -224,8 +222,8 @@ EdRead_ASL {
 	int lineinc;
 	int can_end;
 	char rl_buf[80];
-	void (*iadjfcn)(void*, unsigned long);
-	void (*dadjfcn)(void*, unsigned long);
+	void (*iadjfcn)(void*, size_t);
+	void (*dadjfcn)(void*, size_t);
 	} EdRead_ASL;
 #define EdRead EdRead_ASL
 
@@ -258,11 +256,13 @@ Edagpars {
 	void (*Congrd_nomap)	(ASL*, int nc, real *X, real *G, fint *nerror);
 	void (*Hvcomp)		(ASL*, real *hv, real *p, int no, real *ow, real *y);
 	void (*Hvcomp_nomap)	(ASL*, real *hv, real *p, int no, real *ow, real *y);
+	void (*Hvcompd)	(ASL*, real *hv, real *p, int co);
+	varno_t (*Hvcomps)	(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z);
 	void (*Hvinit)		(ASL*, int hid_limit, int nobj, real *ow, real *y);
 	void (*Hvinit_nomap)	(ASL*, int hid_limit, int nobj, real *ow, real *y);
 	void (*Hesset)		(ASL*, int flags, int no, int nno, int nc, int nnc);
 	int  (*Lconval)		(ASL*, int ncon, real *X, fint *nerror);
-	void (*Xknown)		(ASL*, real*, fint*);
+	int  (*Xknown)		(ASL*, real*, fint*);
 	void (*Duthes)		(ASL*, real *H, int nobj, real *ow, real *y);
 	void (*Duthes_nomap)	(ASL*, real *H, int nobj, real *ow, real *y);
 	void (*Fulhes)		(ASL*, real *H, fint LH, int no, real *ow, real *y);
@@ -282,6 +282,8 @@ Edagpars {
 #define conival(i,x,ne)		(*((ASL*)asl)->p.Conival)((ASL*)asl,i,x,ne)
 #define congrd(i,x,g,ne)	(*((ASL*)asl)->p.Congrd)((ASL*)asl,i,x,g,ne)
 #define hvcomp(hv,P,no,ow,y)	(*((ASL*)asl)->p.Hvcomp)((ASL*)asl,hv,P,no,ow,y)
+#define hvcompd(hv,P,co)	(*((ASL*)asl)->p.Hvcompd)((ASL*)asl,hv,P,co)
+#define hvcomps(hv,P,co,nz,z)	(*((ASL*)asl)->p.Hvcomps)((ASL*)asl,hv,P,co,nz,z)
 #define hvinit(no,ow,y)		(*((ASL*)asl)->p.Hvinit)((ASL*)asl,ihd_limit,no,ow,y)
 #define hesset(f,o,n,c,nc)	(*((ASL*)asl)->p.Hesset)((ASL*)asl,f,o,n,c,nc)
 #define duthes(h,n,ow,y)	(*((ASL*)asl)->p.Duthes)((ASL*)asl,h,n,ow,y)
@@ -569,8 +571,8 @@ Edaginfo {
 	void *uinfo;
 
 	/* for reading alternate binary formats */
-	void (*iadjfcn)(void*, unsigned long);
-	void (*dadjfcn)(void*, unsigned long);
+	void (*iadjfcn)(void*, size_t);
+	void (*dadjfcn)(void*, size_t);
 	const char *opfmt;	/* format of opcodes */
 
 	/* for scaling */
@@ -603,12 +605,24 @@ Edaginfo {
 	/* for modifying objectives */
 	Objrep	**Or;
 	real *orscratch;	/* scratch (if needed) */
+	void (*opify)(ASL*);
+	int nlc0, nlo0;	/* values of nlc_ and nlo_ before obj_adj() */
 
 	/* for simplifying complementarities */
 	MPEC_Adjust *mpa;
 
 	/* for derivative errors */
 	DerivErrInfo *Derrs, *Derrs0;
+
+	/* bounds and solution filenames */
+	char *boundsfile;
+	char *solfile;
+
+	/* memory use statistics */
+	size_t temp_rd_bytes;	/* bytes temporarily allocated during .nl read */
+	size_t tot_M1z_bytes;	/* total allocated by M1alloc and M1zapalloc */
+	size_t rd_M1z_bytes;	/* tot_M1z_bytes after reading the .nl file */
+
 	} Edaginfo;
 
  struct
@@ -650,7 +664,6 @@ TMInfo {
 #define A_rownos	asl->i.A_rownos_
 #define A_vals		asl->i.A_vals_
 #define Cgrad		asl->i.Cgrad_
-#define CgradZ		asl->i.CgradZ_
 #define Fortran		asl->i.Fortran_
 #define LUrhs		asl->i.LUrhs_
 #define LUv		asl->i.LUv_
@@ -816,8 +829,8 @@ enum ASL_reader_flag_bits {	/* bits in flags arg */
 	ASL_findgroups	= 12,	/* Find both group structures; you want this */
 				/* unless you're a solver like LANCELOT that */
 				/* deals explicitly with group structure. */
-	ASL_find_c_class = 32,	/* Find c_class and c_class_max: see nlp.h */
-	ASL_find_o_class = 64,	/* Find o_class and o_class_max: or nlp2.h */
+	ASL_find_c_class = 32,	/* Find c_class and c_class_max: see nlp.h and nlp2.h */
+	ASL_find_o_class = 64,	/* Find o_class and o_class_max: see nlp.h and nlp2.h */
 	ASL_find_co_class = 96,	/* Find all four */
 
 	/* applicable to all .nl file readers: */
@@ -901,7 +914,10 @@ enum ASL_suf_sos_flags { /* bits in flags parameter of suf_sos() */
 
 enum ASL_write_flags {
 	ASL_write_ASCII = 1,
-	ASL_write_CR = 2
+	ASL_write_CR = 2,
+	ASL_write_binary = 4,
+	ASL_write_no_X0 = 8,
+	ASL_write_no_pi0 = 16
 	};
 
 enum ASL_writer_error_codes {
@@ -917,6 +933,16 @@ enum ASL_writer_error_codes {
 #ifndef Sig_ret_type
 #define Sig_ret_type void
 #endif
+
+ typedef struct
+QPinfo {
+	int nc;	/* number of nonempty columns */
+	int nz;	/* number of nonzeros */
+	int *colno;	/* column numbers of nonempty columns */
+	size_t *colbeg;	/* nonzeros for column colno[i]: (rowno[j], delsq[j]) */
+	int *rowno;	/* for colbeg[i] <= j < colbeg[i+1], except that values */
+	real *delsq;	/* in colno, colbeg, and rowno are incremented by Fortran */
+	} QPinfo;
 
  extern ASL *ASL_alloc(int);
  extern void ASL_free(ASL**);
@@ -952,13 +978,14 @@ enum ASL_writer_error_codes {
  extern void colstart_inc_ASL(ASL*);
  extern void conscale_ASL(ASL*, int, real, fint*);
  extern void conval_(fint *M, fint *N, real *X, real *F, fint *nerror);
+ extern int degree_ASL(ASL*, int, void**);
  extern void delprb_(VOID);
  extern void dense_j_ASL(ASL*);
  extern void densej_(VOID);
  extern void deriv_errchk_ASL(ASL*, fint*, int coi, int n);
  extern void deriv_errclear_ASL(Edaginfo*);
  extern void derprop(derp *);
- extern char *dtoa(double, int, int, int*, int*, char **);
+ extern char *dtoa_r(double, int, int, int*, int*, char**, char*, size_t);
  extern ufunc *dynlink_ASL(const char*);
  extern int edag_peek(EdRead*);
  extern void equ_adjust_ASL(ASL*, int*, int*);
@@ -971,7 +998,7 @@ enum ASL_writer_error_codes {
  extern int fg_write_ASL(ASL*, const char*, NewVCO*, int);
  extern void fintrouble_ASL(ASL*, func_info*, const char*, TMInfo*);
  extern void flagsave_ASL(ASL*, int);
- extern void freedtoa(char*);
+ extern char *fread_sol_ASL(ASL*, const char *fname, real**xp, real **yp);
  extern func_info *func_lookup(ASL*, const char*, int add);
  extern void func_add(ASL*);
  extern int g_fmt(char*, double);
@@ -991,19 +1018,19 @@ enum ASL_writer_error_codes {
  extern void intcatch_ASL(ASL*, void (*)(int,void*), void*);
  extern void introuble_ASL(ASL*, const char *who, real a, int jv);
  extern void introuble2_ASL(ASL*, const char *who, real a, real b, int jv);
- extern FILE *jac0dim_ASL(ASL*, char *stub, ftnlen stub_len);
- extern int  jac1dim_ASL(ASL*,char *stub, fint *M, fint *N, fint *NO,
+ extern FILE *jac0dim_ASL(ASL*, const char *stub, ftnlen stub_len);
+ extern int  jac1dim_ASL(ASL*, const char *stub, fint *M, fint *N, fint *NO,
 			fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
- extern int  jac2dim_ASL (ASL*,char *stub, fint *M, fint *N, fint *NO,
+ extern int  jac2dim_ASL (ASL*, const char *stub, fint *M, fint *N, fint *NO,
 		fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
- extern FILE *jac_dim_ASL(ASL*, char *stub, fint *M, fint *N, fint *NO,
+ extern FILE *jac_dim_ASL(ASL*, const char *stub, fint *M, fint *N, fint *NO,
 			fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
- extern int  jacdim_(char *stub, fint *M, fint *N, fint *NO, fint *NZ,
+ extern int  jacdim_(const char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 			fint *MXROW, fint *MXCOL, ftnlen stub_len);
  extern void jacinc_(fint *M, fint *N, fint *NZ,
 			fint *JP, short *JI, real *X, real *L, real *U,
 			real *Lrhs, real *Urhs, real *Inf);
- extern int  jacpdim_ASL(ASL*,char *stub, fint *M, fint *N, fint *NO,
+ extern int  jacpdim_ASL(ASL*, const char *stub, fint *M, fint *N, fint *NO,
 		fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
  extern void jacval_(fint *M, fint *N, fint *NZ, real *X,
 			real *JAC, fint *nerror);
@@ -1020,6 +1047,8 @@ enum ASL_writer_error_codes {
  extern void mpec_auxvars_ASL(ASL*, real *c, real *x);
  extern fint mqpcheck_ASL(ASL*, int co, fint **rowqp, fint **colqp, real **delsqp);
  extern ssize_t mqpcheckZ_ASL(ASL*, int co, fint **rowqp, size_t **colqp, real **delsqp);
+ extern ssize_t mqpcheckv_ASL(ASL*, int co, QPinfo **QPIp, void **vp);
+ extern void mqpcheckv_free_ASL(ASL*, void **vp);
  extern void *mymalloc(size_t);
  extern real mypow(real,real);
  extern void *myralloc(void *, size_t);
@@ -1084,6 +1113,11 @@ enum ASL_writer_error_codes {
 #ifndef strtod	/* if not set by previous funcadd.h */
 #define strtod strtod_ASL
 #endif
+extern void ACQUIRE_DTOA_LOCK(unsigned int);
+extern void FREE_DTOA_LOCK(unsigned int);
+extern int dtoa_get_threadno(void);
+extern void init_dtoa_locks(void);
+extern void set_max_dtoa_threads(unsigned int);
 #endif
 
 #ifdef __cplusplus
@@ -1101,6 +1135,7 @@ enum ASL_writer_error_codes {
 #define fg_wread(a,b) fg_wread_ASL((ASL*)asl,a,b)
 #define fg_write(a,b,c) fg_write_ASL((ASL*)asl,a,b,c)
 #define fgh_read(a,b) fgh_read_ASL((ASL*)asl,a,b)
+#define fread_soln(f,x,y) fread_sol_ASL((ASL*)asl,f,x,y)
 #define gen_rownos() gen_rownos_ASL((ASL*)asl)
 #undef getenv
 #define getenv getenv_ASL
@@ -1115,6 +1150,8 @@ enum ASL_writer_error_codes {
 #define lcon_name(n) lcon_name_ASL((ASL*)asl,n)
 #define mip_pri(a,b,c,d) mip_pri_ASL((ASL*)asl,a,b,c,d)
 #define mqpcheck(a,b,c,d) mqpcheck_ASL((ASL*)asl,a,b,c,d)
+#define mqpcheckv(a,b,c) mqpcheckv_ASL((ASL*)asl,a,b,c)
+#define mqpcheckv_free(a) mqpcheckv_free_ASL((ASL*)asl,a)
 #define nl_obj(n) nl_obj_ASL((ASL*)asl,n)
 #define nqpcheck(a,b,c,d) nqpcheck_ASL((ASL*)asl,a,b,c,d)
 #define obj_name(n) obj_name_ASL((ASL*)asl,n)
@@ -1146,19 +1183,24 @@ enum ASL_writer_error_codes {
 
 #define exit mainexit_ASL
 
+#ifdef ALLOW_OPENMP
+#undef MULTIPLE_THREADS
+#define MULTIPLE_THREADS
+#endif
+
 #ifdef MULTIPLE_THREADS
 #define A_ASL , ASL *asl
 #define C_ASL , (ASL*)asl
 #define D_ASL ASL *asl;
 #define K_ASL , asl
 #ifndef MEM_LOCK
-#define MEM_LOCK 3
+#define MEM_LOCK 2
 #endif
 #ifndef MBLK_LOCK
-#define MBLK_LOCK 4
+#define MBLK_LOCK 3
 #endif
 #ifndef HESOPROD_LOCK
-#define HESOPROD_LOCK 5
+#define HESOPROD_LOCK 4
 #endif
 #else	/* MULTIPLE_THREADS */
 #define A_ASL /*nothing*/

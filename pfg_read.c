@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #ifdef DEBUG
 #include "assert.h"
@@ -48,6 +42,9 @@ THIS SOFTWARE.
 extern "C" {
 #endif
 
+extern real conpival_nomap_ASL(ASL*, int, real*, fint*);
+extern void conpgrd_nomap_ASL(ASL*, int, real *, real*, fint*);
+
 #define GAP_MAX 10
 
 #ifdef PSHVREAD
@@ -68,6 +65,11 @@ typedef struct Static Static;
 
 #undef nzc
 
+#if defined(IEEE_MC68k) || defined(IBM)
+  enum { W0 = 0, W1 = 1 };
+#else
+  enum { W0 = 1, W1 = 0 };
+#endif
 
 /*******/
 
@@ -84,7 +86,7 @@ Elemtemp {
 	unsigned int esize;
 	int nmax;
 	int k;
-	Char **mp;
+	void **mp;
 	} Elemtemp;
 
  typedef struct
@@ -95,9 +97,6 @@ PSfind {
 
  typedef struct EU EU;
  struct EU { efunc_n *op; union {real v; EU *p; } u; };
-
-static int nlthash = 1021;	/* hash table length (fixed for now) */
-static int nrangehash = 1021;	/* range hash table length (fixed for now) */
 
  struct
 Static {
@@ -115,6 +114,8 @@ Static {
 	expr_va *_varglist, *_varg2list, *_varg2list_end;
 	int *_imap, *_vrefnext, *_vrefx;
 	int *_zc, *zc1, *_zci, *zci1, *_zl;
+	size_t _lthashmask, _nrange, _rangehashmask;
+	int klthash, krangehash;
 	int _allJ;
 	int _amax1;
 	int _cexp_k;
@@ -195,6 +196,7 @@ Static {
 #define lt_scale	S->_lt_scale
 #define ltfree		S->_ltfree
 #define lthash		S->_lthash
+#define lthashmask	S->_lthashmask
 #define max_var		S->_max_var
 #define max_var1	asl->P.max_var1_
 #define Ncom		S->_ncom
@@ -203,6 +205,7 @@ Static {
 #define noa		S->_noa
 #define nocopy		S->_nocopy
 #define nndv		S->_nndv
+#define nrange		S->_nrange
 #define nsce		S->_nsce
 #define nv0b		S->_nv0b
 #define nv0c		S->_nv0c
@@ -213,6 +216,7 @@ Static {
 #define nzc		S->_nzc
 #define nzclim		S->_nzclim
 #define rangehash	S->_rangehash
+#define rangehashmask	S->_rangehashmask
 #define relo2list	S->_relo2list
 #define relolist	S->_relolist
 #define rnz		S->_rnz
@@ -243,6 +247,14 @@ S_init(Static *S, ASLTYPE *asl)
 	S->asl = asl;
 	S->a = (ASL*)asl;
 	return S;
+	}
+
+ static void *
+new_mblkzap(ASLTYPE *asl, int k)
+{
+	void *rv = new_mblk_ASL((ASL*)asl,k);
+	memset(rv, 0, sizeof(void*)<<k);
+	return rv;
 	}
 
  static void
@@ -276,12 +288,12 @@ ed_reset(ASLTYPE *asl)
  static derp *dzork;
  static ograd *ogzork;
  static expr *ezork;
- static expr_n *enzork;
- static int dzork1, dzork2, izork = -1;
+ static EU *enzork;
+ static int dzork1, dzork2, exprzork, exprzork1, izork = -1;
 #endif
 
  static Elemtemp *
-new_Elemtemp(Static *S, unsigned int esize, Char **mp)
+new_Elemtemp(Static *S, unsigned int esize, void **mp)
 {
 	Elemtemp *e;
 	int k;
@@ -292,7 +304,7 @@ new_Elemtemp(Static *S, unsigned int esize, Char **mp)
 	e->mp = mp;
 	e->k = k = htcl(8*esize);
 	*mp = new_mblk(k);
-	e->nmax = (sizeof(Char*) << k) / esize;
+	e->nmax = (sizeof(void*) << k) / esize;
 	return e;
 	}
 
@@ -307,7 +319,7 @@ del_Elemtemp(Static *S, Elemtemp *e)
  static void
 upgrade_Elemtemp(Static *S, Elemtemp *e)
 {
-	Char *m, *m0;
+	void *m, *m0;
 	int k;
 	ASL *asl = S->a;
 
@@ -315,7 +327,7 @@ upgrade_Elemtemp(Static *S, Elemtemp *e)
 	memcpy(m = new_mblk(e->k), m0 = *e->mp, e->esize * e->nmax);
 	del_mblk(k++, m0);
 	*e->mp = m;
-	e->nmax = (sizeof(Char*) << k) / e->esize;
+	e->nmax = (sizeof(void*) << k) / e->esize;
 	}
 
  static void
@@ -459,6 +471,10 @@ new_expr(Static *S, int o, expr *L, expr *R)
 {
 	expr *rv;
 
+#ifdef DEBUG
+	if (++exprzork1 == exprzork)
+		printf("exprzork1 = %d\n", exprzork1);;
+#endif
 	if ((rv = expr_free))
 		expr_free = rv->L.e;
 	else
@@ -471,15 +487,19 @@ new_expr(Static *S, int o, expr *L, expr *R)
 				R = 0;
 				PSHV(rv->dL2 = 2);
 				}
-			else
+			else {
 				o = f_OP1POW;
+				rv->dR = ((expr_n *)R)->v;
+				/* rv->R.e may be used for a back pointer */
+				}
 			}
 		else if (Intcast L->op == f_OPNUM)
 			o = f_OPCPOW;
 		}
-	rv->op = (efunc *)(long)o;
+	rv->op = (efunc *)(size_t)o;
 	rv->L.e = L;
 	rv->R.e = R;
+	rv->a = 0;
 #ifdef DEBUG
 	if (rv == ezork)
 		printf("");
@@ -516,6 +536,7 @@ dexpr(Static *S, expr *e, expr *L, expr *R)
 				case PLUS:	i = Hv_plusLR;	break;
 				case MINUS:	i = Hv_minusLR;	break;
 				case MULT:	i = Hv_timesLR;	break;
+				case DIV:	i = Hv_divLR;	break;
 				default:	i = Hv_binaryLR;
 				}
 		    else switch(opcode) {
@@ -719,7 +740,7 @@ eread(EdRead *R)
 				badline(R);
 			rva = (expr_va *)mem(sizeof(expr_va));
 			PSHV(rva->val = 0;)
-			rva->op = (efunc *)(long)k;
+			rva->op = (efunc *)(size_t)k;
 			rva->L.d = d = (de *)mem(i*sizeof(de) + sizeof(expr *));
 			rva->next = varglist;
 			varglist = rva;
@@ -759,8 +780,16 @@ eread(EdRead *R)
 				*b++ = r;
 				}
 				while(--j > 0);
+			if (b[-2] <= 0.)
+				p->z = 2*i - 2;
+			else {
+				b = p->bs + 1;
+				while(*b <= 0.)
+					b += 2;
+				p->z = (b - p->bs) - 1;
+				}
 			rv = (expr *)mem(sizeof(expr));
-			rv->op = (efunc *)(long)k;
+			rv->op = (efunc *)(size_t)k;
 			rv->L.p = p;
 			rv->R.e = eread(R);
 			return rv;
@@ -768,7 +797,8 @@ eread(EdRead *R)
 		case 5: /* if */
 			rvif = (expr_if *)mem(sizeof(expr_if));
 			PSHV(rvif->val = 0;)
-			rvif->op = (efunc *)(long)k;
+			PSHV(rvif->Te = rvif->Fe = 0;) /* for bogus .nl files */
+			rvif->op = (efunc *)(size_t)k;
 			rvif->next = iflist;
 			iflist = rvif;
 			rvif->e = eread(R);
@@ -805,7 +835,7 @@ ogfree(Static *S, ograd *og)
 		if (ogzork) {
 			do if (og == ogzork)
 				printf("");
-			   while(og = og->next);
+			   while((og = og->next));
 			og = og1;
 			}
 #endif
@@ -848,19 +878,22 @@ new_ograd(Static *S, ograd *next, int varno, real coef)
  static linarg *
 lahash(Static *S, linarg *la)
 {
+	ASLTYPE *asl;
 	Ulong x;
-	int nnz;
-	linarg *la1, **lap;
+	int k, nnz;
+	linarg *la1, *la2, **lap, **lap1, **q, **q0, **qe;
 	ograd *og, *og1;
+	size_t mask;
 	union {real r; Ulong L[2];} u;
 
+	asl = S->asl;
 	x = nnz = la->nnz;
 	for(og = la->nz; og; og = og->next) {
 		u.r = og->coef;
 		x = (x << 1 | (x & 0x80000000) >> 31) ^
-			  (og->varno*101 + u.L[0] + u.L[1]);
+			  (og->varno*101 + u.L[W0] + 257*u.L[W1]);
 		}
-	for(lap = &lthash[x % nlthash]; (la1 = *lap); lap = &la1->hnext)
+	for(lap = &lthash[x & lthashmask]; (la1 = *lap); lap = &la1->hnext)
 		if (la1->nnz == nnz) {
 			og = la->nz;
 			og1 = la1->nz;
@@ -879,25 +912,50 @@ lahash(Static *S, linarg *la)
 				og1 = og1->next;
 				}
 			}
-	S->asl->P.nlttot++;
-	return *lap = la;
+	*lap = la;
+	la->hnext = 0;
+	if (++S->asl->P.nlttot > lthashmask) {
+		mask = lthashmask;
+		k = S->klthash;
+		q = q0 = lthash;
+		qe = q + mask;
+		lthashmask = mask = (mask << 1) | 1;
+		lap = lthash = (linarg**)new_mblkzap(asl, S->klthash = k + 1);
+		while(q <= qe) {
+			for(la2 = *q++; la2; la2 = la1) {
+				la1 = la2->hnext;
+				x = la2->nnz;
+				for(og = la2->nz; og; og = og->next) {
+					u.r = og->coef;
+					x = (x << 1 | (x & 0x80000000) >> 31) ^
+						  (og->varno*101 + u.L[W0] + 257*u.L[W1]);
+					}
+				lap1 = lap + (x & mask);
+				la2->hnext = *lap1;
+				*lap1 = la2;
+				}
+			}
+		del_mblk(k, q0);
+		}
+	return la;
 	}
 
  static range *
-new_range(ASLTYPE *asl, range *r, int linkup)
+new_range(Static *S, range *r, range **rp)
 {
-	int len, uilen;
-	range *r1, *r2;
+	ASLTYPE *asl;
+	int k, len, uilen;
+	range *r1, *r2, *r3, **rp1, **rq, **rq0, **rqe;
+	size_t mask;
 
+	asl = S->asl;
 	uilen = r->nv*sizeof(int);
 	len = sizeof(range) + uilen;
-	if (r->n >= r->nv)
-		r1 = (range*)(linkup ? mem(len) : new_mblk(htcl(len)));
-	else
-		r1 = (range*)mem(len);
+	r1 = (range*)mem(len);
 	r1->nintv = 0;
 	r1->n = r->n;
 	r1->nv = r->nv;
+	r1->chksum = r->chksum;
 	r1->refs = 0;
 	r1->lasttermno = -1;
 	r1->hnext = r1->hunext = 0;
@@ -905,13 +963,27 @@ new_range(ASLTYPE *asl, range *r, int linkup)
 		memcpy(r1->ui = (int*)(r1+1), r->ui, uilen);
 	r1->lap = (linarg**)new_mblk(htcl(len = r->n*sizeof(linarg*)));
 	memcpy(r1->lap, r->lap, len);
-	if (linkup) {
-		r2 = r1->rlist.next = asl->P.rlist.next;
-		r1->rlist.prev = r2->rlist.prev;
-		r2->rlist.prev = asl->P.rlist.next = r1;
+	r2 = r1->rlist.next = asl->P.rlist.next;
+	r1->rlist.prev = r2->rlist.prev;
+	r2->rlist.prev = asl->P.rlist.next = r1;
+	*rp = r1;
+	if (++nrange > rangehashmask) {
+		mask = rangehashmask;
+		k = S->krangehash;
+		rq = rq0 = rangehash;
+		rqe = rq + mask;
+		rangehashmask = mask = (mask << 1) | 1;
+		rp = rangehash = (range**)new_mblkzap(asl, S->krangehash = k + 1);
+		while(rq <= rqe) {
+			for(r2 = *rq++; r2; r2 = r3) {
+				r3 = r2->hunext;
+				rp1 = rp + (r2->chksum & mask);
+				r2->hunext = *rp1;
+				*rp1 = r2;
+				}
+			}
+		del_mblk(k, rq0);
 		}
-	else
-		r1->rlist.prev = r1->rlist.next = 0;
 	return r1;
 	}
 
@@ -946,138 +1018,72 @@ lacompar(const void *a, const void *b, void *v)
 	}
 
  static int
-ndiff(range *r, range *r1, int *nn1p)
-{	/* Return the number of linargs in r but not r1; */
-	/* set *nn1p to the number of linargs in r1 but not r. */
+ndiff(range *r, range *r1)
+{
+	/* Return 0 if r and r1 have the same linargs; else return 1. */
 
-	int i, nn, nn1;
 	linarg **la, **la1, **la1e, **lae;
 
-	nn = nn1 = 0;
 	la = r->lap;
 	lae = la + r->n;
 	la1 = r1->lap;
 	la1e = la1 + r1->n;
-	for(;;) {
-		if (la >= lae) {
-			nn1 += la1e - la1;
-			break;
-			}
-		if (la1 >= la1e) {
-			nn += lae - la;
-			break;
-			}
-		if (!(i = lacompar((char*)la, (char *)la1, NULL))) {
-			la++;
-			la1++;
-			}
-		else if (i < 0) {
-			nn++;
-			la++;
-			}
-		else {
-			nn1++;
-			la1++;
-			}
+	for(;;++la, ++la1) {
+		if (la >= lae)
+			return la1 < la1e;
+		if (la1 >= la1e)
+			return 1;
+		if (lacompar((char*)la, (char *)la1, NULL))
+			return 1;
 		}
-	if (nn1p)
-		*nn1p = nn1;
-	return nn;
+	return 0;
 	}
 
- static void
-lap_merge(ASL *asl, int nn, range *r, range *r1)
-{	/* merge nn new linargs from r into r1 */
-
-	int i, n1;
-	linarg **la, **la1, **la1e, **lae, **lap, **lap0;
-
-	la = r->lap;
-	lae = la + r->n;
-	la1 = r1->lap;
-	la1e = la1 + r1->n;
-	n1 = r1->n + nn;
-	lap = lap0 = (linarg**)new_mblk(htcl(n1*sizeof(linarg*)));
-	for(;;) {
-		if (la >= lae) {
-			while(la1 < la1e)
-				*lap++ = *la1++;
-			break;
-			}
-		if (la1 >= la1e) {
-			do *lap++ = *la++;
-				while(la < lae);
-			break;
-			}
-		if (!(i = lacompar((char*)la, (char *)la1, NULL))) {
-			*lap++ = *la++;
-			la1++;
-			}
-		else if (i < 0)
-			*lap++ = *la++;
-		else
-			*lap++ = *la1++;
-		}
-	del_mblk(htcl(r1->n*sizeof(linarg*)), r1->lap);
-	r1->lap = lap0;
-	r1->n = n1;
-	}
-
- static void
-ucopy(ASL *asl, range *r, range **rp)
-{
-	range *r1;
-	int nn;
-
-	r1 = *rp;
-	/* see whether to update this copy */
-	if (r->n == r1->n && !memcmp(r->lap, r1->lap, r->n*sizeof(linarg*)))
-		return;
-	if (!(nn = ndiff(r, r1, 0)))
-		return;
-	lap_merge(asl, nn, r, r1);
-	}
-
- static range **
+ static range *
 uhash(Static *S, range *r)
 {
-	range *r1, **rp;
+	ASLTYPE *asl;
 	int len, n, nv, *ui, *uie;
-	unsigned long L = 0;
-	ASLTYPE *asl = S->asl;
+	range *r1, **rp;
+	size_t L;
 
+	asl = S->asl;
+	L = 0;
 	nv = r->nv;
 	ui = r->ui;
 	uie = ui + nv;
 	len = sizeof(int)*nv;
 	while (ui < uie)
 		L = 37*L + *ui++;
+	r->chksum = L;
 	ui = r->ui;
-	rp = rangehash + L%nrangehash;
+	rp = rangehash + (L & rangehashmask);
 	n = r->n;
-	if (S->asl->P.merge)
+	if (asl->P.merge)
 	    while((r1 = *rp)) {
-		if (r1->nv == nv && r1->n == n
-		 && !memcmp(ui, r1->ui, len)) {
-			ucopy((ASL*)asl, r, rp);
-			return rp;
+		if (r1->nv == nv && r1->n == n && (len == 0 || !memcmp(ui, r1->ui, len))) {
+			if (n == 0 || !memcmp(r->lap, r1->lap, n*sizeof(linarg*)))
+				return *rp;
+			if (!ndiff(r, r1))
+				return *rp;
 			}
 		rp = &r1->hunext;
 		}
-	*rp = new_range(asl, r, 1);
-	return rp;
+	return new_range(S, r, rp);
 	}
 
- static range **
+ static range *
 rhash(Static *S, range *r, int addnew)
 {
-	range *r1, **rp;
-	ograd *og;
-	linarg **lae, **lap;
+	ASLTYPE *asl;
 	int len, n;
-	ASLTYPE *asl = S->asl;
-	unsigned long L = 0;
+	linarg **lae, **lap;
+	ograd *og;
+	range *r1, **rp;
+	unsigned long L;
 
+	asl = S->asl;
+	L = 0;
 	lap = r->lap;
 	n = r->n;
 	lae = lap + n;
@@ -1087,17 +1093,18 @@ rhash(Static *S, range *r, int addnew)
 		for(og = (*lap++)->nz; og; og = og->next)
 			L = 101*L + og->varno;
 		}
+	r->chksum = L;
 	lap = r->lap;
-	rp = rangehash + L%nrangehash;
+	rp = rangehash + (L & rangehashmask);
 	if (asl->P.merge)
 	    while((r1 = *rp)) {
 		if (r1->n == n && !memcmp(lap, r1->lap, len))
-			return rp;
+			return r1;
 		rp = &r1->hnext;
 		}
 	if (addnew)
-		*rp = new_range(asl, r, 1);
-	return rp;
+		return new_range(S, r, rp);
+	return *rp;
 	}
 
  static int
@@ -1544,9 +1551,6 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 
 		case 5: /* if */
 			rvif = (expr_if *)e;
-			afree(S, awalk(S,rvif->e), &rvif->e);
-			/* The above may introduce "range" rows that */
-			/* are not involved in any derivatives... */
 			afree(S, awalk(S,rvif->T), &rvif->T);
 			afree(S, awalk(S,rvif->F), &rvif->F);
 			break;
@@ -1641,9 +1645,6 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 			return new_ograd(S, 0, k, 1.);
 
 		case 11: /* OPCOUNT */
-			args = e->L.ep;
-			for(argse = e->R.ep; args < argse; args++)
-				afree(S, awalk(S, *args), args);
 			break;
 
 		default:
@@ -1993,7 +1994,7 @@ dvwalk(Static *S, int i)
 		dvi->nl = 0;
 		return;
 		}
-	if ((dvi->lt = afree(S, og, 0)))
+	if ((c->la = dvi->lt = afree(S, og, 0)))
 		dvi->scale = lt_scale;
 	for(n = 1, tl = tlist; tl; tl = tl->tnext)
 		n++;
@@ -2140,7 +2141,7 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	i = k = nzcperm(S);
 	f = p->f;
 	if (!larvlist)
-		for(; i < nzc; i++)
+		for(; i < nzc; i++) {
 			if ((j = zci[i]) < max_var) {
 				for(L = cexps[j-nv0x].cref; L; L = L->next)
 					if (!zc[L->item.i]++)
@@ -2155,6 +2156,7 @@ termwalk(Static *S, expr **ep, PSfind *p)
 							zci[nzc++] = j;
 					}
 				}
+			}
 
 	r = (range *)rnz;	/* scratch */
 	if ((ncp = nzc - k)) {
@@ -2194,7 +2196,7 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	zcsort(S, zc, zci, 0, nzc2, nv0x);
 	for(j = 0; j < nzc2; j++)
 		*ui++ = zci[j];
-	r = *(n >= nzc2 ? uhash(S,r) : rhash(S,r,1));
+	r = n >= nzc2 ? uhash(S,r) : rhash(S,r,1);
 	del_mblk(kl, lap);
 
 	e1 = *ep;
@@ -2596,32 +2598,42 @@ cotermwalk(Static *S, expr **ep, ps_func *f, int wantg, int omitdv)
  static void
 psfind(Static *S)
 {
-	int i, j, m, mx;
+	ASLTYPE *asl;
 	fint x;
+	int i, j, k, m, mx, nv, nx;
+	linarg *la, **lap;
 	ps_func *f, *f1;
 	range *r, *r0;
-	linarg *la, **lap;
+	size_t L;
 #ifdef PSHVREAD
-	int ihdlim, ihdlim1, ihdmax, ihdmin, n;
 	Ihinfo *ihi, *ihi0, *ihi1;
+	int ihdlim, ihdlim1, ihdmax, ihdmin, n;
 #endif
-	ASLTYPE *asl = S->asl;
-
+	asl = S->asl;
 	m = asl->i.n_con0;
-	mx = m + asl->i.nsufext[ASL_Sufkind_con];
+	mx = m + (nx = asl->i.nsufext[ASL_Sufkind_con]);
 	x = (n_obj+mx)*sizeof(ps_func)
-		+ nlthash*sizeof(linarg*)
-		+ nrangehash*sizeof(range*)
 		+ slmax*sizeof(expr*)
 		+ (Ncom+1)*sizeof(int);
 	asl->P.ops = f = (ps_func *)M1alloc(x);
 	asl->P.cps = f1 = f + n_obj;
-	lthash = (linarg**)(f1 + mx);
-	rangehash = (range**)(lthash + nlthash);
-	slscratch = (expr**)(rangehash + nrangehash);
-	memset(lthash, 0, (nlthash+nrangehash)*sizeof(linarg*));
+	if (nx)
+		memset(f1 + m, 0, nx*sizeof(ps_func));
+	slscratch = (expr**)(f1 + mx);
 	asl->P.dvsp0 = (int*)(slscratch + slmax);
 	*asl->P.dvsp0 = Ncom;
+
+	k = 3;
+	if ((nv = n_var) > 7) {
+		nv >>= 3;
+		do ++k; while(nv >>= 1);
+		}
+	S->klthash = S->krangehash = k;
+	lthash = (linarg**)new_mblkzap(asl, k);
+	rangehash = (range**)new_mblkzap(asl, k);
+	L = 1;
+	lthashmask = rangehashmask = (L << k) - 1;
+	nrange = 0;
 
 	/* Separate allocation of zc1, zci1, rnz to allow freeing them later. */
 	/* Allow room in rnz for use as scratch in termwalk. */
@@ -2699,7 +2711,7 @@ psfind(Static *S)
 				ihi->nr++;
 				}
 		asl->P.ihdmax = ihdmax;
-		asl->P.ihdmin = ihdmin;
+		asl->P.ihdmin = asl->P.ndhmax = ihdmin;
 		ihi1 = ihi = ihi0 + ihdlim;
 		ihi->ihd = ihdlim1;	/* sentinel */
 		for(i = ihdlim; i > 0; --i)
@@ -2712,6 +2724,10 @@ psfind(Static *S)
 		asl->P.ihi1 = ihi1;
 		}
 #endif
+	del_mblk(S->krangehash, rangehash);
+	del_mblk(S->klthash, lthash);
+	lthash = 0;
+	rangehash = 0;
 	}
 
 /*******/
@@ -2719,13 +2735,13 @@ psfind(Static *S)
  static void
 ewalk(Static *S, expr *e, int deriv)
 {
-	int a0, a1, i, j, k, kf, numargs, op;
+	int a0, a1, i, j, j1, k, kf, numargs, op;
 	real *b, *b0, *ra;
 	unsigned int len;
 #ifdef PSHVREAD
 	ASL *asl;
 	argpair *da;
-	int i1, j0, j1, k0, k1, kn, *nn, *nn0;
+	int i1, j0, k0, k1, kn, *nn, *nn0;
 	real **fh;
 	expr **args1;
 #endif
@@ -2943,7 +2959,7 @@ ewalk(Static *S, expr *e, int deriv)
 				arg = ap->e;
 				op = Intcast arg->op;
 				ewalk(S, arg, deriv);
-				arg->op = (efunc *)(long)op;
+				arg->op = (efunc *)(size_t)op;
 				if (arg->a != noa)
 					i += deriv;
 				}
@@ -2971,6 +2987,8 @@ ewalk(Static *S, expr *e, int deriv)
 				if (kf < numargs) {
 					ASLTYPE *asl = S->asl;
 					dig = (char*)mem(numargs);
+					for(j1 = 0; j1 < numargs; ++j1)
+						dig[j1] = 1;
 					}
 				}
 			else
@@ -2999,14 +3017,14 @@ ewalk(Static *S, expr *e, int deriv)
 #endif
 
 			for(ap = ap0 = rvf->ap; ap < ape; ap++) {
-				j = 1;
+				j1 = 0;
 				arg = ap->e;
 				arg->op = r_ops[op = Intcast arg->op];
 				switch(op) {
 					case f_OPNUM:
 						goto loopend;
 					case f_OPVARVAL:
-						arg->op = (efunc *)(long)op;
+						arg->op = (efunc *)(size_t)op;
 					}
 				b = b0 + (j = ap->u.v - ra);
 				*b = 0;
@@ -3017,11 +3035,11 @@ ewalk(Static *S, expr *e, int deriv)
 				da->e = arg;
 				(da++)->u.v = b;
 				*nn++ = j;
-				j = 0;
+				j1 = 1;
 #endif
 			loopend:
-				if (dig)
-					*dig++ = j;
+				if (dig && j1)
+					dig[j] = 0;
 				}
 #ifdef PSHVREAD
 			rvf->dae = da;
@@ -3239,10 +3257,11 @@ imap_alloc(Static *S)
 comsubs(Static *S, int alen, cde *d)
 {
 	list *L;
-	int a, i, j, k;
+	int a, i, j, jx, k, nzc1;
 	int *r, *re;
 	cexp *ce;
 	derp *D, *dnext;
+	dv_info *dvi;
 	relo *R;
 	expr *e;
 	split_ce *cs;
@@ -3253,20 +3272,22 @@ comsubs(Static *S, int alen, cde *d)
 	a = lasta00;
 	dnext = 0;
 	R = 0;
-	for(i = j = 0; i < nzc; i++)
+	nzc1 = nzc;
+	nzc = 0;
+	for(i = j = 0; i < nzc1; i++)
 		if ((k = zci[i]) >= nv0x && k < max_var1)
 			zci[j++] = k;
 		else
 			zc[k] = 0;
-	if ((nzc = j)) {
-		for(i = 0; i < nzc; i++) {
+	if ((nzc1 = j)) {
+		for(i = 0; i < nzc1; i++) {
 			if ((j = zci[i] - nv0x) >= Ncom) {
 				cs = asl->P.Split_ce + (j-Ncom);
 				if ((r = cs->ce)) {
 					re = r + *r;
 					while(r++ < re)
 						if (!zc[j = *r + nv0x]++)
-							zci[nzc++] = j;
+							zci[nzc1++] = j;
 					}
 				}
 			else if (j >= 0 && (L = cexps[j].cref)) {
@@ -3275,31 +3296,30 @@ comsubs(Static *S, int alen, cde *d)
 					 || asl->P.dv[j-nv0x].ll)
 						continue;
 					zc[j] = 1;
-					zci[nzc++] = j;
+					zci[nzc1++] = j;
 					}
 					while((L = L->next));
 				else do {
 					if (!zc[L->item.i]++)
-						zci[nzc++] = L->item.i;
+						zci[nzc1++] = L->item.i;
 					}
 					while((L = L->next));
 				}
 			}
-		if (nzc > 1)
-			zcsort(S, zc, zci, 0, nzc, -1);
-		}
-	if (nzc > 0) {
+		if (nzc1 > 1)
+			zcsort(S, zc, zci, 0, nzc1, -1);
 		R = new_relo1(S, dnext);
 		i = 0;
 		do {
 			j = zci[i];
+			jx = j - nv0x;
 			zc[j] = 0;
-			ce = &cexps[j - nv0x];
+			ce = &cexps[jx];
 			e = ce->e;
-			k = varp[j-nv0x]->a;
+			k = varp[jx]->a;
 			if (ce->funneled) {
 				if (j >= max_var)
-					imap[((expr_vx*)varp[j-nv0x])->a0] = a;
+					imap[((expr_vx*)varp[jx])->a0] = a;
 				imap[k] = a++;
 				}
 			else {
@@ -3310,8 +3330,9 @@ comsubs(Static *S, int alen, cde *d)
 				/* zlen == 1 if e->op == OPNUM */
 				imap[k] = e->op == OPNUM ? a-1 : imap[e->a];
 				if (!ce->d
-				 && (k = j - nv0x) < Ncom
-				 && (og = asl->P.dv[k].ll)) {
+				 && jx < Ncom
+				 && (og = (dvi = &asl->P.dv[jx])->ll)
+				 && (dvi->nl || dvi->lt)) {
 					dnext = R->D =
 						derp_ogcopy(S,og,R->D,imap[j]);
 					continue;
@@ -3319,8 +3340,7 @@ comsubs(Static *S, int alen, cde *d)
 				}
 			dnext = R->D = derpcopy(S, ce, R->D);
 			}
-			while(++i < nzc);
-		nzc = 0;
+			while(++i < nzc1);
 		}
 	if (D || R) {
 		if (!R)
@@ -3399,11 +3419,12 @@ linpt_read(EdRead *R, int nlin)
  static int
 funnelkind(Static *S, int i0, int *ip)
 {
-	cexp *ce, *cej;
+	cexp *ce, *cej, *ce2;
 	dv_info *dvi;
 	int i, j, k, k1, k2, nzc0, rv;
 	int *vr, *vre;
 	linarg *la, **lap, **lape;
+	linpart *L, *Le;
 	list *tl;
 	range *r;
 	ASLTYPE *asl = S->asl;
@@ -3416,6 +3437,7 @@ funnelkind(Static *S, int i0, int *ip)
 	dvi = asl->P.dv;
 	if (i0 >= Ncom || !dvi[i0].nl)
 		dvi = 0;
+	ce2 = 0; /* used to get funnelkind 2 right in rare cases */
 	for(i = k = 0; i < nzc; i++)
 		if ((j = zci[i]) < nv0x) {
 			if (k >= maxfwd) {
@@ -3427,10 +3449,17 @@ funnelkind(Static *S, int i0, int *ip)
 		else  {
 			cej = cexps + (j -= nv0x);
 			if (!(vr = cej->vref)) {
-				if (dvi && j < Ncom && dvi[j].ll)
-					for(tl = cej->cref; tl; tl = tl->next)
+				if (dvi && j < Ncom && (tl = cej->cref)) {
+				    if (dvi[j].ll) {
+					for(; tl; tl = tl->next)
 					    if (!zc[tl->item.i]++)
 						zci[nzc++] = tl->item.i;
+					}
+				    else {
+					cej->vref = (int*)ce2;
+					ce2 = cej;
+					}
+				    }
 				continue;
 				}
 			if (!*++vr) {
@@ -3465,6 +3494,8 @@ funnelkind(Static *S, int i0, int *ip)
 	else
 		while(i < k1)
 			*vr++ = zci[i++];
+	while(nzc > nzc0)
+		zc[zci[--nzc]] = 0;
 	if (!nocopy) {
 		k1 = 0;
 		if (i0 < Ncom) {
@@ -3483,16 +3514,54 @@ funnelkind(Static *S, int i0, int *ip)
 			}
 		if (k) {
 			if (nderp > 3*(k+k1)) {
+				if (!ce2)
+					goto ret2;
+				while((cej = ce2)) {
+					ce2 = (cexp*)cej->vref;
+					cej->vref = 0;
+					for(tl = cej->cref; tl; tl = tl->next)
+						if (!zc[tl->item.i]++)
+							zci[nzc++] = tl->item.i;
+					}
+				for(i = k = 0; i < nzc; i++) {
+					if ((j = zci[i]) < nv0x) {
+						vrefx[k++] = j;
+						continue;
+						}
+					cej = cexps + (j -= nv0x);
+					if ((vr = cej->vref)) {
+						if (*++vr) {
+							for(vre = vr + *vr; ++vr < vre; )
+								if (!zc[*vr]++)
+									zci[nzc++] = *vr;
+							}
+						}
+					if (j < Ncom) {
+						for(tl = cej->cref; tl; tl = tl->next)
+							if (!zc[tl->item.i]++)
+								zci[nzc++] = tl->item.i;
+						}
+					if ((L = cej->L)) {
+						for(Le = L + cej->nlin; L < Le; ++L)
+							if (!zc[L->v.i]++)
+								zci[nzc++] = L->v.i;
+						}
+					}
+				while(nzc > nzc0)
+					zc[zci[--nzc]] = 0;
+ ret2:
 				*ip = k;
 				return 2;
 				}
 			}
 		}
+	while((cej = ce2)) {
+		ce2 = (cexp*)cej->vref;
+		cej->vref = 0;
+		}
 	rv = 0;
 	if (nocopy || nderp > 3*(nzc0+k1))
 		rv = 1;
-	while(nzc > nzc0)
-		zc[zci[--nzc]] = 0;
 	return rv;
 	}
 
@@ -3568,12 +3637,13 @@ cexp_walk(Static *S, int k)
 	ewalk(S, e, 1);
 	PSHV(ce->ee = last_e;)
 	ka = k + nv0x;
-	if ((ce->zlen = lasta - la0))
+	if ((na = lasta - la0))
 		ce->z.i = la0;
 	else {
 		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k-Ncom])->a0;
-		ce->zlen = 1;
+		na = 1;
 		}
+	ce->zlen = na;
 	j = ap ? *ap : ka;
 	if (nlin) {
 		if (nlin == 1)
@@ -3603,8 +3673,7 @@ cexp_walk(Static *S, int k)
 			for(i = nzc; --i >= 0; )
 				if ((j = zci[i]) >= nv0x && j < max_var1)
 					imap[varp[j-nv0x]->a] = a++;
-			if ((na = ce->zlen) || a > lasta00)
-				na += a - nv1;
+			na += a - nv1;
 			f->fcde.zaplen = na*sizeof(real);
 			i = nzc;
 			derpadjust(S, last_d, a, 0);
@@ -3612,7 +3681,7 @@ cexp_walk(Static *S, int k)
 		else {
 			f->fulld = 0;
 			f->fcde.e = e;
-			comsubs(S, ce->zlen, &f->fcde);
+			comsubs(S, na, &f->fcde);
 			memcpy(zci, vrefx, i*sizeof(int));
 			}
 		last_d = 0;
@@ -3752,7 +3821,7 @@ funneladjust(Static *S)
 	for(ce = c + Ncom; c < ce; c++) {
 		if ((L = c->L))
 			for(Le = L + c->nlin; L < Le; L++)
-				L->v.vp = (Char*)&var_e[L->v.i];
+				L->v.vp = (void*)&var_e[L->v.i];
 #ifdef PSHVREAD
 		c->ef = hvadjust(c->ee);
 #endif
@@ -4307,9 +4376,9 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	if (flags & ASL_find_co_class)
 		x += nco;
 	if (X0)
-		memset(X0, 0, nvx*sizeof(real));
+		memset(X0, 0, nvr*sizeof(real));
 	if (havex0)
-		memset(havex0, 0, nvx);
+		memset(havex0, 0, nvr);
 	e = var_e = (expr_v *)M1zapalloc(x);
 	con_de = (cde *)(e + nv);
 	lcon_de = con_de + nc;
@@ -4379,14 +4448,18 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 #ifdef PSHVREAD
 			a->i.ncxval = (int*)M1zapalloc(nco*sizeof(int));
 			a->i.noxval = a->i.ncxval + nc;
-			a->p.Conival = a->p.Conival_nomap = conpival_ASL;
-			a->p.Congrd  = a->p.Congrd_nomap  = conpgrd_ASL;
-			a->p.Objval = a->p.Objval_nomap  = objpval_ASL;
-			a->p.Objgrd = a->p.Objgrd_nomap  = objpgrd_ASL;
+			a->p.Conival = conpival_ASL;
+			a->p.Conival_nomap = conpival_nomap_ASL;
+			a->p.Congrd  = conpgrd_ASL;
+			a->p.Congrd_nomap  = conpgrd_nomap_ASL;
+			a->p.Objval = a->p.Objval_nomap = objpval_ASL;
+			a->p.Objgrd = a->p.Objgrd_nomap = objpgrd_ASL;
 			a->p.Conval = conpval_ASL;
 			a->p.Jacval = jacpval_ASL;
 			a->p.Lconval= lconpval_ASL;
 			a->p.Hvcomp = a->p.Hvcomp_nomap = hvpcomp_ASL;
+			a->p.Hvcompd = hvpcompd_ASL;
+			a->p.Hvcomps = hvpcomps_ASL;
 			a->p.Hvinit = a->p.Hvinit_nomap = hvpinit_ASL;
 			a->p.Hesset = hes_setup;
 			a->p.Xknown = xp2known_ASL;
@@ -4397,7 +4470,6 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 #else
 			a->p.Xknown = xp1known_ASL;
 #endif
-			a->i.err_jmp_ = 0;
 			return prob_adj_ASL(a);
 			}
 		ER.can_end = 0;
@@ -4595,14 +4667,6 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 
 #ifdef PSHVREAD
 
- static Char *
-new_mblkzap(ASL_pfgh *asl, int k)
-{
-	Char *rv = new_mblk_ASL((ASL*)asl,k);
-	memset(rv, 0, sizeof(Char*)<<k);
-	return rv;
-	}
-
  static int
 heswork(expr *e)
 {
@@ -4631,10 +4695,13 @@ heswork(expr *e)
 			n += 10;
 			break;
 
+		case Hv_divLR:
+			n += 13;
+			break;
+
 		case Hv_binaryLR:
 			n += 14;
 			break;
-
 
 		case Hv_vararg:
 			d = ((expr_va*)e)->L.d;
@@ -4696,15 +4763,25 @@ hesfunnel(Static *S, int *ip, int nrefs, ograd **ogp, linarg ***lapp, linarg ***
 	linarg *la, **lap, **lape;
 	ograd *og;
 	dv_info *dvi;
-	list *L;
+	/*list *L;*//*20170615*/
 	range *r;
+	split_ce *cs; /*20170615*/
 	ASLTYPE *asl = S->asl;
 
 	i = *ip;
 	c = cexps + i;
+#if 1 /*20170615*/
+	if (c->cref)
+		return 0;
+#endif
 	n = 0;
 	if (i >= Ncom) {
-		r = asl->P.Split_ce[i-Ncom].r;
+		cs = &asl->P.Split_ce[i-Ncom];
+#if 1 /*20170615*/
+		if (cs->ce)
+			return 0;
+#endif
+		r = cs->r;
 		lap = r->lap;
 		lape = lap + (n = r->n);
 		}
@@ -4743,8 +4820,10 @@ hesfunnel(Static *S, int *ip, int nrefs, ograd **ogp, linarg ***lapp, linarg ***
 	m = nzc;
 	while(nzc > 0)
 		zc[zci[--nzc]] = 0;
+#if 0 /*20170615*/
 	for(L = c->cref; L; L = L->next)
 		n++;
+#endif
 	if (m > n)
 		m = n;
 	if ((k = m*nrefs - n) <= 0)

@@ -22,7 +22,7 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-#ifdef NO_ERRNO
+#if defined(NO_ERRNO) || (!defined(CHECK_ERRNO) && !defined(ALSO_CHECK_ERRNO))
 #define errno_set(x) /*nothing*/
 #define ErrnoChk /* nothing */
 #else
@@ -30,22 +30,14 @@ THIS SOFTWARE.
 #define ErrnoChk errno ||
 #endif
 
-#ifdef NANCHECK
-#ifdef IEEE_MC68k
-#define errchk(x) ErrnoChk ((((Long *)&(x))[0] & 0x7ff00000L) == 0x7ff00000L)\
-	&& (((Long *)&(x))[1] || ((Long *)&(x))[0] & 0xfffffL)
-#else
-#ifdef IEEE_8087
-#define errchk(x) ErrnoChk ((((Long *)&(x))[1] & 0x7ff00000L) == 0x7ff00000L)\
-	&& (((Long *)&(x))[0] || ((Long *)&(x))[1] & 0xfffffL)
-#else
-!!!! Cannot use -DNANCHECK on non-IEEE machines
-#endif
-#endif
-#else
-#define errchk(x) errno
-#endif
+typedef union { real d; unsigned int u[2]; } U;
 
-#ifdef KR_headers
-extern char *strerror();
+#ifdef IEEE_MC68k
+#define errchk(x) ErrnoChk ((x.u[0] & 0x7ff00000) == 0x7ff00000)
+#elif defined(IEEE_8087)
+#define errchk(x) ErrnoChk ((x.u[1] & 0x7ff00000) == 0x7ff00000)
+#elif !defined(NO_ERRNO)
+#define errchk(x) errno
+#else
+!!! Cannot use -DNO_ERRNO on this machine!!!
 #endif

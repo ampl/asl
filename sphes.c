@@ -1,31 +1,26 @@
-/****************************************************************
-Copyright (C) 1997-1998, 2000-2001 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "asl_pfgh.h"
+#include "obj_adj.h"
 
  static void
-hv_fwd(ASL_pfgh *asl, register expr *e)
+hv_fwd(ASL_pfgh *asl, expr *e)
 {
 	expr *e1, **ep;
 	real dO;
@@ -43,6 +38,7 @@ hv_fwd(ASL_pfgh *asl, register expr *e)
 
 		case Hv_timesLR:
 		case Hv_binaryLR:
+		case Hv_divLR:
 			e->dO.r = e->L.e->dO.r + e->R.e->dO.r;
 			break;
 
@@ -85,13 +81,13 @@ hv_fwd(ASL_pfgh *asl, register expr *e)
 				hv_fwd(asl, e1);
 				e->dO.r = ((expr_if *)e)->Te->dO.r;
 				}
-			else if ((e1 = ((expr_if*)e)->T))
+			else if ((e1 = ((expr_if*)e)->T) && e1->op != f_OPNUM)
 				e->dO.r = e1->dO.r;
 			if ((e1 = ((expr_if*)e)->Ff)) {
 				hv_fwd(asl, e1);
 				e->dO.r += ((expr_if *)e)->Fe->dO.r;
 				}
-			else if ((e1 = ((expr_if*)e)->F))
+			else if ((e1 = ((expr_if*)e)->F) && e1->op != f_OPNUM)
 				e->dO.r += e1->dO.r;
 			if (!((expr_if*)e)->val && (D = ((expr_if*)e)->D)) {
 				((expr_if*)e)->val = ((expr_if*)e)->T;
@@ -176,11 +172,11 @@ func_back(expr_f *f)
 	}
 
  static void
-hv_back(register expr *e)
+hv_back(expr *e)
 {
-	register expr *e1, **ep, *e2;
-	real adO, t1, t2;
 	de *d;
+	expr *e1, **ep, *e2;
+	real adO, t1, t2;
 
 	if (!e || (!e->aO && !e->adO))
 		return;
@@ -199,6 +195,18 @@ hv_back(register expr *e)
 			t1 = adO * e1->dO.r;
 			t2 = adO * e2->dO.r;
 			e1->aO  += e->aO + t1 + t2;
+			e2->aO  += e->aO + t1 + t2;
+			e1->adO += adO;
+			e2->adO += adO;
+			break;
+
+		case Hv_divLR:
+			e1 = e->L.e;
+			e2 = e->R.e;
+			adO = e->adO;
+			t1 = adO * e1->dO.r;
+			t2 = adO * e2->dO.r;
+			e1->aO  += e->aO + t2;
 			e2->aO  += e->aO + t1 + t2;
 			e1->adO += adO;
 			e2->adO += adO;
@@ -228,6 +236,13 @@ hv_back(register expr *e)
 			break;
 
 		case Hv_if:
+			if (!((expr_if *)e)->Fe) {
+				e1 = ((expr_if *)e)->F;
+				if (e1->op != f_OPNUM) {
+					e1->aO = e->aO;
+					e1->adO = e->adO;
+					}
+				}
 			if ((e1 = ((expr_if *)e)->Te)) {
 				e1->aO = e->aO;
 				e1->adO = e->adO;
@@ -244,13 +259,6 @@ hv_back(register expr *e)
 				e1->aO = e->aO;
 				e1->adO = e->adO;
 				hv_back(e1);
-				}
-			else {
-				e1 = ((expr_if *)e)->F;
-				if (e1->op != f_OPNUM) {
-					e1->aO = e->aO;
-					e1->adO = e->adO;
-					}
 				}
 			break;
 
@@ -341,9 +349,10 @@ hv_back(register expr *e)
 	}
 
  static void
-hv_fwd0(ASL_pfgh *asl, register cexp *c, register expr_v *v)
+hv_fwd0(ASL_pfgh *asl, cexp *c, expr_v *v)
 {
-	register linpart *L, *Le;
+	linarg *la;
+	linpart *L, *Le;
 	real x;
 
 	v->aO = v->adO = 0;
@@ -355,7 +364,9 @@ hv_fwd0(ASL_pfgh *asl, register cexp *c, register expr_v *v)
 		x = c->e->dO.r;
 	else
 		x = 0;
-	if ((L = c->L))
+	if ((la = c->la))
+		x += la->v->dO.r;
+	else if ((L = c->L))
 		for(Le = L + c->nlin; L < Le; L++)
 			x += ((expr_v*)L->v.vp)->dO.r;
 	v->dO.r = x;
@@ -415,9 +426,14 @@ pshv_prod1(ASL_pfgh *asl, range *r, int nobj, int ow, int y)
 		i = *--cei;
 		c = cexps + i;
 		v = asl->P.vp[i];
-		if (v->aO && (L = c->L))
-		    for(Le = L + c->nlin; L < Le; L++)
-			((expr_v*)L->v.vp)->aO++;
+		if (v->aO && (L = c->L)) {
+		    if ((la = c->la))
+			la->v->aO = 1;
+		    else {
+			for(Le = L + c->nlin; L < Le; L++)
+				((expr_v*)L->v.vp)->aO++;
+			}
+		    }
 		if ((e = c->ee)) {
 			e->aO = 1.;
 			e->adO = v->adO;
@@ -502,7 +518,7 @@ saveog(ASL_pfgh *asl, int no, int noe, int y, int *kp)
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + nlc; p < pe; p++)
+		for(pe = p + asl->i.nlc0; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
 				for(og = g->og; og; og = og->next)
 					n++;
@@ -521,7 +537,7 @@ saveog(ASL_pfgh *asl, int no, int noe, int y, int *kp)
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + nlc; p < pe; p++)
+		for(pe = p + asl->i.nlc0; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
 				for(og = g->og; og; og = og->next)
 					*o++ = og->coef;
@@ -548,7 +564,7 @@ restog(ASL_pfgh *asl, real *ogsave, int no, int noe, int y, int k)
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + nlc; p < pe; p++)
+		for(pe = p + asl->i.nlc0; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
 				for(og = g->og; og; og = og->next)
 					og->coef = *o++;
@@ -720,6 +736,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 {
 	ASL_pfgh *asl;
 	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
+	Objrep **por, *or;
 	SputInfo *spi, *spi1;
 	de *d;
 	derp *D1;
@@ -728,7 +745,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	expr_va *valist;
 	fint *hr, *hre, *hrownos, rv;
 	int *ui, *zc, *zci;
-	int i, j, k, khinfo, kog, kz, n, n1, nhinfo, no, noe, nqslim, nzc;
+	int i, j, k, khinfo, kog, kz, n, n1, nhinfo, nlc0, no, noe, nqslim, nzc;
 	int rfilter, robjno;
 	linarg *la, **lap, **lap1, **lape;
 	ograd *og, *og1, **ogp, **ogpe;
@@ -744,20 +761,29 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	n1 = n_var + 1;
 	if (!pspi)
 		pspi = &asl->i.sputinfo_;
+	nlc0 = asl->i.nlc0;
 	if (nobj >= 0 && nobj < n_obj) {
 		robjno = -2 - nobj;
-		rfilter = n_obj > 1 || (!y && nlc > 0);
+		rfilter = n_obj > 1 || (!y && nlc0 > 0);
 		ow = 0;
 		no = nobj;
 		noe = no + 1;
 		}
 	else {
 		robjno = nobj = -1;
-		rfilter = (!ow && n_obj > 0) || (!y && nlc > 0);
+		rfilter = (!ow && n_obj > 0) || (!y && nlc0 > 0);
 		no = noe = 0;
 		if (ow) {
 			noe = n_obj;
 			ow = 1;
+			if ((por = asl->i.Or)) {
+				for(i = 0; i < noe; ++i) {
+					if (por[i]) {
+						y = 1;
+						break;
+						}
+					}
+				}
 			}
 		}
 	if (y)
@@ -776,7 +802,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		*pspi = 0;
 		}
 	if (!asl->P.hes_setup_called)
-		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc);
+		(*asl->p.Hesset)(a, 1, 0, nlo, 0, nlc0);
 	asl->P.hes_setup_called = 3;
 	asl->P.iflist = 0;
 	asl->P.valist = 0;
@@ -834,7 +860,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 			}
 	if (asl->P.ncongroups && y) {
 		p = asl->P.cps;
-		for(pe = p + nlc; p < pe; p++)
+		for(pe = p + nlc0; p < pe; p++)
 			for(g = p->g, ge = g + p->ng; g < ge; g++)
 			    if ((og = g->og)) {
 				do og->coef = 1; while((og = og->next));
@@ -892,7 +918,6 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		*rtodo++ = 0;	/* reset */
 		while((uhw = uhwi)) {
 			uhwi = uhwi->next;
-			si = s;
 			ogp = uhw->ogp;
 			r = uhw->r;
 			ogpe = ogp + r->n;
@@ -1046,7 +1071,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	SputInfo *spi;
 	expr_v *v;
 	fint *hr;
-	int i, j, k, kh, n, no, noe, *ui;
+	int i, j, k, kh, n, nlc0, no, noe, *ui;
 	linarg *la, **lap, **lap1, **lape;
 	ograd *og, *og1, **ogp, **ogpe;
 	ps_func *p, *pe;
@@ -1062,10 +1087,14 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	xpsg_check_ASL(asl, nobj, ow, y);
 	if (!pspi)
 		pspi = &a->i.sputinfo_;
+	no = n_obj;
+	nlc0 = asl->i.nlc0;
+	if (nobj >= no)
+		nobj = -1;
 	i = j = 0;
 	if (y)
 		j = 1;
-	if (nobj >= 0 && nobj < n_obj) {
+	if (nobj >= 0) {
 		no = nobj;
 		noe = no + 1;
 		owi = ow ? ow + no : &edag_one_ASL;
@@ -1082,7 +1111,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	if (asl->P.hes_setup_called != 3)
 		sphes_setup_ASL(a, pspi, nobj, ow != 0, y != 0, 0);
 	spi = *pspi;
-	if (spi->nobj != nobj || spi->ow < i || spi->y < j) {
+	if ((spi->nobj != nobj && nobj >= 0) || spi->ow < i || spi->y < j) {
 		fprintf(Stderr,
 		 "\nsphes() call inconsistent with previous sphsetup()\n");
 		exit(1);
@@ -1122,7 +1151,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 		cscale = asl->i.lscale;
 		p = asl->P.cps;
 		y1 = y;
-		for(pe = p + nlc; p < pe; p++, y1++)
+		for(pe = p + asl->i.nlc0; p < pe; p++, y1++)
 			if ((t = cscale ? *cscale++ * *y1 : *y1))
 				for(g = p->g, ge = g + p->ng; g < ge; g++)
 				    if ((t1 = t*g->g2))
