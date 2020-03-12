@@ -42,6 +42,12 @@ Same_Double_ASL(double a, double b)
 #include <fcntl.h>	/* for _O_TEXT */
 #include "arith.h"	/* for LONG_LONG_POINTERS */
 
+#ifdef LONG_LONG_POINTERS
+#define Long long long
+#else
+#define Long long
+#endif
+
  void
 Stderr_init_ASL(void)
 {

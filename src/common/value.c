@@ -25,7 +25,7 @@ THIS SOFTWARE.
 #include "getstub.h"
 
  char *
-C_val(Option_Info *oi, keyword *kw, char *value)
+C_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	ASL *asl;
 	char *s, *s1, *z, *zap;
@@ -92,7 +92,7 @@ C_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-CK_val(Option_Info *oi, keyword *kw, char *value)
+CK_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	C_Known *c = (C_Known*)kw->info;
 	Not_Used(oi);
@@ -101,7 +101,7 @@ CK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-Dval_ASL(Option_Info *oi, keyword *kw, char *value, real *v)
+Dval_ASL(Option_Info *oi, const keyword *kw, char *value, real *v)
 {
 	char buf[32], *rv;
 	real t;
@@ -121,14 +121,14 @@ Dval_ASL(Option_Info *oi, keyword *kw, char *value, real *v)
 	}
 
  char *
-DA_val(Option_Info *oi, keyword *kw, char *value)
+DA_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Dval_ASL(oi, kw, value,
 		(double *)((char*)oi->asl + Intcast kw->info));
 	}
 
  char *
-DK_val(Option_Info *oi, keyword *kw, char *value)
+DK_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	D_Known *c = (D_Known*)kw->info;
 	Not_Used(oi);
@@ -137,19 +137,19 @@ DK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-D_val(Option_Info *oi, keyword *kw, char *value)
+D_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Dval_ASL(oi, kw, value, (real*)kw->info);
 	}
 
  char *
-DU_val(Option_Info *oi, keyword *kw, char *value)
+DU_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Dval_ASL(oi, kw, value, (real*)(oi->uinfo + Intcast kw->info));
 	}
 
  char *
-LK_val(Option_Info *oi, keyword *kw, char *value)
+LK_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	L_Known *c = (L_Known*)kw->info;
 	Not_Used(oi);
@@ -158,7 +158,7 @@ LK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-Lval_ASL(Option_Info *oi, keyword *kw, char *value, Long *v)
+Lval_ASL(Option_Info *oi, const keyword *kw, char *value, Long *v)
 {
 	char *rv;
 	Long t;
@@ -177,19 +177,19 @@ Lval_ASL(Option_Info *oi, keyword *kw, char *value, Long *v)
 	}
 
  char *
-L_val(Option_Info *oi, keyword *kw, char *value)
+L_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Lval_ASL(oi, kw, value, (Long *)kw->info);
 	}
 
  char *
-LU_val(Option_Info *oi, keyword *kw, char *value)
+LU_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Lval_ASL(oi, kw, value, (Long *)(oi->uinfo + Intcast kw->info));
 	}
 
  char *
-Ival_ASL(Option_Info *oi, keyword *kw, char *value, int *v)
+Ival_ASL(Option_Info *oi, const keyword *kw, char *value, int *v)
 {
 	char *rv;
 	int t;
@@ -208,13 +208,13 @@ Ival_ASL(Option_Info *oi, keyword *kw, char *value, int *v)
 	}
 
  char *
-IA_val(Option_Info *oi, keyword *kw, char *value)
+IA_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Ival_ASL(oi, kw, value, (int *)((char*)oi->asl + Intcast kw->info));
 	}
 
  char *
-IK_val(Option_Info *oi, keyword *kw, char *value)
+IK_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	I_Known *c = (I_Known*)kw->info;
 	Not_Used(oi);
@@ -223,7 +223,7 @@ IK_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-IK0_val(Option_Info *oi, keyword *kw, char *value)
+IK0_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	Not_Used(oi);
 	*(int*)kw->info = 0;
@@ -231,7 +231,7 @@ IK0_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-IK1_val(Option_Info *oi, keyword *kw, char *value)
+IK1_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	Not_Used(oi);
 	*(int*)kw->info = 1;
@@ -239,25 +239,25 @@ IK1_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-IU_val(Option_Info *oi, keyword *kw, char *value)
+IU_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Ival_ASL(oi, kw, value, (int *)(oi->uinfo + Intcast kw->info));
 	}
 
  char *
-I_val(Option_Info *oi, keyword *kw, char *value)
+I_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Ival_ASL(oi, kw, value, (int*)kw->info);
 	}
 
  char *
-WS_val(Option_Info *oi, keyword *kw, char *value)
+WS_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	return Ival_ASL(oi, kw, value, &oi->wantsol);
 	}
 
  char *
-SU_val(Option_Info *oi, keyword *kw, char *value)
+SU_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	char *rv;
 	short *v = (short *)(oi->uinfo + Intcast kw->info);
@@ -268,7 +268,7 @@ SU_val(Option_Info *oi, keyword *kw, char *value)
 	}
 
  char *
-FI_val(Option_Info *oi, keyword *kw, char *value)
+FI_val(Option_Info *oi, const keyword *kw, char *value)
 {
 	Long L = *(fint*)kw->info;
 	char *rv = Lval_ASL(oi, kw, value, &L);

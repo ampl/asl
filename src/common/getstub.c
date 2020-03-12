@@ -1,26 +1,20 @@
-/****************************************************************
-Copyright (C) 1997-1998 Lucent Technologies
-All Rights Reserved
+/*******************************************************************
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
 
-Permission to use, copy, modify, and distribute this software and
-its documentation for any purpose and without fee is hereby
-granted, provided that the above copyright notice appear in all
-copies and that both that the copyright notice and this
-permission notice and warranty disclaimer appear in supporting
-documentation, and that the name of Lucent or any of its entities
-not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
 
-LUCENT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL LUCENT OR ANY OF ITS ENTITIES BE LIABLE FOR ANY
-SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
-IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-****************************************************************/
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+*******************************************************************/
 
 #include "getstub.h"
 
@@ -33,11 +27,11 @@ static char EmptyString[] = {0};
 char *Lic_info_ASL = EmptyString, *Lic_info_add_ASL;
 
  static int
-kw_width(keyword *kw, int n, keyword **pkwe)
+kw_width(const keyword *kw, int n, const keyword **pkwe)
 {
 	const char *s;
 	int L = 1, m;
-	keyword *kwe = kw;
+	const keyword *kwe = kw;
 
 	if (kw) {
 		for(kwe += n; kw < kwe; kw++) {
@@ -99,7 +93,7 @@ tabexpand(int L, const char *name, const char *s)
 shownames(Option_Info *oi)
 {
 	const char *s;
-	keyword *v, *ve;
+	const keyword *v, *ve;
 	int L, L1, L2, anl, te;
 
 	if (oi) {
@@ -174,7 +168,7 @@ usage_noexit_ASL(Option_Info *oi, int rc)
 		0};
 	char **o;
 	const char *s, *s1;
-	keyword *kw, *kwe;
+	const keyword *kw, *kwe;
 	int i, L, L1, L2;
 	FILE *f = stdout;
 
@@ -246,7 +240,7 @@ usage_ASL(Option_Info *oi, int rc)
  char *
 get_opt_ASL(Option_Info *oi, char *s)
 {
-	keyword *kw;
+	const keyword *kw;
 	char buf[256];
 	char *b, *be, *s0, *s1;
 	fint N;
@@ -261,7 +255,7 @@ get_opt_ASL(Option_Info *oi, char *s)
 		oi->option_echo |= ASL_OI_echo | ASL_OI_echothis;
 		}
 	s0 = s;
-	if ((kw = (keyword *)b_search_ASL(oi->keywds, (int)sizeof(keyword),
+	if ((kw = (const keyword *)b_search_ASL(oi->keywds, (int)sizeof(keyword),
 			oi->n_keywds, &s, &oi->eqsign))) {
 		oi->option_echo = (oi->option_echo | ASL_OI_echothis)
 				& ~ASL_OI_badvalue;
@@ -354,7 +348,7 @@ show_version_ASL(Option_Info *oi)
 		printf(" (%s)", sysdetails_ASL);
 	if (oi->driver_date > 0)
 		printf(", driver(%ld)", oi->driver_date);
-	printf(", ASL(%ld)\n", ASLdate_ASL);
+	printf(", %s(%ld)\n", "ASL_VERSION_NAME", ASLdate_ASL);
 	if (Lic_info_add_ASL)
 		printf("%s\n", Lic_info_add_ASL);
 	if (Lic_info_ASL && *Lic_info_ASL)
@@ -364,7 +358,7 @@ show_version_ASL(Option_Info *oi)
 	}
 
  char *
-Ver_val_ASL(Option_Info *oi, keyword *kw, char *v)
+Ver_val_ASL(Option_Info *oi, const keyword *kw, char *v)
 {
 	char *s;
 	int wantver;
@@ -613,7 +607,7 @@ badopt_ASL(Option_Info *oi)
 	}
 
  char *
-badval_ASL(Option_Info *oi, keyword *kw, char *value, char *badc)
+badval_ASL(Option_Info *oi, const keyword *kw, char *value, char *badc)
 {
 	char *s;
 	int c, w, w1;

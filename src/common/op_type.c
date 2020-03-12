@@ -22,12 +22,12 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
- char
+const char
 op_type_ASL[] = {
 #include "op_type.hd"
 	};
 
- char
+const char
 op_typeb_ASL[] = {
 #include "op_typeb.hd"
 	};

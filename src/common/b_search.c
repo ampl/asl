@@ -51,36 +51,19 @@ extern "C" {
 #include "ctype.h"
 #define Tolower(x) tolower(x)
 #else
-static unsigned char lc[256];
-
- static void
-lc_init(void)
-{
-	int i;
-	const char *s;
-	for(i = 0; i < 256; i++)
-		lc[i] = i;
-	for(s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; *s; s++)
-		lc[(int)*s] = *s + 'a' - 'A';
-	}
-#define Tolower(x) lc[x]
+ int Tolower(int chr)//touches only one character per call
+ {
+   return (chr >= 'A' && chr <= 'Z') ? (chr - 'A' + 'a') : (chr);
+ }
 #endif
 
  void *
-b_search_ASL(void *ow, int owsize, int n, char **sp, char **peq)
+b_search_ASL(const void *ow, int owsize, int n, char **sp, char **peq)
 {
 	int c, c1, c2, n1;
 	char *s, *s1, *s2;
 	void *ow1;
-	static char Blank[] = " ", Eq[] = "=";
-#ifndef Use_tolower
-	static int first = 1;
-	if (first) {
-		lc_init();
-		first = 0;
-		}
-#endif
-
+	static char Blank[] = " ", Eq[] = "="; //dad static var
 	for(s = *sp; (c = *(unsigned char *)s) <= ' '; s++)
 		if (!c)
 			goto no_ow1;

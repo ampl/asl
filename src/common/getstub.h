@@ -31,14 +31,14 @@ THIS SOFTWARE.
  typedef struct keyword keyword;
 
  typedef char *
-Kwfunc(Option_Info *oi, keyword *kw, char *value);
+Kwfunc(Option_Info *oi, const keyword *kw, char *value);
 
  struct
 keyword {
-	char *name;
+	const char *name;
 	Kwfunc *kf;
-	void *info;
-	char *desc;
+	const void *info;
+	const char *desc;
 	};
 
 #define KW(a,b,c,d) {a,b,(void*)(c),d}
@@ -52,7 +52,7 @@ Option_Info {
 	char *sname;		/* invocation name of solver */
 	char *bsname;		/* solver name in startup "banner" */
 	char *opname;		/* name of solver_options environment var */
-	keyword *keywds;	/* key words */
+	const keyword *keywds;	/* key words */
 	int n_keywds;		/* number of key words */
 	int flags;		/* whether funcadd will be called, etc.: */
 				/* see the first enum below  */
@@ -117,7 +117,7 @@ Option_Info {
 
 /* Kwfuncs should invoke badopt_ASL() if they complain. */
 extern void  badopt_ASL (Option_Info*);
-extern char *badval_ASL (Option_Info*, keyword*, char *value, char *badc);
+extern char *badval_ASL (Option_Info*, const keyword*, char *value, char *badc);
 extern char* get_opt_ASL  (Option_Info*, char*);
 extern int   getopts_ASL  (ASL*, char **argv, Option_Info*);
 extern char* getstops_ASL (ASL*, char **argv, Option_Info*);
@@ -162,9 +162,9 @@ extern Kwfunc SU_val;
 
 /* Routines for converting Double (real), Long, and int values: */
 
-extern char *Dval_ASL (Option_Info*, keyword*, char*, real*);
-extern char *Ival_ASL (Option_Info*, keyword*, char*, int*);
-extern char *Lval_ASL (Option_Info*, keyword*, char*, Long*);
+extern char *Dval_ASL (Option_Info*, const keyword*, char*, real*);
+extern char *Ival_ASL (Option_Info*, const keyword*, char*, int*);
+extern char *Lval_ASL (Option_Info*, const keyword*, char*, Long*);
 
 #define voffset_of(t,c) ((void *)&((t*)0)->c)
 

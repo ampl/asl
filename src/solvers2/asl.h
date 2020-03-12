@@ -1093,7 +1093,7 @@ QPinfo {
  extern int already_ASL(const char*);
  extern int ascanf(EdRead*, const char*, ...);
  extern void auxinfo_ASL(AmplExports*);
- extern void *b_search_ASL(void *ow, int owsize, int n, char **sp, char **peq);
+ extern void *b_search_ASL(const void *ow, int owsize, int n, char **sp, char **peq);
  extern void badasl_ASL(ASL*,int,const char*);
  extern void badline(EdRead*);
  extern void badread(EdRead*);
