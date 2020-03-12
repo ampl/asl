@@ -1,0 +1,277 @@
+# This cmake file builds three libraries asl, asl2 and aslcpp. On windows
+# it also builds asl-dynrt, asl2-dynrt, aslcpp-dynrt, built against the
+# dynamic runtime (they are used to compile mp).
+# It exports the static libraries as targets with the corresponding name.
+# Define GENERATE_ARITH to force old-style generation of the arith.h file, useful for
+# non-x86 CPUs. No cross-compiling when this is enabled, as it sets the CPU arithmetics 
+# constants to the machine in which is run.
+# Define BUILD_CPP to build the cpp wrapper to the ASL library
+project(ASL)
+cmake_minimum_required(VERSION 2.8)
+# Set the path to CMake modules.
+set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${AMPL_CMAKE_MODULE_DIR})
+
+# Base directory
+set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+
+# Get rid of useless warnings
+if(MSVC)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
+include(addPrefix)
+# Define the ARCH variable (32 or 64)
+include(initArchitecture)
+# Set generic architecture compiler flags
+include(setArchitecture)
+getArchitectureFlags(${ARCH} CCFLAGS LLFLAGS)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CCFLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${LLFLAGS}")
+
+# ################# Generate dynamic files ##################
+file(READ ${SRCDIR}/solvers/details.c0 DETAILS)
+string(REPLACE "System_details"
+               "${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}" DETAILS
+               "${DETAILS}")
+file(WRITE ${GENERATED_INCLUDE_DIR}/details.c "${DETAILS}")
+
+configure_file(${SRCDIR}/solvers/stdio1.h0 ${GENERATED_INCLUDE_DIR}/stdio1.h
+               COPYONLY)
+
+if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^x86")
+  include(CheckTypeSize)
+  check_type_size(double DOUBLE_SIZE)
+  check_type_size(long LONG_SIZE)
+  set(ARITH_H "#define IEEE_8087\n#define Arith_Kind_ASL 1\n")
+  set(ARITH_INT) # Integer type used by arith.h checks.
+  math(EXPR LONG_SIZE_X2 "${LONG_SIZE} * 2")
+  if(DOUBLE_SIZE EQUAL LONG_SIZE_X2)
+    set(ARITH_INT long)
+    set(ARITH_INT_SIZE ${LONG_SIZE})
+  else()
+    check_type_size(int INT_SIZE)
+    math(EXPR INT_SIZE_X2 "${INT_SIZE} * 2")
+    if(DOUBLE_SIZE EQUAL INT_SIZE_X2)
+      set(ARITH_H "${ARITH_H}#define Long int\n#define Intcast (int)(long)\n")
+      set(ARITH_INT int)
+      set(ARITH_INT_SIZE ${INT_SIZE})
+    endif()
+  endif()
+  if(ARITH_INT)
+    check_type_size("struct { double d\; ${ARITH_INT} L\; }[2]" STRUCT_SIZE)
+    math(EXPR DOUBLE_PLUS_INT_SIZE_X2
+         "2 * (${DOUBLE_SIZE} + ${ARITH_INT_SIZE})")
+    if(STRUCT_SIZE GREATER DOUBLE_PLUS_INT_SIZE_X2)
+      set(ARITH_H "${ARITH_H}#define Double_Align\n")
+    endif()
+  endif()
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(ARITH_H "${ARITH_H}#define X64_bit_pointers\n")
+  endif()
+  # Check long long.
+  check_type_size("long long" LONG_LONG_SIZE)
+  if(LONG_LONG_SIZE GREATER LONG_SIZE AND LONG_LONG_SIZE EQUAL
+                                          CMAKE_SIZEOF_VOID_P)
+    set(ARITH_H "${ARITH_H}#define LONG_LONG_POINTERS\n")
+  endif()
+  if(LONG_LONG_SIZE LESS 8)
+    set(ARITH_H "${ARITH_H}#define NO_LONG_LONG\n")
+  endif()
+  # Check ssize_t.
+  check_type_size(size_t SIZE_T_SIZE)
+  check_type_size(ssize_t SSIZE_T_SIZE)
+  if(NOT SSIZE_T_SIZE)
+    if(SIZE_T_SIZE EQUAL LONG_SIZE)
+      set(ARITH_SSIZE_T long)
+    elseif(SIZE_T_SIZE EQUAL INT_SIZE)
+      set(ARITH_SSIZE_T int)
+    elseif(SIZE_T_SIZE EQUAL LONG_LONG_SIZE)
+      set(ARITH_SSIZE_T "long long")
+    else()
+      set(ARITH_SSIZE_T "signed size_t")
+    endif()
+    set(ARITH_H "${ARITH_H}#define ssize_t ${ARITH_SSIZE_T}\n")
+  elseif(NOT SIZE_T_SIZE EQUAL SSIZE_T_SIZE)
+    set(ARITH_H "${ARITH_H}/* sizeof(size_t) = ${SIZE_T_SIZE}")
+    set(ARITH_H "${ARITH_H} but sizeof(ssize_t) = ${SSIZE_T_SIZE} */\n")
+  endif()
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/arith.h
+       "${ARITH_H}#define QNaN0 0x0\n#define QNaN1 0xfff80000\n")
+else()
+  if(NOT WIN32)
+    set(FPINIT ${SRCDIR}/solvers/fpinit.c)
+  endif()
+
+  if(GENERATE_ARITH)
+    add_executable(arithchk ${SRCDIR}/solvers/arithchk.c ${FPINIT})
+    if(WIN32)
+      target_compile_definitions(arithchk PRIVATE NO_FPINIT NO_SSIZE_T)
+    else()
+      target_compile_definitions(arithchk PRIVATE ASL_NO_FPINITMT)
+      target_link_libraries(arithchk m)
+    endif()
+    add_custom_command(
+      OUTPUT ${GENERATED_INCLUDE_DIR}/arith.h
+      DEPENDS arithchk
+      COMMAND ${WINE} $<TARGET_FILE:arithchk> > ${GENERATED_INCLUDE_DIR}/arith.h
+      COMMENT "Writing arith.h")
+    if(NOT MSVC)
+      string(REPLACE "-Wall -Wextra -pedantic" "" CMAKE_C_FLAGS
+                     "${CMAKE_C_FLAGS}")
+      target_compile_options(arithchk PUBLIC -Wno-format-security)
+    endif()
+  else()
+    add_custom_command(
+      OUTPUT ${GENERATED_INCLUDE_DIR}/arith.h
+      COMMAND ${CMAKE_COMMAND} -E copy ${SRCDIR}/solvers/arith.h1
+              ${GENERATED_INCLUDE_DIR}/arith.h
+      COMMENT "Copying arith.h1 to arith.h")
+  endif(GENERATE_ARITH)
+endif()
+
+# Use a custom target for arith.h, because including a file generated by a
+# custom command in more than one target may result in it being generated
+# multiple times in a parallel build which doesn't work in msbuild. See:
+# http://www.cmake.org/pipermail/cmake/2008-October/024492.html
+add_custom_target(arith-h DEPENDS ${GENERATED_INCLUDE_DIR}/arith.h)
+
+# ASL 1 sources
+set(ASL_SOURCE_DIR ${SRCDIR}/solvers)
+set(ASL1_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
+set(ASL1_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
+    ${ASL_SOURCE_DIR} PARENT_SCOPE)
+    
+set(ASL_SOURCES ${GENERATED_INCLUDE_DIR}/details.c)
+
+set(ASL_HEADERS ${GENERATED_INCLUDE_DIR}/arith.h)
+add_prefix(ASL_HEADERS ${ASL_SOURCE_DIR}/
+  asl.h asl_pfg.h asl_pfgh.h avltree.h errchk.h funcadd.h getstub.h 
+  jac2dim.h jacpdim.h nlp.h nlp2.h obj_adj.h psinfo.h)
+add_prefix(ASL_SOURCES ${ASL_SOURCE_DIR}/
+  asldate.c       atof.c          auxinfo.c       avltree.c
+  b_search.c      basename.c      bscanf.c        com2eval.c
+  comeval.c       con1ival.c      con2ival.c      con2val.c
+  conadj.c        conpval.c       conscale.c      conval.c
+  derprop.c       dtoa1.c         duthes.c        dynlink.c
+  f_read.c        fg_read.c       fg_write.c      fgh_read.c
+  fpecatch.c      fpinit.c        fullhes.c       func_add.c
+  funcadd1.c      g_fmt.c         genrowno.c      getenv.c
+  getstub.c       htcl.c          indic_cons.c    jac0dim.c
+  jac2dim.c       jacdim.c        jacinc.c        jacinc1.c
+  libnamsave.c    mach.c          mainexit.c      mip_pri.c
+  misc.c          mpec_adj.c      mqpcheckv.c     mypow.c
+  names.c         nl_obj.c        nqpcheck.c      obj2val.c
+  obj_adj.c       obj_prec.c      objconst.c      objval.c
+  objval_.c       op_type.c       pfg_read.c      pfghread.c
+  printf.c        pshvprod.c      punknown.c      qp_read.c
+  qpcheck.c       qsortv.c        readsol.c       repwhere.c
+  rops.c          rops2.c         sigcatch.c      sos_add.c
+  sphes.c         sscanf.c        stderr.c        studchk0.c
+  suf_sos.c       value.c         writesol.c      wrtsol_.c
+  ws_desc.c       wsu_desc.c      x2check.c       xectim.c
+  xp1known.c      xp2known.c)
+
+# ASL 2 sources
+set(ASL2_SOURCE_DIR ${SRCDIR}/solvers2)
+set(ASL2_HEADERS ${GENERATED_INCLUDE_DIR}/arith.h)
+add_prefix(ASL2_HEADERS ${ASL2_SOURCE_DIR}/
+  asl.h asl_pfg.h asl_pfgh.h avltree.h errchk.h funcadd.h getstub.h 
+  jac2dim.h jacpdim.h nlp.h nlp2.h  obj_adj.h opno2.h psinfo.h)
+set(ASL2_SOURCES ${GENERATED_INCLUDE_DIR}/details.c)
+add_prefix(ASL2_SOURCES  ${ASL2_SOURCE_DIR}/
+  asldate.c       atof.c          auxinfo.c       avltree.c
+  b_search.c      basename.c      bscanf.c        conscale.c
+  degree.c        derprop.c       dtoa1.c         duthes.c
+  dynlink.c       eval1.c         eval2.c         ewalloc1.c
+  ewalloc2.c      f_read.c        fg_read.c       fg_write.c
+  fpecatch.c      fpinit.c        fullhes.c       func_add.c
+  funcadd1.c      g_fmt.c         genrowno.c      getenv.c
+  getstub.c       htcl.c          indic_cons.c    jac0dim.c
+  jac2dim.c       jacdim.c        jacinc.c        jacinc1.c
+  libnamsave.c    mach.c          mainexit.c      mip_pri.c
+  misc.c          mpec_adj.c      mqpcheckv.c     mypow.c
+  names.c         nl_obj.c        nqpcheck.c      nqpcheckZ.c
+  obj_adj.c       obj_prec.c      objconst.c      objval_.c
+  op_type.c       pfghread.c      printf.c        pshvprod.c
+  punknown.c      qpcheck.c       qpcheckZ.c      qsortv.c
+  readsol.c       repwhere.c      sigcatch.c      sos_add.c
+  sphes.c         sscanf.c        stderr.c        studchk0.c
+  suf_sos.c       value.c         writesol.c      wrtsol_.c
+  ws_desc.c       wsu_desc.c      xectim.c        xp2known.c)
+
+# Set preprocessor flags
+include(CheckSymbolExists)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  # Changing the floating point precision is not supported on x64.
+  set(ASL_COMPILE_DEFINITIONS No_Control87)
+endif()
+check_symbol_exists(strtoull stdlib.h HAVE_STRTOULL)
+if(NOT HAVE_STRTOULL)
+  check_symbol_exists(_strtoui64 stdlib.h HAVE_STRTOUI64)
+  if(HAVE_STRTOUI64)
+    set(ASL_COMPILE_DEFINITIONS ${ASL_COMPILE_DEFINITIONS} strtoull=_strtoui64)
+  endif()
+endif()
+if(NOT WIN32)
+  check_symbol_exists(getrusage "sys/resource.h" HAVE_RUSAGE)
+  if(NOT HAVE_RUSAGE)
+    set(ASL_COMPILE_DEFINITIONS ${ASL_COMPILE_DEFINITIONS} NO_RUSAGE=1)
+  endif()
+endif()
+
+macro(createASL name sourcedir sources)
+  add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
+  target_include_directories(${name} PUBLIC ${GENERATED_INCLUDE_DIR}
+                                            ${sourcedir})
+  target_compile_definitions(${name} PRIVATE ${ASL_COMPILE_DEFINITIONS})
+  target_link_libraries(${name} PUBLIC ${CMAKE_DL_LIBS})
+  if(NOT WIN32)
+    target_link_libraries(${name} PRIVATE m)
+  endif()
+  if(MSVC)
+    target_compile_options(${name} PRIVATE 
+      /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
+  else()
+    target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
+  endif()
+  if(MSVC)
+      add_library(${name}-dynrt STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
+      target_include_directories(${name}-dynrt PUBLIC ${GENERATED_INCLUDE_DIR}
+                                                ${sourcedir})
+      target_compile_definitions(${name}-dynrt PRIVATE ${ASL_COMPILE_DEFINITIONS})
+      target_compile_options(${name}-dynrt PRIVATE 
+        /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
+      target_compile_options(${name}-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
+  endif()
+endmacro()
+
+set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS})
+set(ASL2_SOURCES ${ASL2_SOURCES} ${ASL2_HEADERS})
+
+# Create ASL libraries
+createasl(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
+createasl(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+
+# Cpp wrapper, only if explicitly enabled
+if(BUILD_CPP)
+    set(ASLCPP_SRCDIR ${SRCDIR}/cpp)
+    set(ASL_CPP_HEADERS ${ASLCPP_SRCDIR}/aslinterface.h)
+    set(ASL_CPP_SOURCES ${ASLCPP_SRCDIR}/aslinterface.cc)
+    add_library(aslcpp STATIC ${ASL_CPP_SOURCES} ${ASL_CPP_HEADERS} ${ASL_HEADERS})
+    target_link_libraries(aslcpp PUBLIC asl ${CMAKE_DL_LIBS})
+    if(NOT WIN32)
+      target_link_libraries(aslcpp PRIVATE m)
+    endif()
+endif()
+
+install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd 
+    DESTINATION include/asl) 
+install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd 
+        DESTINATION include/asl2) 
+install(TARGETS asl asl2 DESTINATION lib)
+if(TARGET aslcpp)
+    install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp) 
+    install(TARGETS aslcpp DESTINATION lib)
+endif()

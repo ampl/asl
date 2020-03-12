@@ -1,0 +1,220 @@
+# /*******************************************************************
+# Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+# 
+# Permission to use, copy, modify, and distribute this software and its
+# documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright notice appear in all copies and that
+# both that the copyright notice and this permission notice and warranty
+# disclaimer appear in supporting documentation.
+# 
+# The author and AMPL Optimization, Inc. disclaim all warranties with
+# regard to this software, including all implied warranties of
+# merchantability and fitness.  In no event shall the author be liable
+# for any special, indirect or consequential damages or any damages
+# whatsoever resulting from loss of use, data or profits, whether in an
+# action of contract, negligence or other tortious action, arising out
+# of or in connection with the use or performance of this software.
+# *******************************************************************/
+
+# For making amplsolv.lib with Microsoft Visual C++ .
+
+# Invoke with "nmake -f makefile.vc" .
+
+CC = cl
+RUNTIME = -MT
+CFLAGS = -nologo -Ot1 $(RUNTIME)
+# For DEC Alpha processors, use
+# CFLAGS = -nologo -QAieee -Ot1 -DNo_Control87
+# The math libraries associated with some (older?) versions of VC++
+# return NaN for, e.g., trig functions of large numbers.  If you have
+# such a library, add -DNANCHECK to the CFLAGS assignment.
+
+# For use with lcc (http://www.cs.virginia.edu/~lcc-win32/), use
+#   CC = lc
+#   CFLAGS = -O -DNON_STDIO
+# and change fpinitmt.obj to fpinit.obj below and in amplsolv.lbc
+# (or change amplsolv.lbc to amplsolv.lcc below and obtain amplsolv.lcc
+# from amplsolv.lbc by changing fpinitmt.obj to fpinit.obj).
+
+# This makefile creates a Win32 amplsolv.lib that provides for catching
+# "signals" from a scrolling-window shell, sw.exe, that is available in
+# netlib's "ampl/student/mswin" directory.
+# For this purpose, most objects can be compiled in "single-threaded"
+# mode, while fpinitmt.obj, which catches the "signals", is
+# automatically compiled as a multi-threaded object.  To link a solver
+# with amplsolv.lib compiled in this way, it is necessary to link with
+# the multi-threaded C library while suppressing automatic linking with
+# the non-threaded library, by adding
+#	libcmt.lib /link /NODEFAULTLIB:libc.lib
+# to the end of the solver linking command.  This is illustrated in the
+# solvers/*/makefile.vc files, such as solvers/examples/makefile.vc,
+# solvers/minos/makefile.vc, and solvers/donlp2/makefile.vc.
+
+.c.obj:
+	$(CC) -c $(CFLAGS) $*.c
+
+all: arith.h stdio1.h amplsolv.lib funcadd0.obj
+
+a = \
+	asldate.obj \
+	atof.obj \
+	auxinfo.obj \
+	avltree.obj \
+	b_search.obj \
+	basename.obj \
+	bscanf.obj \
+	conscale.obj \
+	degree.obj \
+	derprop.obj \
+	details.obj \
+	dtoa1.obj \
+	duthes.obj \
+	dynlink.obj \
+	eval1.obj \
+	eval2.obj \
+	ewalloc1.obj \
+	ewalloc2.obj \
+	f_read.obj \
+	fg_read.obj \
+	fg_write.obj \
+	fpecatch.obj \
+	fpinit.obj \
+	fullhes.obj \
+	func_add.obj \
+	funcadd1.obj \
+	g_fmt.obj \
+	genrowno.obj \
+	getenv.obj \
+	getstub.obj \
+	htcl.obj \
+	indic_cons.obj \
+	jac0dim.obj \
+	jac2dim.obj \
+	jacdim.obj \
+	jacinc.obj \
+	jacinc1.obj \
+	libnamsave.obj \
+	mach.obj \
+	mainexit.obj \
+	mip_pri.obj \
+	misc.obj \
+	mpec_adj.obj \
+	mqpcheckv.obj \
+	mypow.obj \
+	names.obj \
+	nl_obj.obj \
+	nqpcheck.obj \
+	nqpcheckZ.obj \
+	obj_adj.obj \
+	obj_prec.obj \
+	objconst.obj \
+	objval_.obj \
+	op_type.obj \
+	pfghread.obj \
+	printf.obj \
+	pshvprod.obj \
+	punknown.obj \
+	qpcheck.obj \
+	qpcheckZ.obj \
+	qsortv.obj \
+	readsol.obj \
+	repwhere.obj \
+	sigcatch.obj \
+	sos_add.obj \
+	sphes.obj \
+	sscanf.obj \
+	stderr.obj \
+	studchk0.obj \
+	suf_sos.obj \
+	value.obj \
+	writesol.obj \
+	wrtsol_.obj \
+	ws_desc.obj \
+	wsu_desc.obj \
+	xectim.obj \
+	xp2known.obj
+
+amplsolv.lib: $a
+	lib -out:amplsolv.lib @amplsolv.lbc
+
+Aslh = arith.h asl.h funcadd.h stdio1.h
+auxinfo.obj funcadd.obj funcadd1.obj funcaddr.obj libnamsave.obj: funcadd.h
+funcadd1.obj mach.obj machlc.obj mypow.obj printf.obj sscanf.obj stderr.obj: arith.h
+funcaddr.obj: funcadd1.c
+avltree.obj: avltree.h
+bscanf.obj conscale.obj degree.obj derprop.obj duthes.obj dynlink.obj eval1.obj eval2.obj \
+	ewalloc1.obj ewalloc2.obj fg_write.obj fpinitmt.obj fullhes.obj funcadd0.obj \
+	func_add.obj g_fmt.obj genrowno.obj getstub.obj htcl.obj indic_cons.obj \
+	jac0dim.obj jac2dim.obj jacdim.obj jacinc1.obj jacinc.obj mip_pri.obj misc.obj \
+	mpec_adj0.obj mqpcheckv.obj names.obj nl_obj.obj nqpcheck.obj obj_adj.obj \
+	obj_adj0.obj obj_prec.obj objval_.obj objconst.obj pfghread.obj pshvprod.obj \
+	repwhere.obj sigcatch.obj sjac0dim.obj sos_add.obj sphes.obj studchk0.obj \
+	suf_sos.obj value.obj writesol.obj wrtsol_.obj xp2known.obj: $(Aslh)
+degree.obj: nlp.h nlp2.h asl_pfg.h asl_pfgh.h obj_adj.h opno.hd opno2.h
+dtoa1.obj: arith.h dtoa.c
+duthes.obj fullhes.obj indic_cons.obj mqpcheckv.obj sphes.obj suf_sos.obj: \
+	asl_pfgh.h psinfo.h nlp.h nlp2.h
+eval1.obj fg_read.obj: nlp.h opno.hd errchk.h
+eval2.obj ewalloc2.obj obj_adj.obj: psinfo.h nlp.h nlp2.h
+eval2.obj: opno2.h errchk.h
+ewalloc1.obj nqpcheckZ.obj qpcheck.obj qpcheckZ.obj readsol.obj: nlp.h
+fg_read.obj: opcode.hd opno.hd r_opn.hd
+fg_write.obj: nlp.h nlp2.h opno.hd opno2.h opcode.hd
+fpinit.obj: fpinitmt.c
+f_read.obj: fg_read.c
+getstub.obj value.obj writesol.obj wrtsol_.obj: getstub.h
+indic_cons.obj: asl_pfgh.h obj_adj.h opno.hd opno2.h
+misc.obj sos_add.obj: asl_pfg.h asl_pfgh.h nlp.h nlp2.h
+mpec_adj.obj: psinfo.h jacpdim.h
+mqpcheckv.obj: avltree.h obj_adj.h opno.hd opno2.h
+nl_obj.obj nqpcheck.obj: nlp.h nlp2.h asl_pfg.h asl_pfgh.h obj_adj.h
+nqpcheck.obj nqpcheckZ.obj: opno.hd opno2.h
+obj_adj.obj: jacpdim.h obj_adj.h
+op_type.obj: op_type.hd op_typeb.hd
+pfghread.obj: jacpdim.h opnos.hd asl_pfg.h opcode.hd opno2.h r_opn0.hd
+pshvprod.obj xp2known.obj: jacpdim.h opno2.h
+repwhere.obj: errchk.h
+sphes.obj: opno2.h obj_adj.h
+
+# Use CFLAGS in compiling arithchk.c in case something in CFLAGS affects
+# the number of bits in integral data types.  (It's probably best not to
+# add such options to CFLAGS.)
+
+XBINLIBS =
+
+# If your compiler requires libraries that it does not supply automatically
+# (i.e., if your compiler is broken, as reportedly Microsoft's VC++ 7 is:
+# it is said to need "XBINLIBS = bufferoverflowu.lib"), modify the above
+# XBINLIB assignment suitably, or invoke
+#   "nmake ... XBINLIBS=..."
+
+arith.h: arithchk.c
+	comptry.bat $(CC) $(CFLAGS) -DNO_FPINIT arithchk.c $(XBINLIBS)
+	arithchk >arith.h
+	del arithchk.exe
+	del arithchk.obj
+
+stdio1.h: stdio1.h0
+	copy stdio1.h0 stdio1.h
+
+stderr.obj: stderr.c
+	$(CC) -c $(CFLAGS) -DSTDERR=stdout stderr.c
+
+details.c: details.c0
+	 echo create details.c by suitably editing details.c0
+
+# For MS VC++ 6.0, details.c should contain
+#	char sysdetails_ASL[] = "MS VC++ 6.0";
+
+# When using the 64-bit Microsoft cl compiler (which does not correctly
+# support the C standard), after "copy makefile.vc makefile" and making
+# any desired adjustments to makefile (none are needed), invoke
+#	nmake fpinitmt_cl64.obj amplsolv.lib
+# or
+#	nmake fpinitmt_cl64.obj
+#	nmake
+
+# The following rule makes fpinitmt.obj for Microsoft's 64-bit cl compiler.
+
+fpinitmt_cl64.obj: fpinitmt.c arith.h
+	$(CC) -c $(CFLAGS) -Dstrtoull=_strtoui64 -Fofpinit.obj fpinitmt.c
