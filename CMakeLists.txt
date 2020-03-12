@@ -30,14 +30,15 @@ getArchitectureFlags(${ARCH} CCFLAGS LLFLAGS)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CCFLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${LLFLAGS}")
 
+set(COMMON_DIR ${SRCDIR}/common)
 # ################# Generate dynamic files ##################
-file(READ ${SRCDIR}/solvers/details.c0 DETAILS)
+file(READ ${COMMON_DIR}/details.c0 DETAILS)
 string(REPLACE "System_details"
                "${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}" DETAILS
                "${DETAILS}")
 file(WRITE ${GENERATED_INCLUDE_DIR}/details.c "${DETAILS}")
 
-configure_file(${SRCDIR}/solvers/stdio1.h0 ${GENERATED_INCLUDE_DIR}/stdio1.h
+configure_file(${COMMON_DIR}/stdio1.h0 ${GENERATED_INCLUDE_DIR}/stdio1.h
                COPYONLY)
 
 if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^x86")
@@ -97,15 +98,14 @@ if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^x86")
     set(ARITH_H "${ARITH_H}/* sizeof(size_t) = ${SIZE_T_SIZE}")
     set(ARITH_H "${ARITH_H} but sizeof(ssize_t) = ${SSIZE_T_SIZE} */\n")
   endif()
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/arith.h
+  file(WRITE ${GENERATED_INCLUDE_DIR}/arith.h
        "${ARITH_H}#define QNaN0 0x0\n#define QNaN1 0xfff80000\n")
 else()
   if(NOT WIN32)
-    set(FPINIT ${SRCDIR}/solvers/fpinit.c)
+    set(FPINIT ${COMMON_DIR}/fpinit.c)
   endif()
-
   if(GENERATE_ARITH)
-    add_executable(arithchk ${SRCDIR}/solvers/arithchk.c ${FPINIT})
+    add_executable(arithchk ${COMMON_DIR}/arithchk.c ${FPINIT})
     if(WIN32)
       target_compile_definitions(arithchk PRIVATE NO_FPINIT NO_SSIZE_T)
     else()
@@ -125,7 +125,7 @@ else()
   else()
     add_custom_command(
       OUTPUT ${GENERATED_INCLUDE_DIR}/arith.h
-      COMMAND ${CMAKE_COMMAND} -E copy ${SRCDIR}/solvers/arith.h1
+      COMMAND ${CMAKE_COMMAND} -E copy ${COMMON_DIR}/arith.h1
               ${GENERATED_INCLUDE_DIR}/arith.h
       COMMENT "Copying arith.h1 to arith.h")
   endif(GENERATE_ARITH)
@@ -137,69 +137,78 @@ endif()
 # http://www.cmake.org/pipermail/cmake/2008-October/024492.html
 add_custom_target(arith-h DEPENDS ${GENERATED_INCLUDE_DIR}/arith.h)
 
+
+# Common sources
+set(COMMON_HEADERS ${GENERATED_INCLUDE_DIR}/arith.h)
+add_prefix(COMMON_HEADERS ${COMMON_DIR}/
+  asl_pfg.h       asl_pfgh.h      avltree.h       errchk.h
+  funcadd.h       getstub.h       jac2dim.h       obj_adj.h)
+
+add_prefix(COMMON_SOURCES ${COMMON_DIR}/ 
+atof.c            auxinfo.c       avltree.c       b_search.c
+basename.c        bscanf.c        conscale.c      dtoa1.c
+dynlink.c         f_read.c        fpecatch.c      
+fpinit.c          func_add.c      funcadd1.c        
+g_fmt.c           genrowno.c      getenv.c  
+jac2dim.c         jacdim.c        jacinc.c        jacinc1.c
+libnamsave.c      mach.c          mainexit.c      mip_pri.c
+mypow.c           names.c         obj_prec.c      op_type.c
+printf.c          punknown.c
+qpcheck.c         qsortv.c        readsol.c
+sigcatch.c        stderr.c        studchk0.c
+value.c           writesol.c      wrtsol_.c
+ws_desc.c         wsu_desc.c      
+nqpcheckZ.c qpcheckZ.c    
+xectim.c   # Only header was different
+getstub.c  # Only asl name - replaced with preprocessor constant
+)
+
 # ASL 1 sources
 set(ASL_SOURCE_DIR ${SRCDIR}/solvers)
 set(ASL1_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
 set(ASL1_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
     ${ASL_SOURCE_DIR} PARENT_SCOPE)
-    
 set(ASL_SOURCES ${GENERATED_INCLUDE_DIR}/details.c)
 
 set(ASL_HEADERS ${GENERATED_INCLUDE_DIR}/arith.h)
 add_prefix(ASL_HEADERS ${ASL_SOURCE_DIR}/
-  asl.h asl_pfg.h asl_pfgh.h avltree.h errchk.h funcadd.h getstub.h 
-  jac2dim.h jacpdim.h nlp.h nlp2.h obj_adj.h psinfo.h)
+  asl.h           jacpdim.h       nlp.h 
+  nlp2.h          psinfo.h)
 add_prefix(ASL_SOURCES ${ASL_SOURCE_DIR}/
-  asldate.c       atof.c          auxinfo.c       avltree.c
-  b_search.c      basename.c      bscanf.c        com2eval.c
-  comeval.c       con1ival.c      con2ival.c      con2val.c
-  conadj.c        conpval.c       conscale.c      conval.c
-  derprop.c       dtoa1.c         duthes.c        dynlink.c
-  f_read.c        fg_read.c       fg_write.c      fgh_read.c
-  fpecatch.c      fpinit.c        fullhes.c       func_add.c
-  funcadd1.c      g_fmt.c         genrowno.c      getenv.c
-  getstub.c       htcl.c          indic_cons.c    jac0dim.c
-  jac2dim.c       jacdim.c        jacinc.c        jacinc1.c
-  libnamsave.c    mach.c          mainexit.c      mip_pri.c
-  misc.c          mpec_adj.c      mqpcheckv.c     mypow.c
-  names.c         nl_obj.c        nqpcheck.c      obj2val.c
-  obj_adj.c       obj_prec.c      objconst.c      objval.c
-  objval_.c       op_type.c       pfg_read.c      pfghread.c
-  printf.c        pshvprod.c      punknown.c      qp_read.c
-  qpcheck.c       qsortv.c        readsol.c       repwhere.c
-  rops.c          rops2.c         sigcatch.c      sos_add.c
-  sphes.c         sscanf.c        stderr.c        studchk0.c
-  suf_sos.c       value.c         writesol.c      wrtsol_.c
-  ws_desc.c       wsu_desc.c      x2check.c       xectim.c
-  xp1known.c      xp2known.c)
+  asldate.c       com2eval.c      comeval.c       
+  con1ival.c      con2ival.c      con2val.c
+  conadj.c        conpval.c       conval.c
+  derprop.c       duthes.c        
+  fg_read.c       fg_write.c      fgh_read.c
+  fullhes.c       htcl.c          
+  indic_cons.c    jac0dim.c
+  misc.c          mpec_adj.c      mqpcheckv.c             
+  nl_obj.c        nqpcheck.c      obj2val.c
+  obj_adj.c       objconst.c      objval.c
+  objval_.c       pfg_read.c      pfghread.c
+  pshvprod.c      qp_read.c       repwhere.c
+  rops.c          rops2.c         sos_add.c
+  sphes.c         sscanf.c        suf_sos.c            
+  x2check.c       xp1known.c      xp2known.c)
+
 
 # ASL 2 sources
 set(ASL2_SOURCE_DIR ${SRCDIR}/solvers2)
 set(ASL2_HEADERS ${GENERATED_INCLUDE_DIR}/arith.h)
 add_prefix(ASL2_HEADERS ${ASL2_SOURCE_DIR}/
-  asl.h asl_pfg.h asl_pfgh.h avltree.h errchk.h funcadd.h getstub.h 
-  jac2dim.h jacpdim.h nlp.h nlp2.h  obj_adj.h opno2.h psinfo.h)
+  asl.h  jacpdim.h nlp.h nlp2.h opno2.h psinfo.h)
 set(ASL2_SOURCES ${GENERATED_INCLUDE_DIR}/details.c)
 add_prefix(ASL2_SOURCES  ${ASL2_SOURCE_DIR}/
-  asldate.c       atof.c          auxinfo.c       avltree.c
-  b_search.c      basename.c      bscanf.c        conscale.c
-  degree.c        derprop.c       dtoa1.c         duthes.c
-  dynlink.c       eval1.c         eval2.c         ewalloc1.c
-  ewalloc2.c      f_read.c        fg_read.c       fg_write.c
-  fpecatch.c      fpinit.c        fullhes.c       func_add.c
-  funcadd1.c      g_fmt.c         genrowno.c      getenv.c
-  getstub.c       htcl.c          indic_cons.c    jac0dim.c
-  jac2dim.c       jacdim.c        jacinc.c        jacinc1.c
-  libnamsave.c    mach.c          mainexit.c      mip_pri.c
-  misc.c          mpec_adj.c      mqpcheckv.c     mypow.c
-  names.c         nl_obj.c        nqpcheck.c      nqpcheckZ.c
-  obj_adj.c       obj_prec.c      objconst.c      objval_.c
-  op_type.c       pfghread.c      printf.c        pshvprod.c
-  punknown.c      qpcheck.c       qpcheckZ.c      qsortv.c
-  readsol.c       repwhere.c      sigcatch.c      sos_add.c
-  sphes.c         sscanf.c        stderr.c        studchk0.c
-  suf_sos.c       value.c         writesol.c      wrtsol_.c
-  ws_desc.c       wsu_desc.c      xectim.c        xp2known.c)
+  asldate.c       
+  degree.c        derprop.c       duthes.c
+  eval1.c         eval2.c         ewalloc1.c
+  fg_read.c       fg_write.c      fullhes.c       
+  htcl.c          indic_cons.c    jac0dim.c
+  misc.c          mpec_adj.c      mqpcheckv.c    
+  nl_obj.c        nqpcheck.c      obj_adj.c       objconst.c      
+  pfghread.c      pshvprod.c      repwhere.c      sos_add.c
+  sphes.c         sscanf.c        suf_sos.c             
+  xp2known.c)
 
 # Set preprocessor flags
 include(CheckSymbolExists)
@@ -223,9 +232,9 @@ endif()
 
 macro(createASL name sourcedir sources)
   add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
-  target_include_directories(${name} PUBLIC ${GENERATED_INCLUDE_DIR}
-                                            ${sourcedir})
-  target_compile_definitions(${name} PRIVATE ${ASL_COMPILE_DEFINITIONS})
+  target_include_directories(${name} PUBLIC 
+    ${GENERATED_INCLUDE_DIR} ${sourcedir} ${COMMON_DIR})
+  target_compile_definitions(${name} PRIVATE ${ASL_COMPILE_DEFINITIONS} ASL_VERSION_NAME=${name})
   target_link_libraries(${name} PUBLIC ${CMAKE_DL_LIBS})
   if(NOT WIN32)
     target_link_libraries(${name} PRIVATE m)
@@ -236,7 +245,7 @@ macro(createASL name sourcedir sources)
   else()
     target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
   endif()
-  if(MSVC)
+  if(MSVC AND (BUILD_DYNRT))
       add_library(${name}-dynrt STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
       target_include_directories(${name}-dynrt PUBLIC ${GENERATED_INCLUDE_DIR}
                                                 ${sourcedir})
@@ -247,8 +256,8 @@ macro(createASL name sourcedir sources)
   endif()
 endmacro()
 
-set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS})
-set(ASL2_SOURCES ${ASL2_SOURCES} ${ASL2_HEADERS})
+set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS} ${COMMON_SOURCES} ${COMMON_HEADERS})
+set(ASL2_SOURCES ${ASL2_SOURCES} ${ASL2_HEADERS} ${COMMON_SOURCES} ${COMMON_HEADERS})
 
 # Create ASL libraries
 createasl(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
