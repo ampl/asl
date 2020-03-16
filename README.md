@@ -3,13 +3,19 @@
 This repository contains the up-to-date version of ASL (AMPL Solver Library) as maintained by David Gay. It supports ```cmake``` multiplatform builds.
 
 ## Linux systems
-To build the static library under x86 Unix/Linux systems, simply to the following (note the definition of ARCH to 64 to build a 64 bits version of the library. Set it to 32 for 32 bits).
+To build the static library under x86 Unix/Linux systems, simply do the following: 
 
 ```
 mkdir build
 cd build
-cmake .. -DARCH=64
+cmake .. 
 make .
+```
+
+This by default builds 64 bits versions of the libraries, to build 32 bits builds, define the variable `ARCH` when calling cmake:
+
+```
+cmake .. -DARCH=32
 ```
 
 ## Windows systems
