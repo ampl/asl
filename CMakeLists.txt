@@ -178,7 +178,7 @@ add_prefix(ASL_SOURCES ${ASL_SOURCE_DIR}/
   asldate.c       com2eval.c      comeval.c       
   con1ival.c      con2ival.c      con2val.c
   conadj.c        conpval.c       conval.c
-  derprop.c       duthes.c        
+  degree.c        derprop.c       duthes.c        
   fg_read.c       fg_write.c      fgh_read.c
   fullhes.c       htcl.c          
   indic_cons.c    jac0dim.c
