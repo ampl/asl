@@ -1,18 +1,27 @@
 # asl
 
-This repository contains the up-to-date version of ASL (AMPL Solver Library) as maintained by David Gay. It supports ```cmake``` multiplatform builds.
+This repository contains the a branched version of ASL (AMPL Solver Library) that has two aims:
+1. Minimize code duplication by having one copy of the files shared betweetn ASL and ASL2
+2. Have the solver library thread-safe, so that multiple instances can be used concurrently
 
-## Linux systems
-To build the static library under x86 Unix/Linux systems, simply to the following (note the definition of ARCH to 64 to build a 64 bits version of the library. Set it to 32 for 32 bits).
+## Build instructions
+### Linux systems
+To build the static library under x86 Unix/Linux systems, simply do the following: 
 
 ```
 mkdir build
 cd build
-cmake .. -DARCH=64
+cmake .. 
 make .
 ```
 
-## Windows systems
+This by default builds 64 bits versions of the libraries, to build 32 bits builds, define the variable `ARCH` when calling cmake:
+
+```
+cmake .. -DARCH=32
+```
+
+### Windows systems
 To build the library on Windows (this assumes Visual Studio 2019 as a generator); note also that after the third step you'll have a file `ASL.sln` that can 
 be opened from Visual Studio to continue the build from there.
 
