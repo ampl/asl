@@ -154,6 +154,7 @@ add_prefix(ASL_SOURCES ${ASL_SOURCE_DIR}/
   b_search.c      basename.c      bscanf.c        com2eval.c
   comeval.c       con1ival.c      con2ival.c      con2val.c
   conadj.c        conpval.c       conscale.c      conval.c
+  degree.c 
   derprop.c       dtoa1.c         duthes.c        dynlink.c
   f_read.c        fg_read.c       fg_write.c      fgh_read.c
   fpecatch.c      fpinit.c        fullhes.c       func_add.c
