@@ -70,8 +70,10 @@ AVL_Tree_alloc2(void *v, AVL_Elcomp cmp, void *(*Malloc)(size_t), void (*Free)(v
 	T->mb = mb;
 	T->efree = N = mb->x;
 	Ne = N + AVL_memgulp - 1;
-	while(N < Ne)
-		N = N->left = N + 1;
+	while(N < Ne) {
+		N->left = N + 1;
+		N = N + 1;
+	}
 	N->left = 0;
 	T->Malloc = Malloc;
 	if (!Free)
@@ -114,8 +116,10 @@ Node_alloc(AVL_Tree *T)
 	N = Nrv = mb->x;
 	Ne = N++ + AVL_memgulp - 1;
 	T->efree = N;
-	while(N < Ne)
-		N = N->left = N + 1;
+	while(N < Ne) {
+		N->left = N + 1;
+		N = N + 1;
+	}
 	N->left = 0;
 	return Nrv;
 	}
