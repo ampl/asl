@@ -477,8 +477,10 @@ new_Hesoprod(ASL_pfgh *asl, ograd *L, ograd *R, real coef)
 		asl->P.khesoprod = kh;
 		h = h1 = (Hesoprod *)new_mblk(kh);
 		h2 = h + (sizeof(Char*) << kh)/sizeof(Hesoprod) - 1;
-		while(h1 < h2)
-			h1 = h1->next = h1 + 1;
+		while(h1 < h2) {
+			h1->next = h1 + 1;
+			h1 = h1 + 1;
+		}
 		h1->next = 0;
 		}
 	asl->P.hop_free = h->next;
