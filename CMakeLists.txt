@@ -233,7 +233,7 @@ macro(createASL name sourcedir sources)
   endif()
   if(MSVC)
     target_compile_options(${name} PRIVATE 
-      /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
+      /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996 /MT$<$<CONFIG:Debug>:d>)
   else()
     target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
   endif()
