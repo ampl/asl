@@ -740,13 +740,21 @@ ewalk1(Staticfgw *S, int *o, int *ostop)
 		goto top;
 
 	  case OPGOTO:
-	  case OPNEXTBLK:
+	  case OPGOTO2:
+	  case OP_NEXTBLK:
+	  case OPGOTOF:
+	  case OPGOTOF2:
+	  case OPGOTOF2n:
 		o = *(int**)(o+1);	/* for chaining blocks of code */
 		goto top;
 
 #ifdef X64_bit_pointers
 	  case OPGOTOalign:
-	  case OPNEXTBLKalign:
+	  case OPGOTO2align:
+	  case OP_NEXTBLKalign:
+	  case OPGOTOFalign:
+	  case OPGOTOF2align:
+	  case OPGOTOF2nalign:
 		o = *(int**)(o+2);
 		goto top;
 #endif

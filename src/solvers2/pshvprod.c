@@ -963,11 +963,13 @@ alignarg(more_func:)
 
 		case OP_GOTO:
 		case OP_NEXTBLK:
+		case OPGOTOF:
 			o = *(int**)(o+1);
 			continue;
 #ifdef X64_bit_pointers
 		case OP_GOTOalign:
 		case OP_NEXTBLKalign:
+		case OPGOTOFalign:
 			o = *(int**)(o+2);
 			continue;
 

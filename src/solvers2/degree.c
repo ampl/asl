@@ -294,11 +294,21 @@ kind2(int *o, char *w, int lin)
 		goto top;
 
 	  case OP_GOTO:
+	  case OPGOTO2:
+	  case OP_NEXTBLK:
+	  case OPGOTOF:
+	  case OPGOTOF2:
+	  case OPGOTOF2n:
 		o = *(int**)(o+1);
 		goto top;
 
 #ifdef X64_bit_pointers
 	  case OP_GOTOalign:
+	  case OPGOTO2align:
+	  case OP_NEXTBLKalign:
+	  case OPGOTOFalign:
+	  case OPGOTOF2align:
+	  case OPGOTOF2nalign:
 		o = *(int**)(o+2);
 		goto top;
 #endif

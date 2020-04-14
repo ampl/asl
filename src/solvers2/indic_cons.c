@@ -1027,11 +1027,19 @@ Leval2(LCADJ_Info *lci, int *o)
 
 #ifdef X64_bit_pointers
 	  case OP_GOTOalign:
+	  case OPGOTO2align:
 	  case OP_NEXTBLKalign:
+	  case OPGOTOFalign:
+	  case OPGOTOF2align:
+	  case OPGOTOF2nalign:
 		++o;
 #endif
 	  case OP_GOTO:
+	  case OPGOTO2:
 	  case OP_NEXTBLK:
+	  case OPGOTOF:
+	  case OPGOTOF2:
+	  case OPGOTOF2n:
 		o = *(int**)(o+1);
 		if (*o != OPRET || !lci->iego)
 			goto top;

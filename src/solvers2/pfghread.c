@@ -6368,7 +6368,7 @@ alignarg(more_func:)
 			tfi = *ptfi;
 			i = tfi->nd;
 			n += i*(i+4);
-			o += tfi->n + 5;
+			o = (int*)(ptfi+1) + tfi->n;
 			break;
 
 /*		case Hv_plusR:	*/
@@ -6415,6 +6415,12 @@ alignarg(more_func:)
 		case OPVARREF:
 			++n;
 			o += 3;
+			break;
+
+		case OP_NEXTBLKalign:
+			++o;
+		case OP_NEXTBLK:
+			o = *(int**)(o+1);
 			break;
 
 		default:/*DEBUG*/
