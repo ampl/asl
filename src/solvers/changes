@@ -3185,3 +3185,7 @@ some invalid indicator constraints.
 fg_read.c fg_write.c indic_cons.c mqpcheckv.c nqpcheck.c opno.hd
 opno2.h pfghread.c pshvprod.c sphes.c:  new cases in opno.hd and
 opno2.h in part for forthcoming new source file nl1vcount.c.
+
+20200404
+  solvers2.tgz:  fix some bugs in pfghread.c and pshvprod.c with
+Hessian computations.  The bugs caused "bad opnumber" messages.

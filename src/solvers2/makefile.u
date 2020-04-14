@@ -165,7 +165,7 @@ amplsolver.a: $a
 
 Aslh = arith.h asl.h funcadd.h stdio1.h
 auxinfo.o funcadd.o funcadd1.o funcaddr.o libnamsave.o: funcadd.h
-funcadd1.o mach.o machlc.o mypow.o printf.o sscanf.o stderr.o: arith.h
+funcadd1.o mach.o mypow.o printf.o sscanf.o stderr.o: arith.h
 funcaddr.o: funcadd1.c
 avltree.o: avltree.h
 bscanf.o conscale.o degree.o derprop.o duthes.o dynlink.o eval1.o eval2.o \
