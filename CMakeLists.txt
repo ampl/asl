@@ -235,8 +235,9 @@ macro(createASL name sourcedir sources)
     target_compile_options(${name} PRIVATE 
       /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996 /MT$<$<CONFIG:Debug>:d>)
   else()
-    target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
+    target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses -fPIC)
   endif()
+
   if(MSVC)
       add_library(${name}-dynrt STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
       target_include_directories(${name}-dynrt PUBLIC ${GENERATED_INCLUDE_DIR}
@@ -246,6 +247,24 @@ macro(createASL name sourcedir sources)
         /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
       target_compile_options(${name}-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
   endif()
+
+
+  add_library(${name}-mt STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
+  target_include_directories(${name}-mt PUBLIC ${GENERATED_INCLUDE_DIR}
+                                            ${sourcedir})
+  target_compile_definitions(${name}-mt PRIVATE ${ASL_COMPILE_DEFINITIONS} MULTIPLE_THREADS ALLOW_OPENMP)
+  target_link_libraries(${name}-mt PUBLIC ${CMAKE_DL_LIBS})
+  if(NOT WIN32)
+    target_link_libraries(${name}-mt PRIVATE m)
+  endif()
+  if(MSVC)
+    target_compile_options(${name}-mt PRIVATE 
+      /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996 /MT$<$<CONFIG:Debug>:d>)
+  else()
+    target_compile_options(${name}-mt PRIVATE -Wno-unused-result -Wno-parentheses -fPIC)
+  endif()
+
+  
 endmacro()
 
 set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS})
