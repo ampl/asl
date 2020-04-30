@@ -139,10 +139,6 @@ add_custom_target(arith-h DEPENDS ${GENERATED_INCLUDE_DIR}/arith.h)
 
 # ASL 1 sources
 set(ASL_SOURCE_DIR ${SRCDIR}/solvers)
-set(ASL1_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
-set(ASL1_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
-    ${ASL_SOURCE_DIR} PARENT_SCOPE)
-    
 set(ASL_SOURCES ${GENERATED_INCLUDE_DIR}/details.c)
 
 set(ASL_HEADERS ${GENERATED_INCLUDE_DIR}/arith.h)
@@ -201,6 +197,17 @@ add_prefix(ASL2_SOURCES  ${ASL2_SOURCE_DIR}/
   sphes.c         sscanf.c        stderr.c        studchk0.c
   suf_sos.c       value.c         writesol.c      wrtsol_.c
   ws_desc.c       wsu_desc.c      xectim.c        xp2known.c)
+
+# Set the properties in the parent project, if present
+get_directory_property(hasParent PARENT_DIRECTORY)
+if(hasParent)
+  set(ASL1_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
+  set(ASL1_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
+    ${ASL_SOURCE_DIR} PARENT_SCOPE)
+  set(ASL2_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
+  set(ASL2_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
+    ${ASL2_SOURCE_DIR} PARENT_SCOPE)  
+endif()
 
 # Set preprocessor flags
 include(CheckSymbolExists)
