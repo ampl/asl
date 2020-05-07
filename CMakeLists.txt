@@ -1,5 +1,7 @@
-# This cmake file builds three libraries asl, asl2 and aslcpp. On windows
-# it also builds asl-dynrt, asl2-dynrt, aslcpp-dynrt, built against the
+# This cmake file builds three libraries asl, asl2 and aslcpp. 
+# It also builds asl-mt and asl2-mt, that are the same library with appropriate
+# compiler flags to support multiple threads.
+# On windows it also builds asl-dynrt, asl2-dynrt, aslcpp-dynrt, built against the
 # dynamic runtime (they are used to compile mp).
 # It exports the static libraries as targets with the corresponding name.
 # Define GENERATE_ARITH to force old-style generation of the arith.h file, useful for
@@ -229,7 +231,7 @@ if(NOT WIN32)
   endif()
 endif()
 
-macro(createASL name sourcedir sources)
+macro(createSingleASL name sourcedir sources)
   add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
   target_include_directories(${name} PUBLIC ${GENERATED_INCLUDE_DIR}
                                             ${sourcedir})
@@ -242,44 +244,34 @@ macro(createASL name sourcedir sources)
     target_compile_options(${name} PRIVATE 
       /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996 /MT$<$<CONFIG:Debug>:d>)
   else()
-    target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses -fPIC)
+    target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
   endif()
-
-  if(MSVC)
-      add_library(${name}-dynrt STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
-      target_include_directories(${name}-dynrt PUBLIC ${GENERATED_INCLUDE_DIR}
-                                                ${sourcedir})
-      target_compile_definitions(${name}-dynrt PRIVATE ${ASL_COMPILE_DEFINITIONS})
-      target_compile_options(${name}-dynrt PRIVATE 
-        /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
-      target_compile_options(${name}-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
-  endif()
-
-
-  add_library(${name}-mt STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
-  target_include_directories(${name}-mt PUBLIC ${GENERATED_INCLUDE_DIR}
-                                            ${sourcedir})
-  target_compile_definitions(${name}-mt PRIVATE ${ASL_COMPILE_DEFINITIONS} MULTIPLE_THREADS ALLOW_OPENMP)
-  target_link_libraries(${name}-mt PUBLIC ${CMAKE_DL_LIBS})
-  if(NOT WIN32)
-    target_link_libraries(${name}-mt PRIVATE m)
-  endif()
-  if(MSVC)
-    target_compile_options(${name}-mt PRIVATE 
-      /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996 /MT$<$<CONFIG:Debug>:d>)
-  else()
-    target_compile_options(${name}-mt PRIVATE -Wno-unused-result -Wno-parentheses -fPIC)
-  endif()
-
-  
+  set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
 endmacro()
 
 set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS})
 set(ASL2_SOURCES ${ASL2_SOURCES} ${ASL2_HEADERS})
 
-# Create ASL libraries
-createasl(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
-createasl(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+# Create ASL 1 
+createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
+# Create ASL 1 with support for multiple threads
+createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES)
+target_compile_definitions(asl-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
+
+# Create ASL 2
+createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+# Create ASL 2 with support for multiple threads
+createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+target_compile_definitions(asl2-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
+
+if(MSVC)
+  # Create ASLs linked to dynamic runtime on windows
+  createSingleASL(asl-dynrt ${ASL_SOURCE_DIR} ASL_SOURCES)
+  target_compile_options(asl-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
+  createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+  target_compile_options(asl2-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
+endif()
+
 
 # Cpp wrapper, only if explicitly enabled
 if(BUILD_CPP)
@@ -297,7 +289,7 @@ install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn
     DESTINATION include/asl) 
 install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd 
         DESTINATION include/asl2) 
-install(TARGETS asl asl2 DESTINATION lib)
+install(TARGETS asl asl2 asl-mt asl2-mt DESTINATION lib)
 if(TARGET aslcpp)
     install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp) 
     install(TARGETS aslcpp DESTINATION lib)
