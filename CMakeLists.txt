@@ -1,18 +1,25 @@
-# This cmake file builds three libraries asl, asl2 and aslcpp. 
+# This cmake file builds the libraries asl and asl2.
 # It also builds asl-mt and asl2-mt, that are the same library with appropriate
 # compiler flags to support multiple threads.
 # On windows it also builds asl-dynrt, asl2-dynrt, aslcpp-dynrt, built against the
-# dynamic runtime (they are used to compile mp).
+# dynamic runtime (they are used to compile mp, for example).
 # It exports the static libraries as targets with the corresponding name.
 # Define GENERATE_ARITH to force old-style generation of the arith.h file, useful for
 # non-x86 CPUs. No cross-compiling when this is enabled, as it sets the CPU arithmetics 
 # constants to the machine in which is run.
-# Define BUILD_CPP to build the cpp wrapper to the ASL library
+# The following options (default off) control what is built:
+# BUILD_CPP to build the cpp wrapper to the ASL library
+# BUILD_DYNRT_LIBS to build the libraries linked against the dynamic runtime
+# BUILD_MT_LIBS to build the multithreaded libraries 
 project(ASL)
 cmake_minimum_required(VERSION 2.8)
 # Set the path to CMake modules.
 set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${AMPL_CMAKE_MODULE_DIR})
+
+option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime (windows only)" OFF)
+option(BUILD_MT_LIBS "Build the multithreaded library" OFF)
+option(BUILD_CPP "Build the cpp interface" OFF)
 
 # Base directory
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -244,7 +251,7 @@ macro(createSingleASL name sourcedir sources)
     target_compile_options(${name} PRIVATE 
       /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996 /MT$<$<CONFIG:Debug>:d>)
   else()
-    target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
+    target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses -mcmodel=medium)
   endif()
   set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
 endmacro()
@@ -254,17 +261,19 @@ set(ASL2_SOURCES ${ASL2_SOURCES} ${ASL2_HEADERS})
 
 # Create ASL 1 
 createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
-# Create ASL 1 with support for multiple threads
-createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES)
-target_compile_definitions(asl-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
-
 # Create ASL 2
 createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
-# Create ASL 2 with support for multiple threads
-createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
-target_compile_definitions(asl2-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
 
-if(MSVC)
+# Create libs with support for multiple threads
+if(BUILD_MT_LIBS)
+  createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES)
+  createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+  target_compile_definitions(asl-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
+  target_compile_definitions(asl2-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
+endif()
+
+
+if(MSVC AND BUILD_DYNRT_LIBS)
   # Create ASLs linked to dynamic runtime on windows
   createSingleASL(asl-dynrt ${ASL_SOURCE_DIR} ASL_SOURCES)
   target_compile_options(asl-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
@@ -289,7 +298,14 @@ install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn
     DESTINATION include/asl) 
 install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd 
         DESTINATION include/asl2) 
-install(TARGETS asl asl2 asl-mt asl2-mt DESTINATION lib)
+
+install(TARGETS asl asl2 DESTINATION lib)
+if(BUILD_MT_LIBS)
+  install(TARGETS asl-mt asl2-mt DESTINATION lib)
+endif()
+if(MSVC AND BUILD_DYNRT_LIBS)
+  install(TARGETS asl-dynrt asl2-dynrt DESTINATION lib)
+endif()
 if(TARGET aslcpp)
     install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp) 
     install(TARGETS aslcpp DESTINATION lib)
