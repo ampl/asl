@@ -23,7 +23,7 @@ option(BUILD_CPP "Build the cpp interface" OFF)
 
 # Base directory
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(GENERATED_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
 
 # Get rid of useless warnings
 if(MSVC)
@@ -112,7 +112,6 @@ else()
   if(NOT WIN32)
     set(FPINIT ${SRCDIR}/solvers/fpinit.c)
   endif()
-
   if(GENERATE_ARITH)
     add_executable(arithchk ${SRCDIR}/solvers/arithchk.c ${FPINIT})
     if(WIN32)
@@ -125,7 +124,7 @@ else()
       OUTPUT ${GENERATED_INCLUDE_DIR}/arith.h
       DEPENDS arithchk
       COMMAND ${WINE} $<TARGET_FILE:arithchk> > ${GENERATED_INCLUDE_DIR}/arith.h
-      COMMENT "Writing arith.h")
+      COMMENT "Writing arith.h to ${GENERATED_INCLUDE_DIR}/arith.h")
     if(NOT MSVC)
       string(REPLACE "-Wall -Wextra -pedantic" "" CMAKE_C_FLAGS
                      "${CMAKE_C_FLAGS}")
@@ -136,7 +135,7 @@ else()
       OUTPUT ${GENERATED_INCLUDE_DIR}/arith.h
       COMMAND ${CMAKE_COMMAND} -E copy ${SRCDIR}/solvers/arith.h1
               ${GENERATED_INCLUDE_DIR}/arith.h
-      COMMENT "Copying arith.h1 to arith.h")
+      COMMENT "Copying arith.h1 to ${GENERATED_INCLUDE_DIR}/arith.h")
   endif(GENERATE_ARITH)
 endif()
 
