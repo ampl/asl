@@ -17,9 +17,15 @@ cmake_minimum_required(VERSION 2.8)
 set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${AMPL_CMAKE_MODULE_DIR})
 
-option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime (windows only)" OFF)
-option(BUILD_MT_LIBS "Build the multithreaded library" OFF)
-option(BUILD_CPP "Build the cpp interface" OFF)
+if(NOT BUILD_DYNRT_LIBS)
+  option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime (windows only)" OFF)
+endif()
+if(NOT BUILD_MT_LIBS)
+  option(BUILD_MT_LIBS "Build the multithreaded library" OFF)
+endif()
+if(NOT BUILD_CPP)
+  option(BUILD_CPP "Build the cpp interface" OFF)
+endif()
 
 # Base directory
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -263,12 +269,14 @@ createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
 # Create ASL 2
 createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
 
+message("in ASL BUILD_MT_LIBS ${BUILD_MT_LIBS}")
 # Create libs with support for multiple threads
 if(BUILD_MT_LIBS)
   createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES)
   createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
   target_compile_definitions(asl-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
   target_compile_definitions(asl2-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
+  message("Building MT libs: asl-mt and asl2-mt")
 endif()
 
 
