@@ -277,7 +277,7 @@ eput(Staticfgw *S, expr *e)
 		break;
 	 case 8:
 		eh = (expr_h*)e;
-		(*pf)(nl, "h%d:%d\n", strlen(eh->sym), eh->sym);
+		(*pf)(nl, "h%d:%s\n", strlen(eh->sym), eh->sym);
 		break;
 	 case 9:
 		en = (expr_n*)e;
@@ -624,7 +624,7 @@ fg_write_ASL(ASL *a, const char *stub, NewVCO *nu, int flags)
 	static NewVCO nu0;
 
 	ASL_CHECK(a, ASL_read_fg, "fg_write");
-	if ((comc1 && !c_cexp1st) || (como1 && !o_cexp1st))
+	if ((comc1 && !c_cexp1st) || (como1 && !o_cexp1st) || (n_lcon && !lc_cexp1st))
 		return ASL_writeerr_badcexp1st;
 	nnc = nne = nno = nnr = nnv = nnzc = nnzo = 0;
 	if (!nu || (nu->nnv == 0 && nu->nnc == 0 && nu->nno == 0))
@@ -718,14 +718,14 @@ fg_write_ASL(ASL *a, const char *stub, NewVCO *nu, int flags)
 	if (ampl_options[2] == 3)
 		fprintf(nl, " %.g", ampl_vbtol);
 	fprintf(nl, "\t# problem %.*s%s", oblen, obase, eol);
-	fprintf(nl, " %d %d %d %d", n_var + nnv, n_con + nnc,
-		n_obj + nno, nranges + nnr);
+	fprintf(nl, " %d %d %d %d %d", n_var + nnv, n_con + nnc,
+		n_obj + nno, nranges + nnr, n_eqn + nne);
 	s = "";
-	if ((n = n_eqn + nne) >= 0) {
-		fprintf(nl, " %d", n);
-		s = ", eqns";
+	if (n_lcon) {
+		fprintf(nl, " %d", n_lcon);
+		s = ", lcons";
 		}
-	fprintf(nl, "\t# vars, constraints, objectives, ranges%s%s", s, eol);
+	fprintf(nl, "\t# vars, constraints, objectives, ranges, eqns%s%s", s, eol);
 	if (n_cc | nlcc)
 		fprintf(nl, " %d %d %d %d%s%s", nlc, nlo, n_cc, nlcc,
 		"\t# nonlinear constrs, objs; ccons: lin, nonlin", eol);
@@ -748,7 +748,7 @@ fg_write_ASL(ASL *a, const char *stub, NewVCO *nu, int flags)
 		eol);
 	fprintf(nl, " %d %d\t# nonzeros in Jacobian, gradients%s",
 		nzc + nnzc, nzo + nnzo, eol);
-	fprintf(nl, " 0 0\t# max name lengths: constraints, variables%s", eol);
+	fprintf(nl, " %d %d\t# max name lengths: constraints, variables%s", maxrownamelen, maxcolnamelen, eol);
 	fprintf(nl, " %d %d %d %d %d\t# common exprs: b,c,o,c1,o1%s",
 		comb, comc, como, comc1, como1, eol);
 
@@ -798,6 +798,30 @@ fg_write_ASL(ASL *a, const char *stub, NewVCO *nu, int flags)
 			}
 		reverse(sd0);
 		}
+
+#define MWRITE_BOUNDS_VAR \
+	br(pf, nl, 'b', LUv, Uvx, n_var);\
+	br(pf, nl, 0, nu->LUnv, nu->Unv, nnv);
+
+#define MWRITE_INITIAL_GUESS_PRIMAL \
+	if (!(flags & ASL_write_no_X0))\
+		iguess(pf, nl, 'x', X0, havex0, n_var, nnv, nu->x0);
+
+#define MWRITE_BOUNDS_RANGE \
+	br(pf, nl, 'r', LUrhs, Urhsx, n_con);\
+	br(pf, nl, 0, nu->LUnc, nu->Unc, nnc);
+
+#define MWRITE_INITIAL_GUESS_DUAL \
+	if ((flags & ASL_write_no_pi0))\
+		iguess(pf, nl, 'd', pi0, havepi0, n_con, nnc, nu->d0);
+
+        if((asl->i.nlf_rw_flags & ASL_nl_permute)) {
+            MWRITE_BOUNDS_VAR;
+            MWRITE_INITIAL_GUESS_PRIMAL;
+            MWRITE_BOUNDS_RANGE;
+            MWRITE_INITIAL_GUESS_DUAL;
+        }
+
 	ce = cexps;
 	n = n_var + nnv;
 	S.v = var_e;
@@ -810,20 +834,22 @@ fg_write_ASL(ASL *a, const char *stub, NewVCO *nu, int flags)
 			}
 		eput(&S, ce->e);
 		}
-	S.cexps1_ = asl->I.cexps1_;
+	S.cexps1_ = cexps1;
 	S.nv0 = n_var;
 	S.com1off = S.nv0 + comb + comc + como;
-	br(pf, nl, 'b', LUv, Uvx, n_var);
-	br(pf, nl, 0, nu->LUnv, nu->Unv, nnv);
-	if (!(flags & ASL_write_no_X0))
-		iguess(pf, nl, 'x', X0, havex0, n_var, nnv, nu->x0);
-	br(pf, nl, 'r', LUrhs, Urhsx, n_con);
-	br(pf, nl, 0, nu->LUnc, nu->Unc, nnc);
-	if (!(flags & ASL_write_no_pi0))
-		iguess(pf, nl, 'd', pi0, havepi0, n_con, nnc, nu->d0);
+
 	coput(&S, 'C', con_de, n_con, c_cexp1st, 0, 0, nnc, 0, 0);
+	if (n_lcon) {
+                coput(&S, 'L', lcon_de, n_lcon, lc_cexp1st, 0, n_var-n_lcon /*19*/, nnc, 0, 0);
+		}
 	coput(&S, 'O', obj_de, n_obj, o_cexp1st, objtype, n_con,
 		nno, nu->oc, nu->ot);
+        if(!(asl->i.nlf_rw_flags & ASL_nl_permute)) {
+            MWRITE_INITIAL_GUESS_DUAL;
+            MWRITE_INITIAL_GUESS_PRIMAL;
+            MWRITE_BOUNDS_RANGE;
+            MWRITE_BOUNDS_VAR
+        }
 	if (A_vals)
 		k1put(pf, nl, A_colstarts, A_vals, A_rownos, n_con, n_var,
 			nnv, nnc, nu->newc);
@@ -843,6 +869,8 @@ fg_wread_ASL(ASL *asl, FILE *f, int flags)
 	want_xpi0 = 7;
 	if (comc1)
 		c_cexp1st = (int*)M1zapalloc((n_con + 1)*sizeof(int));
+	if (n_lcon)
+		lc_cexp1st = (int*)M1zapalloc((n_lcon + 1)*sizeof(int));
 	if (como1)
 		o_cexp1st = (int*)M1zapalloc((n_obj + 1)*sizeof(int));
 	if (!(flags & ASL_keep_derivs)) {

@@ -350,6 +350,8 @@ Exitcall {
 
  typedef struct DerivErrInfo DerivErrInfo;
 
+#define ASL_nl_permute 0x80
+
  typedef struct
 Edaginfo {
 	int ASLtype;
@@ -498,6 +500,7 @@ Edaginfo {
 		/* assigning these pointers before invoking edagread */
 
 	int	*c_cexp1st_;	/* cexp1 starts for constraints */
+	int	*lc_cexp1st_;	/* cexp1 starts for logical constraints */
 	int	*o_cexp1st_;	/* cexp1 starts for objectives */
 
 		/* for complementarity constraints */
@@ -623,6 +626,8 @@ Edaginfo {
 	size_t tot_M1z_bytes;	/* total allocated by M1alloc and M1zapalloc */
 	size_t rd_M1z_bytes;	/* tot_M1z_bytes after reading the .nl file */
 
+        int nlf_rw_flags;
+
 	} Edaginfo;
 
  struct
@@ -710,6 +715,7 @@ TMInfo {
 #define n_con		asl->i.n_con_
 #define n_conjac	asl->i.n_conjac_
 #define n_eqn		asl->i.n_eqn_
+#define lc_cexp1st	asl->i.lc_cexp1st_
 #define n_lcon		asl->i.n_lcon_
 #define n_obj		asl->i.n_obj_
 #define n_var		asl->i.n_var_

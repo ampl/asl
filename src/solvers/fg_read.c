@@ -1423,7 +1423,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 {
 	cgrad *cg, **cgp;
 	expr_v *e;
-	int i, i1, j, k, *ka, kseen, nc, nc0, nco, nlcon, no, nv, nvc, nvo, nvr, nxv, readall;
+	int i, i1, j, k, *ka, kseen, nc, nc0, nco, nlcon, no, nv, nvc, nvo, nvr, nxv, readall, need_nl_permute;
 	int (*Xscanf)(EdRead*, const char*, ...);
 	ograd *og, **ogp;
 	real t;
@@ -1472,6 +1472,8 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 		SS._r_ops = r_ops_ASL;
 	if (c_cexp1st)
 		*c_cexp1st = 0;
+	if (lc_cexp1st)
+		*lc_cexp1st = comc1-n_lcon;
 	if (o_cexp1st)
 		*o_cexp1st = comc1;
 	if (nfunc)
@@ -1575,6 +1577,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 	kaz = 0;
 	nz = 0;
 	j = kseen = 0;
+        need_nl_permute = 1;
 	for(;;) {
 		ER.can_end = 1;
 		i = edag_peek(R);
@@ -1621,6 +1624,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 				if (k < 0 || k >= nc0)
 					badline(R);
 				co_read(R,con_de,c_cexp1st,k,zac,want_derivs);
+                                need_nl_permute=0;
 				break;
 #ifdef Just_Linear
 			case 'F':
@@ -1662,7 +1666,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 				Xscanf(R, "%d", &k);
 				if (k < 0 || k >= nlcon)
 					badline(R);
-				co_read(R, lcon_de, 0, k, 0, 0);
+				co_read(R, lcon_de, lc_cexp1st, k, 0, 0);
 				break;
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
@@ -1675,6 +1679,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 					cexp1_read(R, j, k, nlin);
 				else
 					cexp_read(R, k, nlin);
+                                need_nl_permute=0;
 				break;
 #endif /* Just_Linear */
 			case 'G':
@@ -1749,8 +1754,12 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 				break;
 			case 'r':
 				br_read(R, asl->i.n_con0, LUrhs, Urhsx, cvar, nvr);
+                                need_nl_permute=0;
 				break;
 			case 'b':
+                                if(need_nl_permute)
+                                    asl->i.nlf_rw_flags |= ASL_nl_permute;
+                                need_nl_permute=0;
 				br_read(R, asl->i.n_var0, LUv, Uvx, 0, 0);
 				break;
 			case 'K':
