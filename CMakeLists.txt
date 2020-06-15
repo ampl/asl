@@ -269,14 +269,17 @@ createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
 # Create ASL 2
 createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
 
-message("in ASL BUILD_MT_LIBS ${BUILD_MT_LIBS}")
 # Create libs with support for multiple threads
 if(BUILD_MT_LIBS)
   createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES)
   createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
   target_compile_definitions(asl-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
   target_compile_definitions(asl2-mt PUBLIC MULTIPLE_THREADS ALLOW_OPENMP)
-  message("Building MT libs: asl-mt and asl2-mt")
+  include(FindOpenMP)
+  if(APPLE) 
+    target_compile_options(asl-mt PUBLIC ${OpenMP_C_FLAGS}) 
+    target_compile_options(asl2-mt PUBLIC ${OpenMP_C_FLAGS})
+  endif()
 endif()
 
 
@@ -302,18 +305,18 @@ if(BUILD_CPP)
 endif()
 
 install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd 
-    DESTINATION include/asl) 
+    DESTINATION include/asl  COMPONENT asl) 
 install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd 
-        DESTINATION include/asl2) 
+        DESTINATION include/asl2  COMPONENT asl) 
 
-install(TARGETS asl asl2 DESTINATION lib)
+install(TARGETS asl asl2 DESTINATION lib COMPONENT asl)
 if(BUILD_MT_LIBS)
-  install(TARGETS asl-mt asl2-mt DESTINATION lib)
+  install(TARGETS asl-mt asl2-mt DESTINATION lib COMPONENT asl)
 endif()
 if(MSVC AND BUILD_DYNRT_LIBS)
-  install(TARGETS asl-dynrt asl2-dynrt DESTINATION lib)
+  install(TARGETS asl-dynrt asl2-dynrt DESTINATION lib COMPONENT asl)
 endif()
 if(TARGET aslcpp)
-    install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp) 
-    install(TARGETS aslcpp DESTINATION lib)
+    install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp  COMPONENT asl) 
+    install(TARGETS aslcpp DESTINATION lib  COMPONENT asl)
 endif()
