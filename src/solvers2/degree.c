@@ -529,12 +529,14 @@ degree_ASL(ASL *asl, int co, void **pv)
 						break;
 					case OP_GOTO:
 					case OPGOTO2:
+					case OP_NEXTBLK:
 						if (**(int**)(o+4) != OPRET)
 							goto ret3;
 						break;
 #ifdef X64_bit_pointers
 					case OP_GOTOalign:
 					case OPGOTO2align:
+					case OP_NEXTBLKalign:
 						if (**(int**)(o+5) != OPRET)
 							goto ret3;
 						break;
