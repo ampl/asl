@@ -8,7 +8,7 @@ arithchk.c	63b0185	6532
 asl.h	1905fb07	47150
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	faa4e8ac	29
+asldate.c	16edff51	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -20,7 +20,7 @@ comptry.bat	e40861e9	209
 configure	1679ad6	1706
 configurehere	1f384d7	1690
 conscale.c	9a0f9de	3482
-degree.c	1e74ef10	11242
+degree.c	f4feff5a	10986
 derprop.c	920dff4	1297
 details.c0	fa7ec7b3	182
 dtoa.c	fd6feb77	158408
@@ -34,7 +34,7 @@ ewalloc1.c	e4db6a0d	3561
 ewalloc2.c	339db3	5684
 f_read.c	12b32457	1227
 fg_read.c	aec15d4	52296
-fg_write.c	fbe06d9e	27377
+fg_write.c	e98c6a5b	27213
 float.h0	11d95cda	1822
 fpecatch.c	e1d8a914	1574
 fpinit.c	e816f8aa	5665
@@ -55,7 +55,7 @@ getenv.c	e86c81a2	1466
 getstub.c	fd54164	13070
 getstub.h	f626e91d	7079
 htcl.c	fa7e1d1d	2074
-indic_cons.c	d05eb01	21518
+indic_cons.c	151724ad	21356
 jac0dim.c	f6e08e00	6698
 jac2dim.c	c2d8eba	1694
 jac2dim.h	81b97e7	1982
@@ -66,7 +66,7 @@ jacpdim.h	11b0ac29	2418
 libnamsave.c	f0184dd6	117
 mach.c	f480fbf5	2662
 mainexit.c	e4761b9b	1713
-makefile.u	25f5f40	10364
+makefile.u	e527966b	10373
 makefile.vc	f7d5a008	7278
 mip_pri.c	f1dd1d47	7887
 misc.c	1fe361fb	29511
@@ -109,7 +109,7 @@ rnd_prod.s	f4996bed	1471
 sigcatch.c	fe35ba8b	2374
 sjac0dim.c	ff686adb	1546
 sos_add.c	f59f41c0	22398
-sphes.c	1b844120	34586
+sphes.c	175198b3	34531
 sprintf.c	e6ce1d45	3050
 sscanf.c	e8e79b09	3302
 stderr.c	fc99b4f4	2096

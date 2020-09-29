@@ -601,6 +601,9 @@ alignarg(more_if:)
 			o = cp->b;
 			continue;
 
+#ifdef X64_bit_pointers
+		case OP_PLTERM1align:
+#endif
 		case n_OPPLTERM1:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
