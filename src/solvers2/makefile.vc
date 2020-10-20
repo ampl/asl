@@ -170,7 +170,7 @@ mqpcheckv.obj: avltree.h obj_adj.h opno.hd opno2.h
 nl_obj.obj nqpcheck.obj: nlp.h nlp2.h asl_pfg.h asl_pfgh.h obj_adj.h
 nqpcheck.obj nqpcheckZ.obj: opno.hd opno2.h
 obj_adj.obj: jacpdim.h obj_adj.h
-op_type.obj: op_type.hd op_typeb.hd
+op_type.obj: op_type.hd
 pfghread.obj: jacpdim.h opnos.hd asl_pfg.h opcode.hd opno2.h r_opn0.hd
 pshvprod.obj xp2known.obj: jacpdim.h opno2.h
 repwhere.obj: errchk.h

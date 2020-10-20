@@ -142,10 +142,10 @@ alignarg(more_OPLESS01:)
 		case nOPLESS2:
 			o1 = o + 5 + 2*sizeof(derpblock*)/sizeof(int);
 alignarg(more_OPLESS2:)
-			r = (Eresult*)(w + o[2]);
-			L = (Eresult*)(w + o[3]);
+			r = (Eresult*)(w + o[2]);	/* r->dR holds a derpblock* */
+			L = (Eresult*)(w + o[3]);	/* nOPLESS2 uses r->dL2 instead of r->dR */
 			R = (Eresult*)(w + o[4]);
-			r->dO = L->dO*r->dL + R->dO*r->dR;
+			r->dO = L->dO*r->dL + R->dO*r->dL2;
 			o = o1;
 			break;
 
@@ -191,6 +191,7 @@ alignarg(more_OPLESS2:)
 
 		case OPDIV10:
 		case nOPPOW1i:
+		case nOPPOW10:
 		case OP_atan210:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -530,11 +531,10 @@ hv_back(int *o, real *w, real aO0, real adO0)
 			t1 = adO * L->dO;
 			t2 = adO * R->dO;
 			L->aO  += r->aO*r->dL + t2*r->dLR;
-			R->aO  += r->aO*r->dR + t1*r->dLR + t2*r->dL2;
+			R->aO  += r->aO*r->dL2 + t1*r->dLR + t2*r->dL2;
 			break;
 
 		case nOPREM2:
-		case nOPLESS2:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
 			R = (Eresult*)(w + o[4]);
@@ -543,6 +543,17 @@ hv_back(int *o, real *w, real aO0, real adO0)
 			R->aO  += r->aO*r->dR;
 			L->adO += adO * r->dL;
 			R->adO += adO * r->dR;
+			break;
+
+		case nOPLESS2:
+			r = (Eresult*)(w + o[2]);	/* r->dR holds a derpblock* */
+			L = (Eresult*)(w + o[3]);	/* nOPLESS2 uses r->dL2 instead of r->dR */
+			R = (Eresult*)(w + o[4]);
+			adO = r->adO;
+			L->aO  += r->aO*r->dL;
+			R->aO  += r->aO*r->dL2;
+			L->adO += adO * r->dL;
+			R->adO += adO * r->dL2;
 			break;
 
 /*		case Hv_unary: */
@@ -1049,12 +1060,19 @@ hfg_back(Ops *O, real *w)
 /*		case Hv_timesLR: */
 		case OPDIV2:
 		case nOPREM2:
-		case nOPLESS2:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
 			R = (Eresult*)(w + o[4]);
 			L->aO  += r->aO*r->dL;
 			R->aO  += r->aO*r->dR;
+			break;
+
+		case nOPLESS2:
+			r = (Eresult*)(w + o[2]);	/* r->dR holds a derpblock* */
+			L = (Eresult*)(w + o[3]);	/* nOPLESS2 uses r->dL2 instead of r->dR */
+			R = (Eresult*)(w + o[4]);
+			L->aO  += r->aO*r->dL;
+			R->aO  += r->aO*r->dL2;
 			break;
 
 /*		case Hv_unary: */

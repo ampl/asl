@@ -196,7 +196,7 @@ mqpcheckv.o: avltree.h obj_adj.h opno.hd opno2.h
 nl_obj.o nqpcheck.o: nlp.h nlp2.h asl_pfg.h asl_pfgh.h obj_adj.h
 nqpcheck.o nqpcheckZ.o: opno.hd opno2.h
 obj_adj.o: jacpdim.h obj_adj.h
-op_type.o: op_type.hd op_typeb.hd
+op_type.o: op_type.hd
 pfghread.o: jacpdim.h opnos.hd asl_pfg.h opcode.hd opno2.h r_opn0.hd
 pshvprod.o xp2known.o: jacpdim.h opno2.h
 repwhere.o: errchk.h
@@ -365,7 +365,6 @@ xs0 = \
 	objval_.c \
 	op_type.c \
 	op_type.hd \
-	op_typeb.hd \
 	opcode.hd \
 	opno.hd \
 	opno2.h \

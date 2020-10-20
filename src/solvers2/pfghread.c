@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018, 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -59,6 +59,13 @@ expr {
 	int op;
 	pei L, R;
 	};
+
+ typedef struct
+exprc {
+	int op;
+	pei L, R;
+	int c;
+	} exprc;
 
  typedef struct
 expr_if {
@@ -153,6 +160,7 @@ Static {
 	expr_nv *exprn_free;
 	expr **slscratch;	/* used in awalk(sumlist) */
 	expr *_last_e;
+	exprc *exprc_free;
 	expr_nv **_larvlist;
 	expr_nv *var_e, **_varp;
 	int *_oplast, *_opnext, *_zc, *_zci, *_zl, *c1s, *dvspb;
@@ -664,7 +672,7 @@ efree(Static *S, expr *e)
 	expr **args, **argse, *e1;
 	expr_if *eif;
  top:
-	switch(optypeb[e->op]) {
+	switch(optype[e->op]) {
 
 	 case 2: /* binary */
 		efree(S, e->R.e);
@@ -678,8 +686,15 @@ efree(Static *S, expr *e)
 		e = e1;
 		goto top;
 
-	 case 3: /* minlist,maxlist*/
+	 case 3: /* OP1POW */
+		e1 = e->L.e;
+		e->L.e = (expr*)S->exprc_free;
+		S->exprc_free = (exprc*)e;
+		e = e1;
+		goto top;
+
 	 case 6: /* sumlist */
+	 case 12: /* minlist,maxlist*/
 		args = e->L.ep;
 		argse = e->R.ep;
 		while(args < argse)
@@ -739,24 +754,54 @@ exprmem(Static *S, size_t L)
  static expr *
 new_expr(Static *S, int o, expr *L, expr *R)
 {
-	expr *rv;
+	expr *LR, *rv;
+	exprc *rvc;
 
-	if ((rv = S->expr_free))
-		S->expr_free = rv->L.e;
-	else
-		rv = exprmem(S, sizeof(expr));
-	if (o == f_OPPOW) {
+	switch(o) {
+	  case f_OPPOW:
 		if (R->op == f_OPNUM) {
 			if (((expr_nv *)R)->varno == S->two) {
 				o = f_OP2POW;
 				R = 0;
+				break;
 				}
-			else
-				o = f_OP1POW;
+			o = f_OP1POW;
+			LR = R;
 			}
-		else if (L->op == f_OPNUM)
+		else if (L->op == f_OPNUM) {
 			o = f_OPCPOW;
-		}
+			LR = L;
+			L = R;
+			}
+		else
+			break;
+ rvc_ret:
+		if ((rvc = S->exprc_free))
+			S->exprc_free = (exprc*)rvc->L.e;
+		else
+			rvc = (exprc*)exprmem(S, sizeof(exprc));
+		rvc->op = o;
+		rvc->L.e = L;
+		rvc->R.e = 0;
+		rvc->c = ((expr_nv*)LR)->varno;
+		return (expr*)rvc;
+	  case OP_atan2:
+		if (R->op == f_OPNUM) {
+			o = OPatan210;
+			LR = R;
+			goto rvc_ret;
+			}
+		if (L->op == f_OPNUM) {
+			o = OPatan201;
+			LR = L;
+			L = R;
+			goto rvc_ret;
+			}
+	  }
+	if ((rv = S->expr_free))
+		S->expr_free = rv->L.e;
+	else
+		rv = exprmem(S, sizeof(expr));
 	rv->op = o;
 	rv->L.e = L;
 	rv->R.e = R;
@@ -799,7 +844,7 @@ eread(EdRead *R)
 	ASLTYPE *asl;
 	Static *S;
 	char *wd;
-	expr *F, *L, *T, *arg, **args, **argse, **argss, *rv;
+	expr *F, *L, *T, *arg, **args, **argse, **argss;
 	fint L1;
 	func_info *fi;
 	int *at, i, j, k, numargs, op, symargs;
@@ -912,15 +957,13 @@ eread(EdRead *R)
 	switch(optype[k]) {
 
 		case 1:	/* unary */
-			rv = new_expr(S, k, eread(R), 0);
-			return rv;
+			return new_expr(S, k, eread(R), 0);
 
 		case 2:	/* binary */
 			L = eread(R);
-			rv = new_expr(S, k, L, eread(R));
-			return rv;
+			return new_expr(S, k, L, eread(R));
 
-		case 3:	/* vararg (min, max) */
+		case 12: /* vararg (min, max) */
 			i = -1;
 			Xscanf(R, "%d", &i);
 			if (i <= 0)
@@ -1697,10 +1740,11 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 	ograd *Laf, *Raf, *rv, *taf;
 	real t;
 	tfinfo *tfi;
-
-	switch(optypeb[k = e->op]) {
+ 
+	switch(optype[k = e->op]) {
 
 		case 1:	/* unary */
+		case 3: /* exprc */
 			Laf = awalk(S, e->L.e);
 			if (k == f_OPUMINUS) {
 				if ((taf = Laf)) {
@@ -1756,12 +1800,6 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 			  }
 			afree(S, Laf, &e->L.e);
 			afree(S, Raf, &e->R.e);
-			break;
-
-		case 3:	/* vararg (min, max) */
-			args = e->L.ep;
-			for(argse = e->R.ep; args < argse; ++args)
-				afree(S, awalk(S, *args), args);
 			break;
 
 		case 4: /* piece-wise linear */
@@ -1878,6 +1916,12 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 		case 11: /* OPCOUNT */
 			args = e->L.ep;
 			for(argse = e->R.ep; args < argse; args++)
+				afree(S, awalk(S, *args), args);
+			break;
+
+		case 12: /* vararg (min, max) */
+			args = e->L.ep;
+			for(argse = e->R.ep; args < argse; ++args)
 				afree(S, awalk(S, *args), args);
 			break;
 
@@ -2776,9 +2820,10 @@ getgroup(Static *S, real scale, expr *e, PSfind *p)
 	int i, nb, nzc1, *ov, *ove, *zc1, *zci1;
 	ASL *asl = S->a;
 
-	for(e1 = e; optype[e1->op] == 1; e1 = e1->L.e)
+	e0 = 0;
+	for(e1 = e; (optype[e1->op] & ~2) == 1; e1 = e1->L.e)
 		e0 = e1;
-	if (e1 == e || !might_expand(S, e1))
+	if (!e0 || !might_expand(S, e1))
 		return 0;
 	PSfind_init(S, &f1, &p1, 0);
 	f = p->f;
@@ -3478,16 +3523,34 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		op[1] = rv;
 		op[2] = i;
 		break;
-	  case OPPOW:
 	  case f_OP1POW:
 	  case f_OPCPOW:
-		k = n_OPPOW0;
-		if (!deriv)
+	  case OPPOW:
+		if (!deriv) {
+			k = n_OPPOW0;
 			goto mult0;
+			}
 		ia = ja = 0;
 		*deriv = 0;
 		i = ewalk(S, e->L.e, &ia, 0);
-		j = ewalk(S, e->R.e, &ja, 0);
+		switch(k) {
+		  case f_OPCPOW:
+			ja = ia;
+			j = i;
+			ia = 0;
+			i = ((exprc*)e)->c;
+			k = OPPOW;
+			break;
+		  case f_OP1POW:
+			j = ((exprc*)e)->c;
+			k = OPPOW;
+			break;
+		  default:
+			j = 0;
+			k = n_OPPOW0;
+			if (e->R.e)
+				j = ewalk(S, e->R.e, &ja, 0);
+		  }
 		if (!ja) {
 			if (j < 0) {
 				t = S->htvals_end[j];
@@ -3667,14 +3730,30 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 	  case NE:
 		k = n_OPNE;
 		goto bnoderiv;
+	  case OPatan201:
+	  case OPatan210:
 	  case OP_atan2:
-		k = OP_atan20;
-		if (!deriv)
+		if (!deriv) {
+			k = OP_atan20;
 			goto mult0;
+			}
 		ia = ja = 0;
 		*deriv = 0;
 		i = ewalk(S, e->L.e, &ia, 0);
-		j = ewalk(S, e->R.e, &ja, 0);
+		switch(k) {
+		  case OPatan210:
+			ja = ia;
+			j = i;
+			ia = 0;
+			i = ((exprc*)e)->c;
+			break;
+		  case OPatan201:
+			j = ((exprc*)e)->c;
+			break;
+		  default:
+			j = ewalk(S, e->R.e, &ja, 0);
+		  }
+		k = OP_atan20;
 		if (!(ia | ja))
 			goto bret0;
 		goto binop;
@@ -3966,7 +4045,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				pop = (int**)&op[2];
 			opnext = (int*)&pop[2];
 			cp = 0;
-			opif = 0;
+			opif = nOPIF0;
 			}
 		cp0[0].e = opnext;
 		cp0[0].f = 0;
@@ -5280,7 +5359,7 @@ ewalkg(Static *S, expr *e, int k1)
 	  case OP1POW:
 		k = OP1POW_g;
 		op = nextop(S, 4);
-		op[3] = ewalk(S, e->R.e, 0, 0);
+		op[3] = ((exprc*)e)->c;
 		goto have_op;
 	  case f_OP2POW:
 		k = OP2POW_g;
@@ -5290,7 +5369,18 @@ ewalkg(Static *S, expr *e, int k1)
 		k = OPCPOW_g;
 		op = nextop(S, 4);
 		op[3] = k1;
-		k1 = ewalk(S, e->L.e, 0, 0);
+		k1 = ((exprc*)e)->c;
+		goto have_op;
+	  case OPatan201:
+		k = OPatan201_g;
+		op = nextop(S, 4);
+		op[3] = k1;
+		k1 = ((exprc*)e)->c;
+		goto have_op;
+	  case OPatan210:
+		k = OPatan210_g;
+		op = nextop(S, 4);
+		op[3] = ((exprc*)e)->c;
 		goto have_op;
 	  default:/*DEBUG*/
 		fprintf(Stderr, "bad e->op = %d in ewalkg\n", e->op);

@@ -3,3 +3,5 @@
 #define MULT	2
 #define DIV	3
 #define UMINUS	16
+#define OPatan201 83
+#define OPatan210 84

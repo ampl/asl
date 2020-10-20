@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018, 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -306,8 +306,8 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				r->dL = negInfinity;
-				r->O = r->dL2 = Infinity;
+				g->dL = negInfinity;
+				g->O = g->dL2 = Infinity;
 				goto top;
 				}
 #endif
@@ -1312,6 +1312,20 @@ alignarg(more_if:)
 			}
 		o += 5;
 		goto top;
+	  case OPatan210_g:
+		g = (GOps*)(w + o[1]);
+		g->O = rv.d = atan2(L = w[o[2]], R = w[o[3]]);
+		if (errchk(rv))
+			introuble2("atan2",L,R,1);
+		if (wd) {
+			t = 1. / (L*L + R*R);
+			g->dL =  t * R;
+			t *= t;
+			t1 = L*R;
+			g->dL2 = -(t * (t1+t1));
+			}
+		o += 4;
+		goto top;
 	  case OP_atan201:
 		r = (Eresult*)(w + o[2]);
 		r->O = rv.d = atan2(L = w[o[3]], R = w[o[4]]);
@@ -1325,6 +1339,20 @@ alignarg(more_if:)
 			r->dL2 = t * (t1+t1);
 			}
 		o += 5;
+		goto top;
+	  case OPatan201_g:
+		g = (GOps*)(w + o[1]);
+		g->O = rv.d = atan2(L = w[o[2]], R = w[o[3]]);
+		if (errchk(rv))
+			introuble2("atan2",L,R,1);
+		if (wd) {
+			t = 1. / (L*L + R*R);
+			g->dL = -t * L;
+			t *= t;
+			t1 = L*R;
+			g->dL2 = t * (t1+t1);
+			}
+		o += 4;
 		goto top;
 	  case OP_atan22:
 		r = (Eresult*)(w + o[2]);
@@ -1582,9 +1610,9 @@ alignarg(more_if:)
 	  case n_OPNUMBEROFs:	/* TEMPORARY */
 		n = o[2];
 		t = w[o[3]];
-		j = 3;
+		j = 4;
 		rv.d = 0.;
-		for(k = j + n; ++j < k; )
+		for(k = j + n; j < k; ++j)
 			if (w[o[j]] == t)
 				++rv.d;
 		w[o[1]] = rv.d;
@@ -1662,7 +1690,7 @@ alignarg(more_plterm:)
 		r->O = t + (R - bs[-1])*(r->dL = bs[-2]);
 		goto top;
 	  case n_OPANDLIST:
-		k = o[2];
+		k = 3 + o[2];
 		for(i = 3; i < k; ++i) {
 			if (!w[o[i]]) {
 				w[o[1]] = 0.;
@@ -1674,7 +1702,7 @@ alignarg(more_plterm:)
 		o += k;
 		goto top;
 	  case n_OPORLIST:
-		k = o[2];
+		k = 3 + o[2];
 		for(i = 3; i < k; ++i) {
 			if (w[o[i]]) {
 				w[o[1]] = 1.;

@@ -26,7 +26,7 @@ of or in connection with the use or performance of this software.
 #endif
 
  static void
-hv_fwd(int *o, real *w, int *oend)
+hv_fwd(int *o, real *w, int *oend)	/* for determining sparsity */
 {
 	Condptrs *cp;
 	Eresult *L, *R, *r;
@@ -89,7 +89,7 @@ hv_fwd(int *o, real *w, int *oend)
 alignarg(more_OPLESS01:)
 			r = (Eresult*)(w + o[2]);
 			R = (Eresult*)(w + o[4]);
-			r->dO = R->dO;
+			r->dO = r->dL * R->dO;
 			o = o1;
 			break;
 
@@ -151,6 +151,7 @@ alignarg(more_OPLESS2:)
 		case OPDIV10:
 		case OPMULT10:
 		case nOPREM10:
+		case nOPPOW10:
 		case OP_atan210:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -174,7 +175,7 @@ alignarg(more_OPLESS2:)
 alignarg(more_OPLESS10:)
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
-			r->dO = L->dO;
+			r->dO = r->dL * L->dO;
 			o = o1;
 			break;
 
@@ -536,12 +537,6 @@ hv_back1(int *o, real *w, int *oend)
 		case OP_sqrt1:
 		case OP_tan1:
 		case OPtanh1:
-			r = (Eresult*)(w + o[2]);
-			L = (Eresult*)(w + o[3]);
-			L->adO += r->adO;
-			L->aO  += r->aO  +  r->adO * L->dO;
-			break;
-
 		case OP_2POW1:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -636,6 +631,9 @@ alignarg(more_if:)
 			break;
 #endif
 
+/*		case Hv_plusL: */
+		case OPPLUS10:
+		case OPMINUS10:
 /*		case Hv_negate: */
 		case OPUMINUS1:
 			L = (Eresult*)(w + o[3]);
@@ -648,20 +646,12 @@ alignarg(more_if:)
 /*		case Hv_plusR: */
 		case OPPLUS01:
 			L = (Eresult*)(w + o[4]);
-			goto plus_end;
-
-/*		case Hv_plusL: */
-		case OPPLUS10:
-		case OPMINUS10:
-			L = (Eresult*)(w + o[3]);
- plus_end:
-			r = (Eresult*)(w + o[2]);
-			L->aO += r->aO;
-			L->adO += r->adO;
-			break;
+			goto neg_end;
 
 /*		case Hv_plusLR: */
 		case OPPLUS2:
+/*		case Hv_minusLR: */
+		case OPMINUS2:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
 			R = (Eresult*)(w + o[4]);
@@ -676,17 +666,6 @@ alignarg(more_if:)
 			L = (Eresult*)(w + o[4]);
 			goto neg_end;
 
-/*		case Hv_minusLR: */
-		case OPMINUS2:
-			r = (Eresult*)(w + o[2]);
-			L = (Eresult*)(w + o[3]);
-			R = (Eresult*)(w + o[4]);
-			L->aO += t1 = r->aO;
-			L->adO += t2 = r->adO;
-			R->aO += t1;
-			R->adO += t2;
-			break;
-
 /*		case Hv_timesR: */
 		case OPMULT01:
 			r = (Eresult*)(w + o[2]);
@@ -697,12 +676,6 @@ alignarg(more_if:)
 
 /*		case Hv_timesL: */
 		case OPDIV10:
-			r = (Eresult*)(w + o[2]);
-			L = (Eresult*)(w + o[3]);
-			L->adO += r->adO;
-			L->aO  += r->aO;
-			break;
-
 		case OPMULT10:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -771,7 +744,7 @@ hv_back(int *o, real *w, real aO, real adO0, int *oend)
 	}
 
  static void
-hv_fwd0(EvalWorkspace *ew, cexp *c, Varval *v)
+hv_fwd0(EvalWorkspace *ew, cexp *c, Varval *v)	/* for determining sparsity */
 {
 	Varval *V, *v1;
 	int i, *o, *ob;
@@ -804,12 +777,12 @@ hv_fwd0(EvalWorkspace *ew, cexp *c, Varval *v)
 	}
 
  static void
-pshv_prod1(EvalWorkspace *ew, range *r, int nobj, int ow, int y)
+pshv_prod1(EvalWorkspace *ew, range *r, int nobj, int ow, int y) /* for determining sparsity */
 {
 	ASL_pfgh *asl;
 	Varval *V, *Vc, *v;
 	cexp *c;
-	int *cei, *cei0, *ceie, i, *o;
+	int *cei, *cei0, *ceie, i, *o, *o1;
 	linarg *la, **lap, **lape;
 	lincoef *lc, *lce;
 	linpart *L;
@@ -846,9 +819,8 @@ pshv_prod1(EvalWorkspace *ew, range *r, int nobj, int ow, int y)
 		else if (!y)
 			continue;
 		if ((o = b->o.f)) {
-			hv_fwd(o, w, b->o.b);
-			o = b->o.b;
-			hv_back(o, w, 0., 1., b->o.f);
+			hv_fwd(o, w, o1 = b->o.b);
+			hv_back(o1, w, 0., 1., o);
 			}
 		}
 	while(cei > cei0) {

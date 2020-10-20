@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018, 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -1041,9 +1041,9 @@ eval1(int *o, EvalWorkspace *ew)
 	  case nOPNUMBEROFs:	/* TEMPORARY */
 		n = o[2];
 		t = w[o[3]];
-		j = 3;
+		j = 4;
 		rv.d = 0.;
-		for(k = j + n; ++j < k; )
+		for(k = j + n; j < k; ++j)
 			if (w[o[j]] == t)
 				++rv.d;
 		w[o[1]] = rv.d;
@@ -1114,7 +1114,7 @@ eval1(int *o, EvalWorkspace *ew)
 		w[i] = t + (R - bs[-1])*(w[i+1] = bs[-2]);
 		goto top;
 	  case nOPANDLIST:
-		k = o[2];
+		k = 3 + o[2];
 		for(i = 3; i < k; ++i) {
 			if (!w[o[i]]) {
 				w[o[1]] = 0.;
@@ -1126,7 +1126,7 @@ eval1(int *o, EvalWorkspace *ew)
 		o += k;
 		goto top;
 	  case nOPORLIST:
-		k = o[2];
+		k = 3 + o[2];
 		for(i = 3; i < k; ++i) {
 			if (w[o[i]]) {
 				w[o[1]] = 1.;
