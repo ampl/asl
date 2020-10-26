@@ -16,7 +16,9 @@ cmake_minimum_required(VERSION 2.8)
 # Set the path to CMake modules.
 set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${AMPL_CMAKE_MODULE_DIR})
-
+if(NOT BUILD_MCMODELLARGE)
+  option(BUILD_MCMODELLARGE "Build the library linked with mcmodel=large flag, used for compiling lgo" OFF)
+endif()
 if(NOT BUILD_DYNRT_LIBS)
   option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime (windows only)" OFF)
 endif()
@@ -295,7 +297,12 @@ if(MSVC AND BUILD_DYNRT_LIBS)
   createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
   target_compile_options(asl2-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
 endif()
-
+if(BUILD_MCMODELLARGE)
+ createSingleASL(asl2-large ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+ if(${ARCH} EQUAL 64)
+ target_compile_options(asl2-large PUBLIC "-mcmodel=large")
+ endif()
+endif()
 
 # Cpp wrapper, only if explicitly enabled
 if(BUILD_CPP)
