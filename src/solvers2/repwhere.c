@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -19,15 +19,15 @@ of or in connection with the use or performance of this software.
 #include "asl.h"
 #include "errchk.h"
 
- void
-repwhere_ASL(EvalWorkspace *ew)
+ static void
+report_where(EvalWorkspace *ew, int jv)
 {
 	ASL *asl;
 	FILE *f;
 	char *b, buf[512];
 	int i, j, k, k1;
-	static const char *nfmt[2] = { "%d: ", "function: " };
 	static const char *what[2] = { "constraint", "objective" };
+	static const char *which[4] = { "function: ", "gradient: ", "Hessian: ", "???: " };
 
 	asl = ew->asl;
 	fflush(stdout);
@@ -71,10 +71,12 @@ repwhere_ASL(EvalWorkspace *ew)
 	k = k1 = 0;
 	if ((i = ew->co_index) < 0) {
 		k = 1;
-		i = asl->i.n_con0 -i - 1;
+		i = asl->i.n_con0 - i;
 		if (n_obj <= 1)
 			k1 = 1;
 		}
+	else
+		++i;
 	fprintf(Stderr, "%s ", what[k]);
 	if (maxrownamelen) {
 		strcpy(stub_end, ".row");
@@ -83,40 +85,23 @@ repwhere_ASL(EvalWorkspace *ew)
 				if (!next_line)
 					break;
 			fclose(f);
-			if (j > i) {
+			if (j >= i) {
 				for(b = buf; *b; b++)
 					if (*b == '\n') {
 						*b = 0;
 						break;
 						}
-				fprintf(Stderr, "%s: ", buf);
-				goto ret;
+				fprintf(Stderr, "%s ", buf);
 				}
 			}
 		}
-	fprintf(Stderr, nfmt[k1], i + 1);
+	else
+		if (k1 == 0)
+			fprintf(Stderr, "%d ", i);
+	fprintf(Stderr, "%s", which[jv-1]);
  ret:
 	errno = 0;	/* in case it was set by fopen */
 	fflush(Stderr);
-	}
-
- void
-report_where_ASL(ASL *asl)
-{
-	EvalWorkspace *ew;
-
-	if (!(ew = asl->i.Ew0)) {
-		switch(asl->i.ASLtype) {
-		  case ASL_read_f:
-		  case ASL_read_fg:
-			ew = ewalloc1_ASL(asl);
-			break;
-		  default:
-			ew = ewalloc2_ASL(asl);
-		  }
-		asl->i.Ew0 = ew;
-		}
-	repwhere_ASL(ew);
 	}
 
  static void
@@ -190,7 +175,7 @@ DerivErrInfo {
 	};
 
  void
-deriv_errchk_ASL(EvalWorkspace *ew, fint *nerror, int coi, int n)
+deriv_errchk_ASL(EvalWorkspace *ew, int coi, int n, int jv)
 {
 	ASL *asl;
 	DerivErrInfo *D;
@@ -203,17 +188,19 @@ deriv_errchk_ASL(EvalWorkspace *ew, fint *nerror, int coi, int n)
 		k = -(k + 1);
 		if (k >= nlo)
 			return;
+		k += nlc;
 		}
 	else if (k >= nlc)
 		return;
+	Rp = D->R + k;
 	for(Rp = D->R + k, Rpe = Rp + n; Rp < Rpe; ++Rp, ++coi)
-		if ((R = *Rp)) {
+		if ((R = *Rp) && R->jv <= jv) {
 			jmp_check(ew->err_jmpw, R->jv);
 			if (ew == asl->i.Ew0)
 				jmp_check(asl->i.err_jmp_, R->jv);
 			ew->co_index = coi;
 			ew->cv_index = R->dv;
-			repwhere_ASL(ew);
+			report_where(ew, R->jv);
 			R->errprint(ew,R);
 			fflush(Stderr);
 			jmp_check(ew->err_jmpw1, R->jv);
@@ -221,6 +208,37 @@ deriv_errchk_ASL(EvalWorkspace *ew, fint *nerror, int coi, int n)
 				jmp_check(asl->i.err_jmp1_, R->jv);
 			exit(1);
 			}
+	}
+
+ void
+deriv2_errchk_ASL(EvalWorkspace *ew, int jv)
+{
+	ASL *asl;
+	DerivErrInfo *D;
+	DerrRecord *R, **Rp;
+	int coi, k, ke;
+
+	asl = ew->asl;
+	D = ew->Derrs;
+	for(ke = nlc + nlo, k = 0; k < ke; ++k) {
+		Rp = D->R + k;
+		if ((R = *Rp) && R->jv <= jv) {
+			jmp_check(ew->err_jmpw, R->jv);
+			if (ew == asl->i.Ew0)
+				jmp_check(asl->i.err_jmp_, R->jv);
+			if ((coi = k) >= nlc)
+				coi = nlc - k - 1;
+			ew->co_index = coi;
+			ew->cv_index = R->dv;
+			report_where(ew, R->jv);
+			R->errprint(ew,R);
+			fflush(Stderr);
+			jmp_check(ew->err_jmpw1, R->jv);
+			if (ew == asl->i.Ew0)
+				jmp_check(asl->i.err_jmp1_, R->jv);
+			exit(1);
+			}
+		}
 	}
 
  static DerivErrInfo *
@@ -280,7 +298,7 @@ new_DerrMblock(EvalWorkspace *ew, size_t len)
 	}
 
  static DerrRecord *
-getDR(EvalWorkspace *ew)
+getDR(EvalWorkspace *ew, int jv)
 {
 	ASL *asl;
 	DerivErrInfo *D;
@@ -293,20 +311,25 @@ getDR(EvalWorkspace *ew)
 		k = -(k + 1);
 		if (k >= nlo)
 			return 0;
+		k += nlc;
 		}
 	else if (k >= nlc)
 		return 0;
 	L = (sizeof(DerrRecord) + sizeof(real)-1) & ~(sizeof(real)-1);
+	R = 0;
 	if ((D = ew->Derrs)) {
-		if (D->R[k])
+		if ((R = D->R[k]) && R->jv <= jv)
 			return 0;
 		if (L <= D->mblast - D->mbnext)
 			goto have_D;
 		}
 	D = new_DerrMblock(ew, L);
  have_D:
-	D->R[k] = R = (DerrRecord*)(D->mblast - L);
-	D->mblast = (char*)R;
+	if (!R) {
+		R = (DerrRecord*)(D->mblast - L);
+		D->mblast = (char*)R;
+		}
+	D->R[k] = R;
 	D->busy[D->nbusy++] = k;
 	if ((R->dv = i = ew->cv_index)) {
 		j = 0;
@@ -363,7 +386,7 @@ introuble_ASL(EvalWorkspace *ew, const char *who, real a, int jv)
 	DerrRecord *R;
 
 	if (jv > 1 && !(ew->wantderiv & 2)) {
-		if ((R = getDR(ew))) {
+		if ((R = getDR(ew,jv))) {
 			R->errprint = derrprint1;
 			R->a = a;
 			R->jv = jv;
@@ -377,7 +400,7 @@ introuble_ASL(EvalWorkspace *ew, const char *who, real a, int jv)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, jv);
-	repwhere_ASL(ew);
+	report_where(ew, jv);
 	Errprint(fmt, who, a);
 	jmp_check(ew->err_jmpw1, jv);
 	if (ew == asl->i.Ew0)
@@ -394,7 +417,7 @@ introuble2_ASL(EvalWorkspace *ew, const char *who, real a, real b, int jv)
 	DerrRecord *R;
 
 	if (jv > 1 && !(ew->wantderiv & 2)) {
-		if ((R = getDR(ew))) {
+		if ((R = getDR(ew,jv))) {
 			R->errprint = derrprint2;
 			R->a = a;
 			R->u.b = b;
@@ -409,7 +432,7 @@ introuble2_ASL(EvalWorkspace *ew, const char *who, real a, real b, int jv)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, jv);
-	repwhere_ASL(ew);
+	report_where(ew, jv);
 	Errprint(fmt, who, a, b);
 	jmp_check(ew->err_jmpw1, jv);
 	if (ew == asl->i.Ew0)
@@ -427,7 +450,7 @@ zero_div_ASL(EvalWorkspace *ew, real L, const char *op)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, 1);
-	repwhere_ASL(ew);
+	report_where(ew, 4);
 	fprintf(Stderr, "can't compute %g%s0.\n", L, op);
 	fflush(Stderr);
 	jmp_check(ew->err_jmpw1, 1);
@@ -460,7 +483,7 @@ fintrouble_ASL(EvalWorkspace *ew, func_info *fi, const char *s, TMInfo *T)
 		DerrRecord *R;
 		size_t L;
 
-		if ((R = getDR(ew))) {
+		if ((R = getDR(ew,jv))) {
 			D = ew->Derrs;
 			L = strlen(s) + 1;
 			if (L > D->mblast - D->mbnext)
@@ -480,7 +503,7 @@ fintrouble_ASL(EvalWorkspace *ew, func_info *fi, const char *s, TMInfo *T)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, jv);
-	repwhere_ASL(ew);
+	report_where(ew, jv);
 	fprintf(Stderr, fmt, fi->name, s);
 	fflush(Stderr);
 	for(T1 = T->u.prev; T1; T1 = T1prev) {

@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2016, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -197,6 +197,30 @@ hv0compd(EvalWorkspace *ew, real *hv, real *p, int co)
 	notread("hvcompd", "pfgh_read or fgh_read");
 	}
 
+ static void
+hv0compde(EvalWorkspace *ew, real *hv, real *p, int co, fint *nerror)
+{
+	Not_Used(hv);
+	Not_Used(p);
+	Not_Used(co);
+	Not_Used(ew);
+	Not_Used(nerror);
+	notread("hvcompde", "pfgh_read or fgh_read");
+	}
+
+ static void
+hv0compe(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
+{
+	Not_Used(hv);
+	Not_Used(p);
+	Not_Used(nobj);
+	Not_Used(ow);
+	Not_Used(y);
+	Not_Used(ew);
+	Not_Used(nerror);
+	notread("hvcompe", "pfgh_read or fgh_read");
+	}
+
  static varno_t
 hv0comps(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z)
 {
@@ -210,6 +234,20 @@ hv0comps(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z)
 	return 0;
 	}
 
+ static varno_t
+hv0compse(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerror)
+{
+	Not_Used(hv);
+	Not_Used(p);
+	Not_Used(co);
+	Not_Used(nz);
+	Not_Used(z);
+	Not_Used(ew);
+	Not_Used(nerror);
+	notread("hvcompse", "pfgh_read or fgh_read");
+	return 0;
+	}
+
  static void
 hv0init(EvalWorkspace *ew, int n, int no, real *ow, real *y)
 {
@@ -219,6 +257,18 @@ hv0init(EvalWorkspace *ew, int n, int no, real *ow, real *y)
 	Not_Used(y);
 	Not_Used(ew);
 	notread("hvinit", "pfgh_read");
+	}
+
+ static void
+hv0inite(EvalWorkspace *ew, int n, int no, real *ow, real *y, fint *nerror)
+{
+	Not_Used(n);
+	Not_Used(no);
+	Not_Used(ow);
+	Not_Used(y);
+	Not_Used(ew);
+	Not_Used(nerror);
+	notread("hvinite", "pfgh_read");
 	}
 
  static int
@@ -243,6 +293,18 @@ dut0hes(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y)
 	}
 
  static void
+dute0hes(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y, fint *nerror)
+{
+	Not_Used(H);
+	Not_Used(nobj);
+	Not_Used(ow);
+	Not_Used(y);
+	Not_Used(ew);
+	Not_Used(nerror);
+	notread("duthese", "pfgh_read or jacpdim");
+	}
+
+ static void
 ful0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y)
 {
 	Not_Used(H);
@@ -255,6 +317,19 @@ ful0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y)
 	}
 
  static void
+fule0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y, fint *nerror)
+{
+	Not_Used(H);
+	Not_Used(LH);
+	Not_Used(nobj);
+	Not_Used(ow);
+	Not_Used(y);
+	Not_Used(ew);
+	Not_Used(nerror);
+	notread("fullhese", "pfgh_read or jacpdim");
+	}
+
+ static void
 sut0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, real *ow, real *y)
 {
 	Not_Used(p);
@@ -263,19 +338,32 @@ sut0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, real *ow, real *y)
 	Not_Used(ow);
 	Not_Used(y);
 	Not_Used(ew);
-	notread("sputhes", "pfgh_read or jacpdim");
+	notread("sphes", "pfgh_read or jacpdim");
+	}
+
+ static void
+sute0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, real *ow, real *y, fint *nerror)
+{
+	Not_Used(p);
+	Not_Used(H);
+	Not_Used(nobj);
+	Not_Used(ow);
+	Not_Used(y);
+	Not_Used(ew);
+	Not_Used(nerror);
+	notread("sphese", "pfgh_read or jacpdim");
 	}
 
  static fint
-sut0set(EvalWorkspace *ew, SputInfo **p, int nobj, int have_ow, int have_y, int both)
+sut0set(EvalWorkspace *ew, SputInfo **p, int nobj, int have_ow, int have_y, int uptri)
 {
 	Not_Used(p);
 	Not_Used(nobj);
 	Not_Used(have_ow);
 	Not_Used(have_y);
-	Not_Used(both);
+	Not_Used(uptri);
 	Not_Used(ew);
-	notread("sputset", "pfgh_read or jacpdim");
+	notread("sphsetup", "pfgh_read or jacpdim");
 	return 0;
 	}
 
@@ -305,20 +393,33 @@ Edagpars edagpars_ASL = {
 	con0grd,
 	hv0comp,
 	hv0comp,
+	hv0compe,
+	hv0compe,
 	hv0compd,
+	hv0compde,
 	hv0comps,
+	hv0compse,
 	hv0init,
 	hv0init,
+	hv0inite,
+	hv0inite,
 /*	hes0set, */
 	lcon0val,
 	x0known,
 	dut0hes,
 	dut0hes,
+	dute0hes,
+	dute0hes,
 	ful0hes,
 	ful0hes,
+	fule0hes,
+	fule0hes,
 	sut0hes,
 	sut0hes,
-	sut0set
+	sute0hes,
+	sute0hes,
+	sut0set,
+	sut0set,
 	};
 
  int
@@ -1060,7 +1161,6 @@ bad_bounds(ASL *asl, const char *fmt, ...)
  int
 prob_adj_ASL(ASL *asl)
 {
-	EvalWorkspace *ew;
 	cgrad *cg, **pcg, **pcge;
 	int flags, k;
 #ifndef NO_BOUNDSFILE_OPTION /*{*/

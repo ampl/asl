@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2016, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -310,13 +310,17 @@ typedef unsigned Long Ulong;
 #endif /* PSINFO_H0_included */
 #ifdef PSHVREAD
  extern void duthes_ASL(ASL*, real *H, int nobj, real *ow, real *y);
+ extern void duthese_ASL(ASL*, real *H, int nobj, real *ow, real *y, fint*);
  extern void fullhes_ASL(ASL*, real*H, fint LH, int nobj, real*ow, real*y);
+ extern void fullhese_ASL(ASL*, real*H, fint LH, int nobj, real*ow, real*y, fint*);
  extern void hvpinit_ASL(ASL*, int ndhmax, int nobj, real *ow, real *y);
+ extern void hvpinite_ASL(ASL*, int ndhmax, int nobj, real *ow, real *y, fint*);
  extern void ihd_clear_ASL(ASL_pfgh*);
  extern ASL_pfgh *pscheck_ASL(ASL*, const char*);
  extern void pshv_prod_ASL(ASL_pfgh*, range*r, int nobj, real*ow, real*y);
  extern fint sphes_setup_ASL(ASL*, SputInfo**, int nobj, int ow, int y, int ul);
- extern void sphes_ASL(ASL*, SputInfo**, real *H, int nobj, real*ow, real *y);
+ extern void sphes_ASL(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y);
+ extern void sphese_ASL(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
  extern void xpsg_check_ASL(ASL_pfgh*, int nobj, real *ow, real *y);
 #else /* PSHVREAD */
  extern int xp1known_ASL(ASL*, real*, fint*);

@@ -44,7 +44,7 @@ ewalloc2_ASL(ASL *a)
 	arglist *al;
 	char *s;
 	const char **sa;
-	func_info *fi, **pfi;
+	func_info *fi;
 	int i, nc, nf, nlogc, nlv, no, nv, nv0, nvx;
 	real *d, *lastx, *ra, *w;
 	size_t L, La, Le, Lh, Lh0, Lo, Lu, Luw, Lx, Lxc, *nxc;
@@ -170,7 +170,6 @@ ewalloc2_ASL(ASL *a)
 		rv->al = al = (arglist*)(sa + asl->i.sa_max);
 		ptfi = (tfinfo**)asl->i.invd;
 		memset(al, 0, nf*sizeof(arglist));
-		pfi = funcs;
 		for(i = 0; i < nf; ++i, ++al) {
 			tfi = ptfi[i];
 			al->n = al->nin = tfi->n;

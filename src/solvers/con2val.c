@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -143,7 +143,7 @@ jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
 		}
 	k = n_conjac[1];
 	if (asl->i.Derrs)
-		deriv_errchk_ASL(a, nerror, j, k-j);
+		deriv_errchk_ASL(a, j, k-j, 2);
 	Adjoints = adjoints;
 	d0 = con_de;
 	cscale = asl->i.cscale;

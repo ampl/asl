@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2016, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -29,7 +29,10 @@ of or in connection with the use or performance of this software.
 #define objpval  objpval_ASL
 #define hvpcomp  hvpcomp_ASL
 #define hvpcompd hvpcompd_ASL
+#define hvpcompde hvpcompde_ASL
+#define hvpcompe hvpcompe_ASL
 #define hvpcomps hvpcomps_ASL
+#define hvpcompse hvpcompse_ASL
 #define xp2known xp2known_ASL
 
 #ifdef __cplusplus
@@ -45,8 +48,11 @@ extern "C" {
  extern void objpgrd(ASL*, int nobj, real *X, real *G, fint *nerror);
  extern real objpval(ASL*, int nobj, real *X, fint *nerror);
  extern void hvpcomp(ASL*, real *hv, real *p, int nobj, real *ow, real *y);
- extern void hvpcompd(ASL*,real *hv, real *p, int co);
+ extern void hvpcompd(ASL*, real *hv, real *p, int co);
+ extern void hvpcompde(ASL* ,real *hv, real *p, int co, fint*);
+ extern void hvpcompe(ASL*, real *hv, real *p, int nobj, real *ow, real *y, fint*);
  extern varno_t hvpcomps(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z);
+ extern varno_t hvpcompse(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
  extern int xp_check_ASL(ASL_pfgh*, real*);
  extern int xp2known(ASL*, real*, fint*);
 #ifdef __cplusplus

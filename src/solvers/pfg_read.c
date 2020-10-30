@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -4459,13 +4459,19 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Lconval= lconpval_ASL;
 			a->p.Hvcomp = a->p.Hvcomp_nomap = hvpcomp_ASL;
 			a->p.Hvcompd = hvpcompd_ASL;
+			a->p.Hvcompde = hvpcompde_ASL;
 			a->p.Hvcomps = hvpcomps_ASL;
+			a->p.Hvcompse = hvpcompse_ASL;
 			a->p.Hvinit = a->p.Hvinit_nomap = hvpinit_ASL;
+			a->p.Hvinite = a->p.Hvinite_nomap = hvpinite_ASL;
 			a->p.Hesset = hes_setup;
 			a->p.Xknown = xp2known_ASL;
 			a->p.Duthes = a->p.Duthes_nomap = duthes_ASL;
+			a->p.Duthese = a->p.Duthese_nomap = duthese_ASL;
 			a->p.Fulhes = a->p.Fulhes_nomap = fullhes_ASL;
+			a->p.Fulhese = a->p.Fulhese_nomap = fullhese_ASL;
 			a->p.Sphes  = a->p.Sphes_nomap  = sphes_ASL;
+			a->p.Sphese = a->p.Sphese_nomap	= sphese_ASL;
 			a->p.Sphset = a->p.Sphset_nomap = sphes_setup_ASL;
 #else
 			a->p.Xknown = xp1known_ASL;

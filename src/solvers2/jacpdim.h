@@ -31,7 +31,10 @@ of or in connection with the use or performance of this software.
 #define objpval  objpval_ew_ASL
 #define hvpcomp  hvpcomp_ew_ASL
 #define hvpcompd hvpcompd_ew_ASL
+#define hvpcompde hvpcompde_ew_ASL
+#define hvpcompe hvpcompe_ew_ASL
 #define hvpcomps hvpcomps_ew_ASL
+#define hvpcompse hvpcompse_ew_ASL
 #define xp2known xp2known_ew_ASL
 
 #ifdef __cplusplus
@@ -47,7 +50,11 @@ extern "C" {
  extern real objpval(EvalWorkspace*, int nobj, real *X, fint *nerror);
  extern void hvpcomp(EvalWorkspace*, real *hv, real *p, int nobj, real *ow, real *y);
  extern void hvpcompd(EvalWorkspace*,real *hv, real *p, int co);
+ extern void hvpcompde(EvalWorkspace*,real *hv, real *p, int co, fint*);
+ extern void hvpcompe(EvalWorkspace*, real *hv, real *p, int nobj, real *ow, real *y, fint*);
  extern varno_t hvpcomps(EvalWorkspace*, real *hv, real *p, int co, varno_t nz, varno_t *z);
+ extern varno_t hvpcompse(EvalWorkspace*, real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
+
  extern int xp2known(EvalWorkspace*, real*, fint*);
 #ifdef __cplusplus
 	}

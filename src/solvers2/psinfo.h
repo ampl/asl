@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -400,13 +400,17 @@ tfinfo {
 #endif /* PSINFO_H0_included */
 #ifdef PSHVREAD
  extern void duthes_ew_ASL(EvalWorkspace*, real *H, int nobj, real *ow, real *y);
+ extern void duthese_ew_ASL(EvalWorkspace*, real *H, int nobj, real *ow, real *y, fint*);
  extern real eval2_ASL(int*, EvalWorkspace*);
- extern void fullhes_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, real*ow, real*y);
+ extern void fullhes_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, real*ow, real *y);
+ extern void fullhese_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, real*ow, real *y, fint*);
  extern void hvpinit_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, real *ow, real *y);
+ extern void hvpinite_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, real *ow, real *y, fint*);
  extern ASL_pfgh *pscheck_ASL(ASL*, const char*);
  extern void pshv_prod_ASL(EvalWorkspace*, range *r, int nobj, real *ow, real *y);
  extern fint sphes_setup_ew_ASL(EvalWorkspace*, SputInfo**, int nobj, int ow, int y, int ul);
- extern void sphes_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, real*ow, real *y);
+ extern void sphes_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, real *ow, real *y);
+ extern void sphese_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
  extern int xp_check_ASL(EvalWorkspace*, real*);
  extern void xpsg_check_ASL(EvalWorkspace*, int nobj, real *ow, real *y);
 #else /* PSHVREAD */

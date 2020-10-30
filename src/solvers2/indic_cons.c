@@ -1181,7 +1181,6 @@ indicator_constrs_ASL(ASL *asl, void *v, Add_Indicator add_indic, int errinfo[2]
 	for(i = rc = 0; i < nlogc; ++i)
 		if ((rc = add_indicator(i, &lci, logc[i].o.e)))
 			break;
- done:
 	if (lci.zc)
 		del_mblk(lci.zc);
 	if (lci.tchunks)

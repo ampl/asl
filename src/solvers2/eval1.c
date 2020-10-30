@@ -1865,7 +1865,7 @@ obj1grd_ew_ASL(EvalWorkspace *ew, int nobj, real *X, real *G, fint *nerror)
 			goto done;
 		}
 	if (ew->Derrs)
-		deriv_errchk_ASL(ew, nerror, -(nobj+1), 1);
+		deriv_errchk_ASL(ew, -(nobj+1), 1, 2);
 	if (ew->x0kind & ASL_need_comba) {
 		dv_funnel(asl, ew, asl->I.dvfb);
 		ew->x0kind &= ~ASL_need_comba;
@@ -1975,7 +1975,7 @@ con1grd_ew_ASL(EvalWorkspace *ew, int nc, real *X, real *G, fint *nerror)
 			return;
 		}
 	if (ew->Derrs)
-		deriv_errchk_ASL(ew, nerror, nc, 1);
+		deriv_errchk_ASL(ew, nc, 1, 2);
 	if (ew->x0kind & ASL_need_comba) {
 		dv_funnel(asl, ew, asl->I.dvfb);
 		ew->x0kind &= ~ASL_need_comba;
@@ -2104,7 +2104,7 @@ jac1val_ew_ASL(EvalWorkspace *ew, real *X, real *G, fint *nerror)
 		}
 	k = n_conjac[1];
 	if (ew->Derrs)
-		deriv_errchk_ASL(ew, nerror, j, k-j);
+		deriv_errchk_ASL(ew, j, k-j, 2);
 	if (asl->i.zap_J)
 		memset(G, 0, asl->i.zap_J);
 	s = ew->derps;

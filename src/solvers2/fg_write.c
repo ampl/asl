@@ -1197,7 +1197,7 @@ fg_write_ASL(ASL *a, const char *stub, NewVCO *nu, int flags)
 	int nv, nx, oblen, rflag, rv;
 	lincoef *Lc, *Lce;
 	linpart *L;
-	real *ca, *numv, *r, *re, t;
+	real *numv, *r, *re, t;
 	static NewVCO nu0;
 
 	ASL_CHECK(a, ASL_read_fg, "fg_write");

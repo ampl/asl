@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -457,10 +457,44 @@ hvcomp_adj(ASL *asl, real *hv, real *p, int no, real *ow, real *y)
 	}
 
  static void
+hvcompe_adj(ASL *asl, real *hv, real *p, int no, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	paradj(asl, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Hvcomp_nomap(asl, hv, p, no, ow, y);
+	*Jp = Jsave;
+	}
+
+ static void
 hvinit_adj(ASL *asl, int hid_limit, int no, real *ow, real *y)
 {
 	paradj(asl, &no, &ow, &y);
 	asl->p.Hvinit_nomap(asl, hid_limit, no, ow, y);
+	}
+
+ static void
+hvinite_adj(ASL *asl, int hid_limit, int no, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	paradj(asl, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Hvinit_nomap(asl, hid_limit, no, ow, y);
+	*Jp = Jsave;
 	}
 
  static void
@@ -471,6 +505,23 @@ duthes_adj(ASL *asl, real *H, int no, real *ow, real *y)
 	}
 
  static void
+duthese_adj(ASL *asl, real *H, int no, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	paradj(asl, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Duthes_nomap(asl, H, no, ow, y);
+	*Jp = Jsave;
+	}
+
+ static void
 fulhes_adj(ASL *asl, real *H, fint LH, int no, real *ow, real *y)
 {
 	paradj(asl, &no, &ow, &y);
@@ -478,10 +529,44 @@ fulhes_adj(ASL *asl, real *H, fint LH, int no, real *ow, real *y)
 	}
 
  static void
+fulhese_adj(ASL *asl, real *H, fint LH, int no, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	paradj(asl, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Fulhes_nomap(asl, H, LH, no, ow, y);
+	*Jp = Jsave;
+	}
+
+ static void
 sphes_adj(ASL *asl, SputInfo **spi, real *H, int no, real *ow, real *y)
 {
 	paradj(asl, &no, &ow, &y);
 	asl->p.Sphes_nomap(asl, spi, H, no, ow, y);
+	}
+
+ static void
+sphese_adj(ASL *asl, SputInfo **spi, real *H, int no, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	paradj(asl, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Sphes_nomap(asl, spi, H, no, ow, y);
+	*Jp = Jsave;
 	}
 
  static fint
@@ -617,10 +702,15 @@ obj_adj_ASL(ASL *asl)
 			asl->p.Objgrd = objgrd_adj;
 			if (asl->i.ASLtype == ASL_read_pfgh) {
 				asl->p.Hvcomp = hvcomp_adj;
+				asl->p.Hvcompe = hvcompe_adj;
 				asl->p.Hvinit = hvinit_adj;
+				asl->p.Hvinite = hvinite_adj;
 				asl->p.Duthes = duthes_adj;
+				asl->p.Duthese = duthese_adj;
 				asl->p.Fulhes = fulhes_adj;
+				asl->p.Fulhese = fulhese_adj;
 				asl->p.Sphes  = sphes_adj;
+				asl->p.Sphese  = sphese_adj;
 				asl->p.Sphset = sphes_setup_adj;
 				}
 			}

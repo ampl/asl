@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -459,11 +459,49 @@ hvcomp_adj(EvalWorkspace *ew, real *hv, real *p, int no, real *ow, real *y)
 	}
 
  static void
+hvcompe_adj(EvalWorkspace *ew, real *hv, real *p, int no, real *ow, real *y, fint *nerror)
+{
+	ASL *asl;
+	Jmp_buf **Jp, *Jsave, b;
+
+	asl = ew->asl;
+	paradj(ew, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Hvcomp_nomap(ew, hv, p, no, ow, y);
+	*Jp = Jsave;
+	}
+
+ static void
 hvinit_adj(EvalWorkspace *ew, int hid_limit, int no, real *ow, real *y)
 {
 	ASL *asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
 	asl->p.Hvinit_nomap(ew, hid_limit, no, ow, y);
+	}
+
+ static void
+hvinite_adj(EvalWorkspace *ew, int hid_limit, int no, real *ow, real *y, fint *nerror)
+{
+	ASL *asl;
+	Jmp_buf **Jp, *Jsave, b;
+
+	asl = ew->asl;
+	paradj(ew, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Hvinit_nomap(ew, hid_limit, no, ow, y);
+	*Jp = Jsave;
 	}
 
  static void
@@ -475,6 +513,25 @@ duthes_adj(EvalWorkspace *ew, real *H, int no, real *ow, real *y)
 	}
 
  static void
+duthese_adj(EvalWorkspace *ew, real *H, int no, real *ow, real *y, fint *nerror)
+{
+	ASL *asl;
+	Jmp_buf **Jp, *Jsave, b;
+
+	asl = ew->asl;
+	paradj(ew, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Duthes_nomap(ew, H, no, ow, y);
+	*Jp = Jsave;
+	}
+
+ static void
 fulhes_adj(EvalWorkspace *ew, real *H, fint LH, int no, real *ow, real *y)
 {
 	ASL *asl = ew->asl;
@@ -483,11 +540,49 @@ fulhes_adj(EvalWorkspace *ew, real *H, fint LH, int no, real *ow, real *y)
 	}
 
  static void
+fulhese_adj(EvalWorkspace *ew, real *H, fint LH, int no, real *ow, real *y, fint *nerror)
+{
+	ASL *asl;
+	Jmp_buf **Jp, *Jsave, b;
+
+	asl = ew->asl;
+	paradj(ew, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Fulhes_nomap(ew, H, LH, no, ow, y);
+	*Jp = Jsave;
+	}
+
+ static void
 sphes_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, real *ow, real *y)
 {
 	ASL *asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
 	asl->p.Sphes_nomap(ew, spi, H, no, ow, y);
+	}
+
+ static void
+sphese_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, real *ow, real *y, fint *nerror)
+{
+	ASL *asl;
+	Jmp_buf **Jp, *Jsave, b;
+
+	asl = ew->asl;
+	paradj(ew, &no, &ow, &y);
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		asl->p.Sphes_nomap(ew, spi, H, no, ow, y);
+	*Jp = Jsave;
 	}
 
  static fint
@@ -625,10 +720,15 @@ obj_adj_ASL(ASL *asl)
 			asl->p.Objgrd = objgrd_adj;
 			if (asl->i.ASLtype == ASL_read_pfgh) {
 				asl->p.Hvcomp = hvcomp_adj;
+				asl->p.Hvcompe = hvcompe_adj;
 				asl->p.Hvinit = hvinit_adj;
+				asl->p.Hvinite = hvinite_adj;
 				asl->p.Duthes = duthes_adj;
+				asl->p.Duthese = duthese_adj;
 				asl->p.Fulhes = fulhes_adj;
+				asl->p.Fulhese = fulhese_adj;
 				asl->p.Sphes  = sphes_adj;
+				asl->p.Sphese  = sphese_adj;
 				asl->p.Sphset = sphes_setup_adj;
 				}
 			}

@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -274,9 +274,31 @@ hvpinit_nc_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y)
 hvpinit_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y)
 {
 	ASL_pfgh *asl = (ASL_pfgh*)ew->asl;
-	ASL_CHECK(((ASL*)asl), ASL_read_pfgh, "xvpinit");
+	ASL_CHECK(((ASL*)asl), ASL_read_pfgh, "hvpinit");
 	xpsg_check_ASL(ew, nobj, ow, y);
 	hvpinit_nc_ASL(ew, ndhmax, nobj, ow, y);
+	}
+
+/* Variant of hvpinit_ew() that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+hvpinite_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y, fint *nerror)
+{
+	ASL_pfgh *asl;
+	Jmp_buf **Jp, *Jsave, b;
+
+	asl = (ASL_pfgh*)ew->asl;
+	ASL_CHECK(((ASL*)asl), ASL_read_pfgh, "hvpinite");
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		hvpinit_nc_ASL(ew, ndhmax, nobj, ow, y);
+	*Jp = Jsave;
 	}
 
 #ifdef __cplusplus

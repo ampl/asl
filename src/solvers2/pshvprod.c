@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018, 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -531,7 +531,7 @@ hv_back(int *o, real *w, real aO0, real adO0)
 			t1 = adO * L->dO;
 			t2 = adO * R->dO;
 			L->aO  += r->aO*r->dL + t2*r->dLR;
-			R->aO  += r->aO*r->dL2 + t1*r->dLR + t2*r->dL2;
+			R->aO  += r->aO*r->dR + t1*r->dLR + t2*r->dL2;
 			break;
 
 		case nOPREM2:
@@ -1582,6 +1582,8 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
 	W = ew->w;
 	V = (Varval*)W;
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcomp");
+	if (ew->Derrs)
+		deriv2_errchk_ASL(ew, 3);
 	++ew->stats.hesvec;
 	asl = (ASL_pfgh*)a;
 	xpsg_check_ASL(ew, nobj, ow, y);
@@ -1765,6 +1767,25 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
 		while(hv < w)
 			*hv++ *= *s++;
 		}
+	}
+
+/* Variant of hvpcomp_ew_ASL that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+hvpcompe_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		hvpcomp_ew_ASL(ew, hv, p, nobj, ow, y);
+	*Jp = Jsave;
 	}
 
  void
@@ -2001,7 +2022,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co)
 		}
 	if (ew->Derrs) {
 		ew->x0kind = oxk;
-		deriv_errchk_ASL(ew, 0, co, 1);
+		deriv_errchk_ASL(ew, co, 1, 3);
 		ew->x0kind |= ASL_x_known;
 		}
 	if ((ndv = asl->P.ncom)) {
@@ -2135,6 +2156,25 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co)
 		del_mblk(p0);
 	}
 
+/* Variant of hvpcompd_ew_ASL that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+hvpcompde_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		hvpcompd_ew_ASL(ew, hv, p, co);
+	*Jp = Jsave;
+	}
+
  varno_t
 hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z)
 	/* p = direction */
@@ -2260,7 +2300,7 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_
 		}
 	if (ew->Derrs) {
 		ew->x0kind = oxk;
-		deriv_errchk_ASL(ew, 0, co, 1);
+		deriv_errchk_ASL(ew, co, 1, 3);
 		ew->x0kind |= ASL_x_known;
 		}
 	if ((ndv = asl->P.ncom)) {
@@ -2429,6 +2469,28 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_
 		}
 	if (p0)
 		del_mblk(p0);
+	return rv;
+	}
+
+/* Variant of hvpcomps_ew_ASL that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ varno_t
+hvpcompse_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+	varno_t rv;
+
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	rv = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		rv = hvpcomps_ew_ASL(ew, hv, p, co, nz, z);
+	*Jp = Jsave;
 	return rv;
 	}
 

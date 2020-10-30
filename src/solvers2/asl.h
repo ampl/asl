@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -245,19 +245,31 @@ Edagpars {
 	void (*Congrd_nomap)	(EvalWorkspace*,int nc, real *X, real *G, fint *nerror);
 	void (*Hvcomp)		(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y);
 	void (*Hvcomp_nomap)	(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y);
+	void (*Hvcompe)		(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y, fint*);
+	void (*Hvcompe_nomap)	(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y, fint*);
 	void (*Hvcompd)		(EvalWorkspace*,real *hv, real *p, int co);
+	void (*Hvcompde)	(EvalWorkspace*,real *hv, real *p, int co, fint*);
 	varno_t (*Hvcomps)	(EvalWorkspace*,real *hv, real *p, int co, varno_t nz, varno_t *z);
+	varno_t (*Hvcompse)	(EvalWorkspace*,real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
 	void (*Hvinit)		(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y);
 	void (*Hvinit_nomap)	(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y);
+	void (*Hvinite)		(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y, fint*);
+	void (*Hvinite_nomap)	(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y, fint*);
 /*	void (*Hesset)		(EvalWorkspace*,int flags, int no, int nno, int nc, int nnc);*/
 	int  (*Lconval)		(EvalWorkspace*,int ncon, real *X, fint *nerror);
-	int (*Xknown)		(EvalWorkspace*,real*, fint*);
+	int  (*Xknown)		(EvalWorkspace*,real*, fint*);
 	void (*Duthes)		(EvalWorkspace*,real *H, int nobj, real *ow, real *y);
 	void (*Duthes_nomap)	(EvalWorkspace*,real *H, int nobj, real *ow, real *y);
+	void (*Duthese)		(EvalWorkspace*,real *H, int nobj, real *ow, real *y, fint*);
+	void (*Duthese_nomap)	(EvalWorkspace*,real *H, int nobj, real *ow, real *y, fint*);
 	void (*Fulhes)		(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y);
 	void (*Fulhes_nomap)	(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y);
+	void (*Fulhese)		(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y, fint*);
+	void (*Fulhese_nomap)	(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y, fint*);
 	void (*Sphes)		(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y);
 	void (*Sphes_nomap)	(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y);
+	void (*Sphese)		(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
+	void (*Sphese_nomap)	(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
 	fint (*Sphset)		(EvalWorkspace*,SputInfo**, int nobj, int ow, int y, int uptri);
 	fint (*Sphset_nomap)	(EvalWorkspace*,SputInfo**, int nobj, int ow, int y, int uptri);
 	EvalWorkspace* (*EWalloc)(ASL*);
@@ -277,9 +289,12 @@ Edagpars {
 #define hvinit(no,ow,y)		asl->p.Hvinit(asl->i.Ew0,ihd_limit,no,ow,y)
 /*#define hesset(f,o,n,c,nc)	asl->p.Hesset(asl->i.Ew0,f,o,n,c,nc)*/
 #define duthes(h,n,ow,y)	asl->p.Duthes(asl->i.Ew0,h,n,ow,y)
+#define duthese(h,n,ow,y,ne)	asl->p.Duthese(asl->i.Ew0,h,n,ow,y,ne)
 #define fullhes(h,lh,n,ow,y)	asl->p.Fulhes(asl->i.Ew0,h,lh,n,ow,y)
+#define fullhese(h,lh,n,ow,y,e)	asl->p.Fulhese(asl->i.Ew0,h,lh,n,ow,y,e)
 #define lconval(I,x,ne)		asl->p.Lconval(asl->i.Ew0,I,x,ne)
 #define sphes(h,no,ow,y)	asl->p.Sphes(asl->i.Ew0,0,h,no,ow,y)
+#define sphese(h,no,ow,y,ne)	asl->p.Sphese(asl->i.Ew0,0,h,no,ow,y,ne)
 #define sphsetup(no,ow,y,b)	asl->p.Sphset(asl->i.Ew0,0,no,ow,y,b)
 #define xknown(x)		asl->p.Xknown(asl->i.Ew0,x,0)
 #define xknown_ew(ew,x)		asl->p.Xknown(ew,x,0)
@@ -296,9 +311,12 @@ Edagpars {
 #define hvcomps_ew(ew,hv,P,co,nz,z)	asl->p.Hvcomps(ew,hv,P,co,nz,z)
 #define hvinit_ew(ew,no,ow,y)		asl->p.Hvinit(ew,ihd_limit,no,ow,y)
 #define duthes_ew(ew,h,n,ow,y)		asl->p.Duthes(ew,h,n,ow,y)
+#define duthese_ew(ew,h,n,ow,y,ne)	asl->p.Duthese(ew,h,n,ow,y,ne)
 #define fullhes_ew(ew,h,lh,n,ow,y)	asl->p.Fulhes(ew,h,lh,n,ow,y)
+#define fullhese_ew(ew,h,lh,n,ow,y,ne)	asl->p.Fulhese(ew,h,lh,n,ow,y,ne)
 #define lconval_ew(ew,i,x,ne)		asl->p.Lconval(ew,i,x,ne)
 #define sphes_ew(ew,h,no,ow,y)		asl->p.Sphes(ew,0,h,no,ow,y)
+#define sphese_ew(ew,h,no,ow,y,ne)	asl->p.Sphese(ew,0,h,no,ow,y,ne)
 #define sphsetup_ew(ew,no,ow,y,b)	asl->p.Sphset(ew,0,no,ow,y,b)
 #define xunknown()			xunknown_ASL(asl->i.Ew0)
 #define xunknown_ew(ew)			xunknown_ASL(ew)
@@ -908,7 +926,6 @@ TMInfo {
 #define optypeb		op_typeb_ASL
 #define pr_unknown	pr_unknown_ASL
 #define read_line	read_line_ASL
-#define report_where	report_where_ASL
 #define scream		scream_ASL
 #define what_prog	what_prog_ASL
 
@@ -930,7 +947,7 @@ enum { /* bits for x0kind */
 	ASL_need_objcom	= 2,
 	ASL_first_x	= 4,
 	ASL_have_funnel = 8,	/* in con[12]ival */
-	ASL_need_funnel	= 16,	/* in pshvprod */
+	ASL_need_funnel	= 16,	/* in pshv_prod */
 	ASL_need_concom = 32,
 	ASL_need_comba  = 64,	/* need to compute comb adjoints */
 	ASL_need_comca  = 128,	/* need to compute comc adjoints */
@@ -1111,7 +1128,8 @@ QPinfo {
  extern void delprb_(void);
  extern void dense_j_ASL(ASL*);
  extern void densej_(void);
- extern void deriv_errchk_ASL(EvalWorkspace *ew, fint*, int coi, int n);
+ extern void deriv2_errchk_ASL(EvalWorkspace *ew, int jv);
+ extern void deriv_errchk_ASL(EvalWorkspace *ew, int coi, int n, int jv);
  extern void deriv_errclear_ASL(EvalWorkspace *);
  extern void derprop(derpblock*, real*, real*, real);
  extern char *dtoa_r(double, int, int, int*, int*, char**, char*, size_t);
@@ -1211,7 +1229,6 @@ QPinfo {
  extern ssize_t qpcheckZ_ASL(ASL*, fint **rowqp, size_t **colqp, real **delsqp);
  extern char *read_line(EdRead*);
  extern char *read_sol_ASL(ASL*, real**xp, real **yp);
- extern void report_where_ASL(ASL*);
  extern void repwhere_ASL(EvalWorkspace*);
  extern void scream(EdRead*, int rc, const char *fmt, ...);
  extern ASL *set_cur_ASL(ASL*);	/* returns previous value */

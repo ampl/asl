@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -336,7 +336,7 @@ jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
 		vmi = get_vminv_ASL(a);
 	k = n_conjac[1];
 	if (asl->i.Derrs)
-		deriv_errchk_ASL(a, nerror, j, k-j);
+		deriv_errchk_ASL(a, j, k-j, 2);
 	p0 = asl->P.cps;
 	for(; j < k; ++j) {
 		i = j;
@@ -532,7 +532,7 @@ objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	if (asl->i.Derrs)
-		deriv_errchk_ASL(a, nerror, -(i+1), 1);
+		deriv_errchk_ASL(a, -(i+1), 1, 2);
 	Adjoints = adjoints;
 	p->nxval = asl->i.nxval;
 	if (p->ng)
@@ -749,7 +749,7 @@ Congrdp(ASL_pfgh *asl, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	if (asl->i.Derrs)
-		deriv_errchk_ASL((ASL*)asl, nerror, i, 1);
+		((ASL*)asl, i, 1, 1);
 	Adjoints = adjoints;
 	p = asl->P.cps + i;
 	p->nxval = asl->i.nxval;
@@ -893,7 +893,7 @@ xpsgchk(ASL_pfgh *asl, ps_func *f0, int *xv, int n, int nx,
 			if (y[i]) {
 				while(i1 <= i2 && y[i1])
 					++i1;
-				deriv_errchk_ASL((ASL*)asl, 0, isobj ? -(i+1) : i, i1-i);
+				deriv_errchk_ASL((ASL*)asl, isobj ? -(i+1) : i, i1-i, 2);
 				}
 			}
 		asl->i.x_known = 1;

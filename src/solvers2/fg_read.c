@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018, 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -355,12 +355,12 @@ nextop(Static *S, int n)
 eread(EdRead *R, uint *deriv, uint atop)
 {
 	ASL_fg *asl;
-	Invd1 *invd, **pinvd;
 	Static *S;
 	fint L1;
 	int (*Xscanf)(EdRead*, const char*, ...);
 	real r;
 #ifndef Just_Linear
+	Invd1 *invd, **pinvd;
 	char *dig;
 	derpblock dbsave, *db, *db1, *db2, **pdb;
 	func_info *fi;
@@ -1541,11 +1541,14 @@ eread(EdRead *R, uint *deriv, uint atop)
  static int *
 eread1(EdRead *R, derpblock **pdb, uint *pia, uint atop)
 {
-	ASL_fg *asl;
 	Static *S;
-	derpblock *db;
 	int *op, rv;
-	uint ia, ka;
+	uint ia;
+#ifndef Just_Linear
+	ASL_fg *asl;
+	derpblock *db;
+	uint ka;
+#endif
 
 	S = (Static *)R->S;
 	S->opfirst = 0;
@@ -1687,6 +1690,7 @@ derpcopy(Static *S, int kc, int k, int nz, int *ci, derpblock *db)
  static void
 co_read(EdRead *R, cde *d, int k, int wd, int *cexp1st)
 {
+#ifndef Just_Linear
 	ASL_fg *asl;
 	Static *S;
 	cexp *cx0, *di;
@@ -1694,6 +1698,7 @@ co_read(EdRead *R, cde *d, int k, int wd, int *cexp1st)
 	derpblock *db;
 	int *c, *ci, *dv, i, j, j1, j2, ndv0, nv, nz, nz1, *vr, *vre;
 	linpart *lp, **plp;
+#endif
 
 	d += k;
 #ifndef Just_Linear
@@ -2212,7 +2217,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 	Jmp_buf JB;
 	cgrad *cg, **cgp;
 	int i, i1, j, k, *ka, kseen, nc, nc0, nco, nlcon, no;
-	int nv, nv1, nvc, nvo, nvr, nxv, *o, readall;
+	int nv1, nvc, nvo, nvr, nxv, *o, readall;
 	int (*Xscanf)(EdRead*, const char*, ...);
 	ograd *og, **ogp;
 	real *oc, t;
@@ -2223,7 +2228,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 #else /* Just_Linear */
 #define ASL_readtype ASL_read_fg
 #undef ncom1
-	int ncom, ncom1;
+	int ncom, ncom1, nv;
 	func_info *fi;
 	char fname[128];
 	int nlin;
@@ -2319,7 +2324,6 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 			memset(havepi0, 0, nc);
 		}
 #ifdef Just_Linear
-	nv = nv1;
 	x = nco*sizeof(cde) + no*sizeof(ograd *) + no;
 #else
 	S->afirst = alast = max_var = asl->i.maxvar = nv = nv1 + ncom;

@@ -155,3 +155,22 @@ fullhes_ew_ASL(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y)
 			}
 		}
 	}
+
+/* Variant of fullhes() that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+fullhese_ew_ASL(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		fullhes_ew_ASL(ew, H, LH, nobj, ow, y);
+	*Jp = Jsave;
+	}

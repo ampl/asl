@@ -1740,7 +1740,7 @@ awalk(Static *S, expr *e)		/* return 0 if e is not linear */
 	ograd *Laf, *Raf, *rv, *taf;
 	real t;
 	tfinfo *tfi;
- 
+
 	switch(optype[k = e->op]) {
 
 		case 1:	/* unary */
@@ -3539,12 +3539,11 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			j = i;
 			ia = 0;
 			i = ((exprc*)e)->c;
-			k = OPPOW;
+			k = n_OPPOW0;
 			break;
 		  case f_OP1POW:
 			j = ((exprc*)e)->c;
-			k = OPPOW;
-			break;
+			goto more_OP1POW;
 		  default:
 			j = 0;
 			k = n_OPPOW0;
@@ -3552,6 +3551,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				j = ewalk(S, e->R.e, &ja, 0);
 		  }
 		if (!ja) {
+ more_OP1POW:
 			if (j < 0) {
 				t = S->htvals_end[j];
 				rv = wlast;
@@ -3741,13 +3741,13 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		*deriv = 0;
 		i = ewalk(S, e->L.e, &ia, 0);
 		switch(k) {
-		  case OPatan210:
+		  case OPatan201:
 			ja = ia;
 			j = i;
 			ia = 0;
 			i = ((exprc*)e)->c;
 			break;
-		  case OPatan201:
+		  case OPatan210:
 			j = ((exprc*)e)->c;
 			break;
 		  default:
@@ -6069,12 +6069,18 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Lconval= lconpval_ew_ASL;
 			a->p.Hvcomp = a->p.Hvcomp_nomap = hvpcomp_ew_ASL;
 			a->p.Hvcompd = hvpcompd_ew_ASL;
+			a->p.Hvcompde = hvpcompde_ew_ASL;
 			a->p.Hvcomps = hvpcomps_ew_ASL;
+			a->p.Hvcompse = hvpcompse_ew_ASL;
 			a->p.Hvinit = a->p.Hvinit_nomap = hvpinit_ew_ASL;
+			a->p.Hvinite = a->p.Hvinite_nomap = hvpinite_ew_ASL;
 			a->p.Xknown = xp2known_ew_ASL;
 			a->p.Duthes = a->p.Duthes_nomap = duthes_ew_ASL;
+			a->p.Duthese = a->p.Duthese_nomap = duthese_ew_ASL;
 			a->p.Fulhes = a->p.Fulhes_nomap = fullhes_ew_ASL;
+			a->p.Fulhese = a->p.Fulhese_nomap = fullhese_ew_ASL;
 			a->p.Sphes  = a->p.Sphes_nomap  = sphes_ew_ASL;
+			a->p.Sphese = a->p.Sphese_nomap	= sphese_ew_ASL;
 			a->p.Sphset = a->p.Sphset_nomap = sphes_setup_ew_ASL;
 #else
 			a->p.Xknown = xp1known_ew_ASL;

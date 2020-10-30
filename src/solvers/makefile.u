@@ -26,7 +26,7 @@
 
 .SUFFIXES: .c .o
 CC = cc
-CFLAGS = -g -O
+CFLAGS = -O
 SHELL=/bin/sh
 
 # Add -DNO_RUSAGE to the CFLAGS assignment if your system

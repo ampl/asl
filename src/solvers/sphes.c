@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -477,10 +477,8 @@ new_Hesoprod(ASL_pfgh *asl, ograd *L, ograd *R, real coef)
 		asl->P.khesoprod = kh;
 		h = h1 = (Hesoprod *)new_mblk(kh);
 		h2 = h + (sizeof(Char*) << kh)/sizeof(Hesoprod) - 1;
-		while(h1 < h2) {
-			h1->next = h1 + 1;
-			h1 = h1 + 1;
-		}
+		while(h1 < h2)
+			h1 = h1->next = h1 + 1;
 		h1->next = 0;
 		}
 	asl->P.hop_free = h->next;
@@ -1086,6 +1084,8 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
 
 	asl = pscheck_ASL(a, "sputhes");
+	if (asl->i.Derrs)
+		deriv2_errchk_ASL(a, 3);
 	xpsg_check_ASL(asl, nobj, ow, y);
 	if (!pspi)
 		pspi = &a->i.sputinfo_;
@@ -1314,4 +1314,23 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 				}
 			H[j] = t;
 			}
+	}
+
+/* Variant of sphes that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+sphese_ASL(ASL *asl, SputInfo **spi, real *H, int nobj, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		sphes_ASL(asl, spi, H, nobj, ow, y);
+	*Jp = Jsave;
 	}

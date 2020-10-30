@@ -3209,3 +3209,31 @@ pfghread.c:  fix a bug in qwalk() with OPCPOW; pshvprod.c:  add a
 missing case and fix a glitches with OPDIV2 and nOPLESS2; remove need
 for source file op_typeb.hd; opno2.h:  add OP_atan201_g and
 OP_atan210_g; fix bugs in var^var and atan2(var,var).
+
+20201021
+  solvers2.tgz:  pfghread.c:  Fix a glitch (incorrectly changed
+factor), introduced 20201018, with Hessians involving quotients with
+variables in both numerator and denominator.  I made many little test
+programs for 20201018, but the one for quotients turned out to have
+zero multiplied by the wrong factor, so it did not reveal the trouble.
+I've added a test where the quantity in question is nonzero.
+
+20201022
+  solvers2.tgz:  pfghread.c:  Fix another glitch (wrong opcode),
+introduced 20201018, with a constant raised to a variable power.
+I failed to notice a wrong objective value in the little test of
+const^variable.
+
+20201029
+  New variants duthese(), duthese_ew(), fullhese(), fullhese_ew(),
+hvcompe(), hvcompe_ew(), sphese() and sphese_ew() of duthes(),
+duthes_ew(), fullhes(), fullhes_ew(), hvcomp(), hvcomp_ew(), sphes()
+and sphes_ew() that have an extra argement, fint *nerror, that is
+similar to the nerror argument of other routines, such as objval():
+if nerror is null or negative, the new routines return after an error
+(with *nerror = 1 if nerror is not null); if all goes well and nerror
+is not null, they return with *nerror = 0.  Errors are possible if the
+function and its first derivative can be computed, but second
+derivatives fail, as with x^1.5 for x == 0.
+  solvers2.tgz:  pfghread.c:  fix a glitch with atan2:  the cases for
+atan2(const,varexpr) and atan2(varexpr,const) were interchanged.

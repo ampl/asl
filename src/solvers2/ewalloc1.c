@@ -21,7 +21,7 @@ of or in connection with the use or performance of this software.
  EvalWorkspace*
 ewalloc1_ASL(ASL *asl)
 {
-	EvalWorkspace *rv, *th;
+	EvalWorkspace *rv;
 	Invd1 *invd, **pinvd;
 	arglist *al;
 	char *s;

@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018, 2019 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -390,7 +390,7 @@ alignarg(more_OPCPOW1:)
 		case OPGOTOB:
 			pop = (int**)(o+1);
 			o = (int*)&pop[1];
-			break;
+			goto endchk;
 
 		default:/*DEBUG*/
 			fprintf(Stderr, "Bad *o = %d in hv_fwd\n", *o);
@@ -398,6 +398,7 @@ alignarg(more_OPCPOW1:)
 			r = 0; /* not reached */
 		  }
 		r->aO = r->adO = 0.;
+ endchk:
 		if (o0 == oend)
 			return;
 		}
@@ -1061,7 +1062,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 	ASL *a;
 	ASL_pfgh *asl;
 	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
-	Objrep *or, **por;
+	Objrep **por;
 	Ogptrs *q, *qe;
 	SputInfo *spi, *spi1;
 	Varval *V, *v;
@@ -1407,6 +1408,8 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 	asl = (ASL_pfgh*)(a = ew->asl);
 	ASL_CHECK(a, ASL_read_pfgh, "sputhes");
 	++ew->stats.hesmat;
+	if (ew->Derrs)
+		deriv2_errchk_ASL(ew, 3);
 	w = ew->w;
 	V = (Varval*)w;
 	xpsg_check_ASL(ew, nobj, ow, y);
@@ -1678,4 +1681,23 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 				}
 			H[j] = t;
 			}
+	}
+
+/* Variant of sphes that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+sphese_ew_ASL(EvalWorkspace *ew, SputInfo **spi, real *H, int nobj, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		sphes_ew_ASL(ew, spi, H, nobj, ow, y);
+	*Jp = Jsave;
 	}

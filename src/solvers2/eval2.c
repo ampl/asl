@@ -129,7 +129,6 @@ rcompj(const void *a, const void *b, void *v)
  real
 eval2_ASL(int *o, EvalWorkspace *ew)
 {
-	ASL *asl;
 	Condptrs *cp;
 	Eresult *r;
 	GOps *g;
@@ -152,7 +151,6 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 	rv.d = 0.;
 	if (!o)
 		goto done;
-	asl = ew->asl;
 	w = ew->w;
 	wd = ew->wantderiv;
 
@@ -2485,7 +2483,7 @@ jacpval_ew_ASL(EvalWorkspace *ew, real *X, real *G, fint *nerror)
 		vmi = get_vminv_ASL(a);
 	k = n_conjac[1];
 	if (ew->Derrs)
-		deriv_errchk_ASL(ew, nerror, j, k-j);
+		deriv_errchk_ASL(ew, j, k-j, 2);
 	if (ew->x0kind & ASL_need_comba) {
 		funnelset(ew, asl->I.dvfb);
 		ew->x0kind &= ~ASL_need_comba;
@@ -2681,7 +2679,7 @@ objpgrd_ew_ASL(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	if (ew->Derrs)
-		deriv_errchk_ASL(ew, nerror, -(i+1), 1);
+		deriv_errchk_ASL(ew, -(i+1), 1, 2);
 	if (ew->x0kind & ASL_need_comba) {
 		funnelset(ew, asl->I.dvfb);
 		ew->x0kind &= ~ASL_need_comba;
@@ -2920,7 +2918,7 @@ Congrdp(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
 			return;
 		}
 	if (ew->Derrs)
-		deriv_errchk_ASL(ew, nerror, i, 1);
+		deriv_errchk_ASL(ew, i, 1, 2);
 	if (ew->x0kind & ASL_need_comba) {
 		funnelset(ew, asl->I.dvfb);
 		ew->x0kind &= ~ASL_need_comba;
@@ -3052,7 +3050,7 @@ xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t n
 			if (y[i]) {
 				while(i1 <= i2 && y[i1])
 					++i1;
-				deriv_errchk_ASL(ew, 0, i, i1-i);
+				deriv_errchk_ASL(ew, i, i1-i, 2);
 				}
 			}
 		ew->x0kind |= ASL_x_known;

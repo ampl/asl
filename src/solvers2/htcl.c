@@ -64,7 +64,7 @@ Del_mblk_ASL(ASL *asl, void *x)
 {
 	MBavail *a;
 	MBFree *mb;
-	uint k, nf;
+	uint k;
 
 	a = (MBavail*)((char*)x - sizeof(MBhead));
 	if ((k = a->h.klass) >= MBLK_KMAX_ASL)

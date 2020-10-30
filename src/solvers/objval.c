@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -211,7 +211,7 @@ obj1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 			goto done;
 		}
 	if (asl->i.Derrs)
-		deriv_errchk_ASL(a, nerror, -(i+1), 1);
+		deriv_errchk_ASL(a, -(i+1), 1, 2);
 	if (f_b)
 		funnelset_ASL(asl, f_b);
 	if (f_o)

@@ -1,4 +1,4 @@
-/* The following Lucent copyright notice applies to report_where()
+/* The following Lucent copyright notice applies to parts of report_where()
    and the original introuble* routines (moved here in 2011 from
    rops.c and rops2.c). */
 
@@ -30,7 +30,7 @@ THIS SOFTWARE.
    identified by #ifndef ASL_OLD_DERIV_CHECK . */
 
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -50,12 +50,12 @@ of or in connection with the use or performance of this software.
 #include "asl.h"
 #include "errchk.h"
 
- void
-report_where(ASL *asl)
+ static void
+report_where(ASL *asl, int jv)
 {
 	int i, j, k, k1;
 	static const char *what[2] = { "constraint", "objective" };
-	static const char *nfmt[2] = { "%d: ", "function: " };
+	static const char *which[4] = { "function: ", "gradient: ", "Hessian: ", "???: " };
 	char *b, buf[512];
 	FILE *f;
 
@@ -100,30 +100,35 @@ report_where(ASL *asl)
 	k = k1 = 0;
 	if ((i = co_index) < 0) {
 		k = 1;
-		i = asl->i.n_con0 -i - 1;
+		i = asl->i.n_con0 - i;
 		if (n_obj <= 1)
 			k1 = 1;
 		}
+	else
+		++i;
 	fprintf(Stderr, "%s ", what[k]);
 	if (maxrownamelen) {
 		strcpy(stub_end, ".row");
 		if ((f = fopen(filename, "r"))) {
-			for(j = 0; j <= i; j++)
+			for(j = 0; j < i; j++)
 				if (!next_line)
 					break;
 			fclose(f);
-			if (j > i) {
+			if (j >= i) {
 				for(b = buf; *b; b++)
 					if (*b == '\n') {
 						*b = 0;
 						break;
 						}
-				fprintf(Stderr, "%s: ", buf);
-				goto ret;
+				fprintf(Stderr, "%s ", buf);
 				}
 			}
 		}
-	fprintf(Stderr, nfmt[k1], i + 1);
+	else
+		if (k1 == 0)
+			fprintf(Stderr, "%d ", i);
+ prwhich:
+	fprintf(Stderr, "%s", which[jv-1]);
  ret:
 	errno = 0;	/* in case it was set by fopen */
 	fflush(Stderr);
@@ -153,7 +158,8 @@ Errprint(const char *fmt, ...)
 
 #ifdef ASL_OLD_DERIV_CHECK /*{{*/
  void deriv_errclear_ASL(Edaginfo *I) {}
- void deriv_errchk_ASL(ASL *asl, fint *nerror, int coi, int n) {}
+ void deriv_errchk_ASL(ASL *asl, int coi, int n, int jv) {}
+ void deriv2_errchk_ASL(ASL *asl, int jv) {}
 #else /*}{*/
  typedef struct DerrRecord DerrRecord;
  typedef void (*DerrPrint)(ASL*, DerrRecord*);
@@ -204,7 +210,7 @@ DerivErrInfo {
 	};
 
  void
-deriv_errchk_ASL(ASL *asl, fint *nerror, int coi, int n)
+deriv_errchk_ASL(ASL *asl, int coi, int n, int jv)
 {
 	DerivErrInfo *D;
 	DerrRecord *R, **Rp, **Rpe;
@@ -220,16 +226,41 @@ deriv_errchk_ASL(ASL *asl, fint *nerror, int coi, int n)
 	else if (k >= nlc)
 		return;
 	for(Rp = D->R + k, Rpe = Rp + n; Rp < Rpe; ++Rp, ++coi)
-		if ((R = *Rp)) {
+		if ((R = *Rp) && R->jv <= jv) {
 			jmp_check(err_jmp, R->jv);
 			co_index = coi;
 			cv_index = R->dv;
-			report_where(asl);
+			report_where(asl, R->jv);
 			R->errprint(asl,R);
 			fflush(Stderr);
 			jmp_check(err_jmp1, R->jv);
 			exit(1);
 			}
+	}
+
+ void
+deriv2_errchk_ASL(ASL *asl, int jv)
+{
+	DerivErrInfo *D;
+	DerrRecord *R, **Rp, **Rpe;
+	int coi, k, ke;
+
+	D = asl->i.Derrs;
+	for(ke = nlc + nlo, k = 0; k < ke; ++k) {
+		Rp = D->R + k;
+		if ((R = *Rp) && R->jv <= jv) {
+			jmp_check(err_jmp, R->jv);
+			if ((coi = k) >= nlc)
+				coi = nlc - k - 1;
+			co_index = coi;
+			cv_index = R->dv;
+			report_where(asl, R->jv);
+			R->errprint(asl,R);
+			fflush(Stderr);
+			jmp_check(err_jmp1, R->jv);
+			exit(1);
+			}
+		}
 	}
 
  static DerivErrInfo *
@@ -287,7 +318,7 @@ new_DerrMblock(Edaginfo *I, size_t len)
 	}
 
  static DerrRecord *
-getDR(ASL *asl)
+getDR(ASL *asl, int jv)
 {
 	DerivErrInfo *D;
 	DerrRecord *R;
@@ -303,16 +334,20 @@ getDR(ASL *asl)
 	else if (k >= nlc)
 		return 0;
 	L = (sizeof(DerrRecord) + sizeof(real)-1) & ~(sizeof(real)-1);
+	R = 0;
 	if ((D = asl->i.Derrs)) {
-		if (D->R[k])
+		if ((R = D->R[k]) && R->jv <= jv)
 			return 0;
 		if (L <= D->mblast - D->mbnext)
 			goto have_D;
 		}
 	D = new_DerrMblock(&asl->i, L);
  have_D:
-	D->R[k] = R = (DerrRecord*)(D->mblast - L);
-	D->mblast = (char*)R;
+	if (!R) {
+		R = (DerrRecord*)(D->mblast - L);
+		D->mblast = (char*)R;
+		}
+	D->R[k] = R;
 	D->busy[D->nbusy++] = k;
 	if ((R->dv = i = cv_index)) {
 		j = 0;
@@ -370,7 +405,7 @@ introuble_ASL(ASL *asl, const char *who, real a, int jv)
 	DerrRecord *R;
 
 	if (jv > 1 && !(want_deriv & 2)) {
-		if ((R = getDR(asl))) {
+		if ((R = getDR(asl,jv))) {
 			R->errprint = derrprint1;
 			R->a = a;
 			R->jv = jv;
@@ -381,7 +416,7 @@ introuble_ASL(ASL *asl, const char *who, real a, int jv)
 		}
 #endif /*}*/
 	jmp_check(err_jmp, jv);
-	report_where(asl);
+	report_where(asl, 1);
 	Errprint(fmt, who, a);
 	jmp_check(err_jmp1, jv);
 	exit(1);
@@ -395,7 +430,7 @@ introuble2_ASL(ASL *asl, const char *who, real a, real b, int jv)
 	DerrRecord *R;
 
 	if (jv > 1 && !(want_deriv & 2)) {
-		if ((R = getDR(asl))) {
+		if ((R = getDR(asl,jv))) {
 			R->errprint = derrprint2;
 			R->a = a;
 			R->u.b = b;
@@ -407,7 +442,7 @@ introuble2_ASL(ASL *asl, const char *who, real a, real b, int jv)
 		}
 #endif /*}*/
 	jmp_check(err_jmp, jv);
-	report_where(asl);
+	report_where(asl, jv);
 	Errprint(fmt, who, a, b);
 	jmp_check(err_jmp1, jv);
 	exit(1);
@@ -418,7 +453,7 @@ zero_div_ASL(ASL *asl, real L, const char *op)
 {
 	errno_set(EDOM);
 	jmp_check(err_jmp, 1);
-	report_where(asl);
+	report_where(asl, 4);
 	fprintf(Stderr, "can't compute %g%s0.\n", L, op);
 	fflush(Stderr);
 	jmp_check(err_jmp1, 1);
@@ -448,7 +483,7 @@ fintrouble_ASL(ASL *asl, func_info *fi, const char *s, TMInfo *T)
 		DerrRecord *R;
 		size_t L;
 
-		if ((R = getDR(asl))) {
+		if ((R = getDR(asl,jv))) {
 			D = asl->i.Derrs;
 			L = strlen(s) + 1;
 			if (L > D->mblast - D->mbnext)
@@ -465,7 +500,7 @@ fintrouble_ASL(ASL *asl, func_info *fi, const char *s, TMInfo *T)
 		}
 #endif /*}*/
 	jmp_check(err_jmp, jv);
-	report_where(asl);
+	report_where(asl, jv);
 	fprintf(Stderr, fmt, fi->name, s);
 	fflush(Stderr);
 	for(T1 = T->u.prev; T1; T1 = T1prev) {

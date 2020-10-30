@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2016, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -133,4 +133,23 @@ duthes_ew_ASL(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y)
 			for(j = 0; j <= i; j++)
 				*H++ *= t * s[j];
 			}
+	}
+
+/* Variant of duthes that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+duthese_ew_ASL(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		duthes_ew_ASL(ew, H, nobj, ow, y);
+	*Jp = Jsave;
 	}

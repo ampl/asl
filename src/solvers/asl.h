@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2016 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2016, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -256,19 +256,31 @@ Edagpars {
 	void (*Congrd_nomap)	(ASL*, int nc, real *X, real *G, fint *nerror);
 	void (*Hvcomp)		(ASL*, real *hv, real *p, int no, real *ow, real *y);
 	void (*Hvcomp_nomap)	(ASL*, real *hv, real *p, int no, real *ow, real *y);
+	void (*Hvcompe)		(ASL*, real *hv, real *p, int no, real *ow, real *y, fint*);
+	void (*Hvcompe_nomap)	(ASL*, real *hv, real *p, int no, real *ow, real *y, fint*);
 	void (*Hvcompd)	(ASL*, real *hv, real *p, int co);
+	void (*Hvcompde)	(ASL*, real *hv, real *p, int co, fint*);
 	varno_t (*Hvcomps)	(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z);
+	varno_t (*Hvcompse)	(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
 	void (*Hvinit)		(ASL*, int hid_limit, int nobj, real *ow, real *y);
 	void (*Hvinit_nomap)	(ASL*, int hid_limit, int nobj, real *ow, real *y);
+	void (*Hvinite)		(ASL*, int hid_limit, int nobj, real *ow, real *y, fint*);
+	void (*Hvinite_nomap)	(ASL*, int hid_limit, int nobj, real *ow, real *y, fint*);
 	void (*Hesset)		(ASL*, int flags, int no, int nno, int nc, int nnc);
 	int  (*Lconval)		(ASL*, int ncon, real *X, fint *nerror);
 	int  (*Xknown)		(ASL*, real*, fint*);
 	void (*Duthes)		(ASL*, real *H, int nobj, real *ow, real *y);
 	void (*Duthes_nomap)	(ASL*, real *H, int nobj, real *ow, real *y);
+	void (*Duthese)		(ASL*, real *H, int nobj, real *ow, real *y, fint*);
+	void (*Duthese_nomap)	(ASL*, real *H, int nobj, real *ow, real *y, fint*);
 	void (*Fulhes)		(ASL*, real *H, fint LH, int no, real *ow, real *y);
 	void (*Fulhes_nomap)	(ASL*, real *H, fint LH, int no, real *ow, real *y);
+	void (*Fulhese)		(ASL*, real *H, fint LH, int no, real *ow, real *y, fint*);
+	void (*Fulhese_nomap)	(ASL*, real *H, fint LH, int no, real *ow, real *y, fint*);
 	void (*Sphes)		(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y);
 	void (*Sphes_nomap)	(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y);
+	void (*Sphese)		(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
+	void (*Sphese_nomap)	(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
 	fint (*Sphset)		(ASL*, SputInfo**, int nobj, int ow, int y, int uptri);
 	fint (*Sphset_nomap)	(ASL*, SputInfo**, int nobj, int ow, int y, int uptri);
 	} Edagpars;
@@ -287,7 +299,9 @@ Edagpars {
 #define hvinit(no,ow,y)		(*((ASL*)asl)->p.Hvinit)((ASL*)asl,ihd_limit,no,ow,y)
 #define hesset(f,o,n,c,nc)	(*((ASL*)asl)->p.Hesset)((ASL*)asl,f,o,n,c,nc)
 #define duthes(h,n,ow,y)	(*((ASL*)asl)->p.Duthes)((ASL*)asl,h,n,ow,y)
+#define duthese(h,n,ow,y,ne)	(*((ASL*)asl)->p.Duthese)((ASL*)asl,h,n,ow,y,ne)
 #define fullhes(h,lh,n,ow,y)	(*((ASL*)asl)->p.Fulhes)((ASL*)asl,h,lh,n,ow,y)
+#define fullhese(h,lh,n,ow,y,e)	(*((ASL*)asl)->p.Fulhes)((ASL*)asl,h,lh,n,ow,y,e)
 #define lconval(i,x,ne)		(*((ASL*)asl)->p.Lconval)((ASL*)asl,i,x,ne)
 #define sphes(h,no,ow,y)	(*((ASL*)asl)->p.Sphes)( (ASL*)asl,0,h,no,ow,y)
 #define sphsetup(no,ow,y,b)	(*((ASL*)asl)->p.Sphset)((ASL*)asl,0,no,ow,y,b)
@@ -476,7 +490,7 @@ Edaginfo {
 	int	co_index_;	/* set this to (constraint number - 1) or */
 				/* -(objective number) to identify the */
 				/* constraint or objective being evaluated */
-				/* (used in report_where()) */
+				/* (used in report_where() -- see repwhere.c) */
 	int	cv_index_;	/* used internally */
 	Jmp_buf	*err_jmp_;	/* If nonzero when an error is detected, */
 				/* longjmp here (without printing an error */
@@ -791,7 +805,6 @@ TMInfo {
 #define optypeb		op_typeb_ASL
 #define pr_unknown	pr_unknown_ASL
 #define read_line	read_line_ASL
-#define report_where	report_where_ASL
 #define scream		scream_ASL
 #define what_prog	what_prog_ASL
 
@@ -813,7 +826,7 @@ enum { /* bits for x0kind */
 	ASL_have_objcom	= 2,
 	ASL_first_x	= 4,
 	ASL_have_funnel = 8,	/* in con[12]ival */
-	ASL_need_funnel	= 16,	/* in pshvprod */
+	ASL_need_funnel	= 16,	/* in pshv_prod */
 	ASL_have_concom = 32
 	};
 
@@ -982,7 +995,8 @@ QPinfo {
  extern void delprb_(VOID);
  extern void dense_j_ASL(ASL*);
  extern void densej_(VOID);
- extern void deriv_errchk_ASL(ASL*, fint*, int coi, int n);
+ extern void deriv_errchk_ASL(ASL*, int coi, int n, int jv);
+ extern void deriv2_errchk_ASL(ASL *, int jv);
  extern void deriv_errclear_ASL(Edaginfo*);
  extern void derprop(derp *);
  extern char *dtoa_r(double, int, int, int*, int*, char**, char*, size_t);
@@ -1074,7 +1088,6 @@ QPinfo {
  extern ssize_t qpcheckZ_ASL(ASL*, fint **rowqp, size_t **colqp, real **delsqp);
  extern char *read_line(EdRead*);
  extern char *read_sol_ASL(ASL*, real**xp, real **yp);
- extern void report_where(ASL*);
  extern void scream(EdRead*, int rc, const char *fmt, ...);
  extern ASL *set_cur_ASL(ASL*);	/* returns previous value */
  extern real set_randseed_ASL(real nseed);	/* returns new seed, usually nseed, but */

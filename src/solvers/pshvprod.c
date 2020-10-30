@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -775,6 +775,8 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 	real *cscale, *owi, t, t1, t2, *p0, *s, *w, *wi, *x;
 
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcomp");
+	if (a->i.Derrs)
+		deriv2_errchk_ASL(a, 3);
 	asl = (ASL_pfgh*)a;
 	xpsg_check_ASL(asl, nobj, ow, y);
 	nv = n_var;
@@ -943,6 +945,25 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 		while(hv < w)
 			*hv++ *= *s++;
 		}
+	}
+
+/* Variant of hvpcomp_ASL that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+hvpcompe_ASL(ASL *asl, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		hvpcomp_ASL(asl, hv, p, nobj, ow, y);
+	*Jp = Jsave;
 	}
 
  void
@@ -1191,7 +1212,7 @@ hvpcompd_ASL(ASL *a, real *hv, real *p, int co)
 		}
 	if (asl->i.Derrs) {
 		asl->i.x_known = oxk;
-		deriv_errchk_ASL(a, 0, co, 1);
+		deriv_errchk_ASL(a, co, 1, 3);
 		asl->i.x_known = 1;
 		}
 	if (asl->P.ncom) {
@@ -1321,6 +1342,25 @@ hvpcompd_ASL(ASL *a, real *hv, real *p, int co)
 		del_mblk(kp, p0);
 	}
 
+/* Variant of hvpcompd_ASL that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ void
+hvpcompde_ASL(ASL *asl, real *hv, real *p, int co, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		hvpcompd_ASL(asl, hv, p, co);
+	*Jp = Jsave;
+	}
+
  varno_t
 hvpcomps_ASL(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
 	/* p = direction */
@@ -1441,7 +1481,7 @@ hvpcomps_ASL(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
 		}
 	if (asl->i.Derrs) {
 		asl->i.x_known = oxk;
-		deriv_errchk_ASL(a, 0, co, 1);
+		deriv_errchk_ASL(a, co, 1, 3);
 		asl->i.x_known = 1;
 		}
 	if (asl->P.ncom) {
@@ -1608,6 +1648,27 @@ hvpcomps_ASL(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
 	if (p0)
 		del_mblk(kp, p0);
 	return rv;
+	}
+
+/* Variant of hvpcomps_ASL that has a final nerror argument, working
+   similarly to the final nerror argument to objval_(), etc. */
+
+ varno_t
+hvpcompse_ASL(ASL *asl, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerror)
+{
+	Jmp_buf **Jp, *Jsave, b;
+	varno_t rv;
+
+	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
+	Jsave = *Jp;
+	*Jp = &b;
+	*nerror = 0;
+	rv = 0;
+	if (setjmp(b.jb))
+		*nerror = 1;
+	else
+		rv = hvpcomps_ASL(asl, hv, p, co, nz, z);
+	*Jp = Jsave;
 	}
 
 #ifdef __cplusplus
