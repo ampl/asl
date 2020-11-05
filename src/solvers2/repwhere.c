@@ -19,8 +19,8 @@ of or in connection with the use or performance of this software.
 #include "asl.h"
 #include "errchk.h"
 
- static void
-report_where(EvalWorkspace *ew, int jv)
+ void
+repwhere_ASL(EvalWorkspace *ew, int jv)
 {
 	ASL *asl;
 	FILE *f;
@@ -102,6 +102,25 @@ report_where(EvalWorkspace *ew, int jv)
  ret:
 	errno = 0;	/* in case it was set by fopen */
 	fflush(Stderr);
+	}
+
+ void
+report_where_ASL(ASL *asl)
+{
+	EvalWorkspace *ew;
+
+	if (!(ew = asl->i.Ew0)) {
+		switch(asl->i.ASLtype) {
+		  case ASL_read_f:
+		  case ASL_read_fg:
+			ew = ewalloc1_ASL(asl);
+			break;
+		  default:
+			ew = ewalloc2_ASL(asl);
+		  }
+		asl->i.Ew0 = ew;
+		}
+	repwhere_ASL(ew, 1);
 	}
 
  static void
@@ -200,7 +219,7 @@ deriv_errchk_ASL(EvalWorkspace *ew, int coi, int n, int jv)
 				jmp_check(asl->i.err_jmp_, R->jv);
 			ew->co_index = coi;
 			ew->cv_index = R->dv;
-			report_where(ew, R->jv);
+			repwhere_ASL(ew, R->jv);
 			R->errprint(ew,R);
 			fflush(Stderr);
 			jmp_check(ew->err_jmpw1, R->jv);
@@ -230,7 +249,7 @@ deriv2_errchk_ASL(EvalWorkspace *ew, int jv)
 				coi = nlc - k - 1;
 			ew->co_index = coi;
 			ew->cv_index = R->dv;
-			report_where(ew, R->jv);
+			repwhere_ASL(ew, R->jv);
 			R->errprint(ew,R);
 			fflush(Stderr);
 			jmp_check(ew->err_jmpw1, R->jv);
@@ -400,7 +419,7 @@ introuble_ASL(EvalWorkspace *ew, const char *who, real a, int jv)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, jv);
-	report_where(ew, jv);
+	repwhere_ASL(ew, jv);
 	Errprint(fmt, who, a);
 	jmp_check(ew->err_jmpw1, jv);
 	if (ew == asl->i.Ew0)
@@ -432,7 +451,7 @@ introuble2_ASL(EvalWorkspace *ew, const char *who, real a, real b, int jv)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, jv);
-	report_where(ew, jv);
+	repwhere_ASL(ew, jv);
 	Errprint(fmt, who, a, b);
 	jmp_check(ew->err_jmpw1, jv);
 	if (ew == asl->i.Ew0)
@@ -450,7 +469,7 @@ zero_div_ASL(EvalWorkspace *ew, real L, const char *op)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, 1);
-	report_where(ew, 4);
+	repwhere_ASL(ew, 4);
 	fprintf(Stderr, "can't compute %g%s0.\n", L, op);
 	fflush(Stderr);
 	jmp_check(ew->err_jmpw1, 1);
@@ -503,7 +522,7 @@ fintrouble_ASL(EvalWorkspace *ew, func_info *fi, const char *s, TMInfo *T)
 	asl = ew->asl;
 	if (ew == asl->i.Ew0)
 		jmp_check(asl->i.err_jmp_, jv);
-	report_where(ew, jv);
+	repwhere_ASL(ew, jv);
 	fprintf(Stderr, fmt, fi->name, s);
 	fflush(Stderr);
 	for(T1 = T->u.prev; T1; T1 = T1prev) {

@@ -6070,6 +6070,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Hvcomp = a->p.Hvcomp_nomap = hvpcomp_ew_ASL;
 			a->p.Hvcompd = hvpcompd_ew_ASL;
 			a->p.Hvcompde = hvpcompde_ew_ASL;
+			a->p.Hvcompe = hvpcompe_ew_ASL;
 			a->p.Hvcomps = hvpcomps_ew_ASL;
 			a->p.Hvcompse = hvpcompse_ew_ASL;
 			a->p.Hvinit = a->p.Hvinit_nomap = hvpinit_ew_ASL;

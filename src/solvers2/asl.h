@@ -926,6 +926,7 @@ TMInfo {
 #define optypeb		op_typeb_ASL
 #define pr_unknown	pr_unknown_ASL
 #define read_line	read_line_ASL
+#define report_where	report_where_ASL
 #define scream		scream_ASL
 #define what_prog	what_prog_ASL
 
@@ -1228,8 +1229,11 @@ QPinfo {
  extern fint qpcheck_ASL(ASL*, fint **rowqp, fint **colqp, real **delsqp);
  extern ssize_t qpcheckZ_ASL(ASL*, fint **rowqp, size_t **colqp, real **delsqp);
  extern char *read_line(EdRead*);
+ extern void report_where_ASL(ASL*);
  extern char *read_sol_ASL(ASL*, real**xp, real **yp);
- extern void repwhere_ASL(EvalWorkspace*);
+ extern void repwhere_ASL(EvalWorkspace*, int jv); /* jv = 1 == function */
+							/* 2 == gradient */
+							/* 3 == Hessian */
  extern void scream(EdRead*, int rc, const char *fmt, ...);
  extern ASL *set_cur_ASL(ASL*);	/* returns previous value */
  extern real set_randseed_ASL(real nseed);	/* returns new seed, usually nseed, but */
