@@ -4371,7 +4371,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		+ nvref*sizeof(int)
 		+ no;
 	SS.nvar0 = a->i.n_var0;
-	if (!(SS.nvinc = a->i.n_var_ - SS.nvar0 + nvextra))
+	if (!(SS.nvinc = a->i.nvinc = a->i.n_var_ - SS.nvar0 + nvextra))
 		SS.nvar0 += ncom0 + ncom1;
 	if (flags & ASL_find_co_class)
 		x += nco;

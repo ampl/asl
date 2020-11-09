@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2017, 2018 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2017, 2018, 2020 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -44,7 +44,7 @@ Static {
 	dyad *_freedyad, *_dyad_block;
 	int _zerodiv;
 	term **_cterms;
-	int _dyad_ntogo, nvinc, _ograd_ntogo, _term_ntogo;
+	int _dyad_ntogo, _ograd_ntogo, _term_ntogo;
 	Char **_M1state1, **_M1state2;
 	} Static;
 
@@ -434,8 +434,8 @@ ewalk(Static *S, expr *e)
 		asl = S->asl;
 		if ((i = (expr_v *)e - var_e) < n_var)
 			return new_term(S, new_og(S, 0, i, 1.));
-		i -= S->nvinc;
-		if (!(L = cterms[i -= n_var])) {
+		i -= asl->i.nvinc;
+		if (!(L = cterms[i -= asl->i.n_var0])) {
 			/* c_cexp1st and o_cexp1st may not have been allocated */
 			if (!(L = comterm(S,i)))
 				return L;
@@ -659,7 +659,6 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 	s_s = s = z + nv;
 	memset(s, 0, nv*sizeof(fint));
 	ftn = Fortran;
-	SS.nvinc = nv - asl->i.n_var0 + asl->i.nsufext[ASL_Sufkind_var];
 
 	delsq = delsq0 = delsq1 = 0; /* silence buggy "not-initialized" warning */
 	colq = colq1 = 0;				/* ditto */

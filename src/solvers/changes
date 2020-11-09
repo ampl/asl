@@ -3228,12 +3228,29 @@ const^variable.
   New variants duthese(), duthese_ew(), fullhese(), fullhese_ew(),
 hvcompe(), hvcompe_ew(), sphese() and sphese_ew() of duthes(),
 duthes_ew(), fullhes(), fullhes_ew(), hvcomp(), hvcomp_ew(), sphes()
-and sphes_ew() that have an extra argement, fint *nerror, that is
+and sphes_ew() that have an extra argument, fint *nerror, that is
 similar to the nerror argument of other routines, such as objval():
 if nerror is null or negative, the new routines return after an error
 (with *nerror = 1 if nerror is not null); if all goes well and nerror
 is not null, they return with *nerror = 0.  Errors are possible if the
 function and its first derivative can be computed, but second
-derivatives fail, as with x^1.5 for x == 0.
+derivatives fail, as with x^1.5 for x == 0.  The new routines appear
+both in solvers.tgz and in solvers2.tgz.
   solvers2.tgz:  pfghread.c:  fix a glitch with atan2:  the cases for
 atan2(const,varexpr) and atan2(varexpr,const) were interchanged.
+
+20200930
+  solvers.tgz: pshvprod.c: supply a missing return statement to
+hvpcompse_ASL().
+  solvers.tgz and solvers2.tgz:  export report_where again:  yesterday
+it became file static in repwhere.c, but some solvers call it.
+  solvers.tgz: fix a glitch in pfghread.c (assignment for p.Hvcompde).
+
+20201107
+  solvers.tgz:  asl.h fg_read.c fgh_read.c pfg_read.c:  add new field
+nvinc to struct Edaginfo, for use in mqpcheckv.c and nqpcheck.c;
+mqpcheckv.c and nqpcheck.c:  use asl->I.nvinc rather than trying to
+compute nvinc from values that could have been changed by sos_add(),
+and use asl->i.n_var0 at one point rather than the possibly changed
+n_var.  The solvers2.tgz versions of mqpcheckv.c and nqpcheck.c work
+differently and do not use nvinc.

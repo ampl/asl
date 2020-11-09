@@ -1669,6 +1669,7 @@ hvpcompse_ASL(ASL *asl, real *hv, real *p, int co, varno_t nz, varno_t *z, fint 
 	else
 		rv = hvpcomps_ASL(asl, hv, p, co, nz, z);
 	*Jp = Jsave;
+	return rv;
 	}
 
 #ifdef __cplusplus

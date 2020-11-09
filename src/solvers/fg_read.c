@@ -1525,7 +1525,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 		+ nvref*sizeof(int)
 		+ no;
 	SS.nvar0 = a->i.n_var0;
-	if (!(SS.nvinc = a->i.n_var_ - SS.nvar0 + nxv))
+	if (!(SS.nvinc = a->i.nvinc = a->i.n_var_ - SS.nvar0 + nxv))
 		SS.nvar0 += ncom0 + ncom1;
 #endif /* Just_Linear */
 	if (X0)

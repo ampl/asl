@@ -1462,7 +1462,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		+ nvref*sizeof(int)
 		+ no;
 	nvar0 = a->i.n_var0;
-	if (!(nvinc = a->i.n_var_ - nvar0 + nxv))
+	if (!(nvinc = a->i.nvinc = a->i.n_var_ - nvar0 + nxv))
 		nvar0 += ncom0 + ncom1;
 	if (pi0) {
 		memset(pi0, 0, nc*sizeof(real));

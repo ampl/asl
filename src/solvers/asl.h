@@ -608,6 +608,7 @@ Edaginfo {
 	int	n_con0;	/* number of constraints before suf_sos() */
 	int	n_var1; /* index of next variable to be added */
 	int	n_con1; /* index of next constraint to be added */
+	int	nvinc;	/* increment for defined variables */
 	int	*vmap;	/* for mapping variables, length n_var */
 	int	*cmap;	/* for mapping constraints, length n_con */
 	int	*vzap;	/* for zeroing primal variables in eliminated suf_sos */
@@ -805,6 +806,7 @@ TMInfo {
 #define optypeb		op_typeb_ASL
 #define pr_unknown	pr_unknown_ASL
 #define read_line	read_line_ASL
+#define report_where	report_where_ASL
 #define scream		scream_ASL
 #define what_prog	what_prog_ASL
 
@@ -1088,6 +1090,7 @@ QPinfo {
  extern ssize_t qpcheckZ_ASL(ASL*, fint **rowqp, size_t **colqp, real **delsqp);
  extern char *read_line(EdRead*);
  extern char *read_sol_ASL(ASL*, real**xp, real **yp);
+ extern void report_where(ASL*);
  extern void scream(EdRead*, int rc, const char *fmt, ...);
  extern ASL *set_cur_ASL(ASL*);	/* returns previous value */
  extern real set_randseed_ASL(real nseed);	/* returns new seed, usually nseed, but */

@@ -1,4 +1,4 @@
-/* The following Lucent copyright notice applies to parts of report_where()
+/* The following Lucent copyright notice applies to parts of repwhere_ASL()
    and the original introuble* routines (moved here in 2011 from
    rops.c and rops2.c). */
 
@@ -50,8 +50,8 @@ of or in connection with the use or performance of this software.
 #include "asl.h"
 #include "errchk.h"
 
- static void
-report_where(ASL *asl, int jv)
+ void
+repwhere_ASL(ASL *asl, int jv)
 {
 	int i, j, k, k1;
 	static const char *what[2] = { "constraint", "objective" };
@@ -127,12 +127,17 @@ report_where(ASL *asl, int jv)
 	else
 		if (k1 == 0)
 			fprintf(Stderr, "%d ", i);
- prwhich:
+	if (jv > 4 || jv < 1)
+		jv = 4;
 	fprintf(Stderr, "%s", which[jv-1]);
  ret:
 	errno = 0;	/* in case it was set by fopen */
 	fflush(Stderr);
 	}
+
+ void
+report_where(ASL *asl)
+{ repwhere_ASL(asl, 1); }
 
  static void
 jmp_check(Jmp_buf *J, int jv)
@@ -230,7 +235,7 @@ deriv_errchk_ASL(ASL *asl, int coi, int n, int jv)
 			jmp_check(err_jmp, R->jv);
 			co_index = coi;
 			cv_index = R->dv;
-			report_where(asl, R->jv);
+			repwhere_ASL(asl, R->jv);
 			R->errprint(asl,R);
 			fflush(Stderr);
 			jmp_check(err_jmp1, R->jv);
@@ -254,7 +259,7 @@ deriv2_errchk_ASL(ASL *asl, int jv)
 				coi = nlc - k - 1;
 			co_index = coi;
 			cv_index = R->dv;
-			report_where(asl, R->jv);
+			repwhere_ASL(asl, R->jv);
 			R->errprint(asl,R);
 			fflush(Stderr);
 			jmp_check(err_jmp1, R->jv);
@@ -416,7 +421,7 @@ introuble_ASL(ASL *asl, const char *who, real a, int jv)
 		}
 #endif /*}*/
 	jmp_check(err_jmp, jv);
-	report_where(asl, 1);
+	repwhere_ASL(asl, 1);
 	Errprint(fmt, who, a);
 	jmp_check(err_jmp1, jv);
 	exit(1);
@@ -442,7 +447,7 @@ introuble2_ASL(ASL *asl, const char *who, real a, real b, int jv)
 		}
 #endif /*}*/
 	jmp_check(err_jmp, jv);
-	report_where(asl, jv);
+	repwhere_ASL(asl, jv);
 	Errprint(fmt, who, a, b);
 	jmp_check(err_jmp1, jv);
 	exit(1);
@@ -453,7 +458,7 @@ zero_div_ASL(ASL *asl, real L, const char *op)
 {
 	errno_set(EDOM);
 	jmp_check(err_jmp, 1);
-	report_where(asl, 4);
+	repwhere_ASL(asl, 4);
 	fprintf(Stderr, "can't compute %g%s0.\n", L, op);
 	fflush(Stderr);
 	jmp_check(err_jmp1, 1);
@@ -500,7 +505,7 @@ fintrouble_ASL(ASL *asl, func_info *fi, const char *s, TMInfo *T)
 		}
 #endif /*}*/
 	jmp_check(err_jmp, jv);
-	report_where(asl, jv);
+	repwhere_ASL(asl, jv);
 	fprintf(Stderr, fmt, fi->name, s);
 	fflush(Stderr);
 	for(T1 = T->u.prev; T1; T1 = T1prev) {
