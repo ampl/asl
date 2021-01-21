@@ -1,0 +1,4 @@
+20190314
+  snopt.c:  fix a bug with "objrep" with "var v; minimize c*v;" for c
+values other than 1, and relink to fix objrep bugs with several
+adjustable objectives.

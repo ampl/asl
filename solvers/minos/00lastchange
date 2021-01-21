@@ -1,0 +1,7 @@
+20190314
+  m551.c:  fix a bug with "objrep" with "var v; minimize c*v;" for c
+values other than 1, and relink to fix objrep bugs with several
+adjustable objectives.
+
+20190319
+  m551.c:  tweak to allow more general scaling with "objrep".

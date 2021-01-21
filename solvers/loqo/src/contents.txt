@@ -1,0 +1,12 @@
+This directory should contain loqo library sources:
+
+choles.c       myalloc.h
+choles.h       nlmps.c
+cputime.c      nonlin.c
+debugprints.c  options.c
+hash.c         optlp.c
+hash.h         prep.c
+iolp.c         sortsearch.c
+linalg.c       sortsearch.h
+loqo.h         strdup.c
+loqo1.h        version.c

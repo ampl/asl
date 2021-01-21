@@ -1,0 +1,4 @@
+20200914
+  cplex.c:  add possible values 3-7 for (mipstart =) mipstartvalue.
+These values are probably rarely helpful, but a user reported having
+an instance where mipstart=4 was much faster than the default.

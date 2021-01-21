@@ -1,0 +1,3 @@
+20151211
+  lpsolve5.c: fix a bug (possible fault; wrong values) in returning
+suffix .sstatus values.

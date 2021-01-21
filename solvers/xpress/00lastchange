@@ -1,0 +1,6 @@
+20191230
+  xpress.c:  update to XPRESS 8.8, which has bug fixes and
+improvements.  New keywords:  globalfilemax, globalloginterval,
+maxmemoryhard, mipdualreductions, resourcestrategy.  Expanded
+description of refineops.  Keyword nodefilebias is now noted
+as "deprecated and ignored".  See the "xpress -=" output.

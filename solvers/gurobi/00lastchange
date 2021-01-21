@@ -1,0 +1,6 @@
+20200917
+  gurobi.c:  Update to Gurobi 9.0.3.  New keyword kappa to request
+computation of a condition number of an optimal basis.  To bypass a
+gurobi bug with nonlinear constraints, for now an irreducible set of
+infeasible constraints (keyword iisfind) will only be sought among
+linear constraints.
