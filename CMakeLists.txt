@@ -250,6 +250,7 @@ macro(createSingleASL name sourcedir sources)
   target_include_directories(${name} PUBLIC ${GENERATED_INCLUDE_DIR}
                                             ${sourcedir})
   target_compile_definitions(${name} PRIVATE ${ASL_COMPILE_DEFINITIONS})
+  add_dependencies(${name} arith-h)
   target_link_libraries(${name} PUBLIC ${CMAKE_DL_LIBS})
   if(NOT WIN32)
     target_link_libraries(${name} PRIVATE m)
