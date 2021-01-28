@@ -45,7 +45,7 @@ include(initArchitecture)
 include(setArchitecture)
 getArchitectureFlags(${ARCH} CCFLAGS LLFLAGS)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CCFLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${LLFLAGS}")
+
 
 # ################# Generate dynamic files ##################
 file(READ ${SRCDIR}/solvers/details.c0 DETAILS)
@@ -247,8 +247,10 @@ endif()
 
 macro(createSingleASL name sourcedir sources)
   add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
-  target_include_directories(${name} PUBLIC ${GENERATED_INCLUDE_DIR}
-                                            ${sourcedir})
+  target_include_directories(${name} PUBLIC $<BUILD_INTERFACE:${GENERATED_INCLUDE_DIR}>
+                                            $<BUILD_INTERFACE:${sourcedir}>
+                                            $<INSTALL_INTERFACE:include>)
+
   target_compile_definitions(${name} PRIVATE ${ASL_COMPILE_DEFINITIONS})
   add_dependencies(${name} arith-h)
   target_link_libraries(${name} PUBLIC ${CMAKE_DL_LIBS})
@@ -256,8 +258,13 @@ macro(createSingleASL name sourcedir sources)
     target_link_libraries(${name} PRIVATE m)
   endif()
   if(MSVC)
+    if(${name} MATCHES "dynrt")
+        target_compile_options(${name} PUBLIC /MD$<$<CONFIG:Debug>:d>)
+    else()
+        target_compile_options(${name} PUBLIC /MT$<$<CONFIG:Debug>:d>)
+    endif()
     target_compile_options(${name} PRIVATE 
-      /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996 /MT$<$<CONFIG:Debug>:d>)
+      /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
   else()
     target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
   endif()
@@ -293,10 +300,10 @@ endif()
 
 if(MSVC AND BUILD_DYNRT_LIBS)
   # Create ASLs linked to dynamic runtime on windows
+  # createSingleASL adds the appropriate public flags if the library name
+  # matches "dynrt"
   createSingleASL(asl-dynrt ${ASL_SOURCE_DIR} ASL_SOURCES)
-  target_compile_options(asl-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
   createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
-  target_compile_options(asl2-dynrt PUBLIC /MD$<$<CONFIG:Debug>:d>)
 endif()
 if(BUILD_MCMODELLARGE)
  createSingleASL(asl2-large ${ASL2_SOURCE_DIR} ASL2_SOURCES)
@@ -317,19 +324,21 @@ if(BUILD_CPP)
     endif()
 endif()
 
-install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd 
-    DESTINATION include/asl  COMPONENT asl) 
-install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd 
-        DESTINATION include/asl2  COMPONENT asl) 
-
-install(TARGETS asl asl2 DESTINATION lib COMPONENT asl)
+install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd
+              ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
+              DESTINATION include/asl  COMPONENT asl) 
+install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd
+              ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
+              DESTINATION include/asl2  COMPONENT asl)
+install(TARGETS asl asl2 EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
 if(BUILD_MT_LIBS)
-  install(TARGETS asl-mt asl2-mt DESTINATION lib COMPONENT asl)
+  install(TARGETS asl-mt asl2-mt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
 endif()
 if(MSVC AND BUILD_DYNRT_LIBS)
-  install(TARGETS asl-dynrt asl2-dynrt DESTINATION lib COMPONENT asl)
+  install(TARGETS asl-dynrt asl2-dynrt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
 endif()
 if(TARGET aslcpp)
     install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp  COMPONENT asl) 
-    install(TARGETS aslcpp DESTINATION lib  COMPONENT asl)
+    install(TARGETS aslcpp EXPORT ampl-asl-config DESTINATION lib  COMPONENT asl)
 endif()
+install(EXPORT ampl-asl-config DESTINATION share/ampl-asl)
