@@ -11,6 +11,8 @@
 # BUILD_CPP to build the cpp wrapper to the ASL library
 # BUILD_DYNRT_LIBS to build the libraries linked against the dynamic runtime
 # BUILD_MT_LIBS to build the multithreaded libraries 
+# BUILD_F2C to build the fortran to c converter (https://www.netlib.org/f2c/f2c.pdf)
+# BUILD_EXAMPLES to build the examples
 project(ASL)
 cmake_minimum_required(VERSION 2.8)
 # Set the path to CMake modules.
@@ -28,24 +30,38 @@ endif()
 if(NOT BUILD_CPP)
   option(BUILD_CPP "Build the cpp interface" OFF)
 endif()
+if(NOT BUILD_F2C)
+  option(BUILD_F2C "Build the f2c library" OFF)
+endif()
+if(NOT BUILD_EXAMPLES)
+  option(BUILD_EXAMPLES "Build the examples" OFF)
+else()
+  option(BUILD_F2C "Build the f2c library" ON)
+  set(BUILD_F2C ON)
+endif()
 
 # Base directory
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(GENERATED_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
+# Set output directories.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Get rid of useless warnings
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+# For addPrefix and add_to_folder
 include(addPrefix)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Define the ARCH variable (32 or 64)
 include(initArchitecture)
 # Set generic architecture compiler flags
 include(setArchitecture)
 getArchitectureFlags(${ARCH} CCFLAGS LLFLAGS)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CCFLAGS}")
-
 
 # ################# Generate dynamic files ##################
 file(READ ${SRCDIR}/solvers/details.c0 DETAILS)
@@ -152,7 +168,7 @@ endif()
 # multiple times in a parallel build which doesn't work in msbuild. See:
 # http://www.cmake.org/pipermail/cmake/2008-October/024492.html
 add_custom_target(arith-h DEPENDS ${GENERATED_INCLUDE_DIR}/arith.h)
-
+add_to_folder(support arith-h)
 # ASL 1 sources
 set(ASL_SOURCE_DIR ${SRCDIR}/solvers)
 set(ASL_SOURCES ${GENERATED_INCLUDE_DIR}/details.c)
@@ -322,6 +338,13 @@ if(BUILD_CPP)
     if(NOT WIN32)
       target_link_libraries(aslcpp PRIVATE m)
     endif()
+endif()
+
+if(BUILD_F2C)
+  add_subdirectory(${SRCDIR}/f2c)
+endif()
+ if(BUILD_EXAMPLES)
+  add_subdirectory(${SRCDIR}/examples)
 endif()
 
 install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd

@@ -1,0 +1,163 @@
+# Current problem number = 0, mode 2 (fg), file diet.nl
+# 8 variables, 4 constraints, 1 objectives
+# total_cost = 0
+
+# Gradient of objective 0:
+# g[Buy['BEEF']] = 3.19
+# g[Buy['CHK']] = 2.59
+# g[Buy['FISH']] = 2.29
+# g[Buy['HAM']] = 2.89
+# g[Buy['MCH']] = 1.89
+# g[Buy['MTL']] = 1.99
+# g[Buy['SPG']] = 1.99
+# g[Buy['TUR']] = 2.49
+# diet['A'] = 0, lslack = -700, uslack = 10000
+# diet['B1'] = 0, lslack = -700, uslack = 10000
+# diet['B2'] = 0, lslack = -700, uslack = 10000
+# diet['C'] = 0, lslack = -700, uslack = 10000
+# J[diet['A'],Buy['BEEF']] = 60
+# J[diet['A'],Buy['CHK']] = 8
+# J[diet['A'],Buy['FISH']] = 8
+# J[diet['A'],Buy['HAM']] = 40
+# J[diet['A'],Buy['MCH']] = 15
+# J[diet['A'],Buy['MTL']] = 70
+# J[diet['A'],Buy['SPG']] = 25
+# J[diet['A'],Buy['TUR']] = 60
+# J[diet['B1'],Buy['BEEF']] = 10
+# J[diet['B1'],Buy['CHK']] = 20
+# J[diet['B1'],Buy['FISH']] = 15
+# J[diet['B1'],Buy['HAM']] = 35
+# J[diet['B1'],Buy['MCH']] = 15
+# J[diet['B1'],Buy['MTL']] = 15
+# J[diet['B1'],Buy['SPG']] = 25
+# J[diet['B1'],Buy['TUR']] = 15
+# J[diet['B2'],Buy['BEEF']] = 15
+# J[diet['B2'],Buy['CHK']] = 20
+# J[diet['B2'],Buy['FISH']] = 10
+# J[diet['B2'],Buy['HAM']] = 10
+# J[diet['B2'],Buy['MCH']] = 15
+# J[diet['B2'],Buy['MTL']] = 15
+# J[diet['B2'],Buy['SPG']] = 15
+# J[diet['B2'],Buy['TUR']] = 10
+# J[diet['C'],Buy['BEEF']] = 20
+# J[diet['C'],Buy['FISH']] = 10
+# J[diet['C'],Buy['HAM']] = 40
+# J[diet['C'],Buy['MCH']] = 35
+# J[diet['C'],Buy['MTL']] = 30
+# J[diet['C'],Buy['SPG']] = 50
+# J[diet['C'],Buy['TUR']] = 20
+# No current problem
+# Current problem number = 0, mode 5 (pfgh), file ch3.nl
+# 3 variables, 3 constraints, 1 objectives
+# f[0] = 0.0555556
+
+# Gradient of objective 0:
+# g[0] = 0.444444
+# g[1] = 0
+# g[2] = -0.444444
+# c[0] = -0.666667, lslack = -0.333333, uslack = 0.333333
+# c[1] = -1, lslack = 0, uslack = 0
+# c[2] = 1, lslack = 0, uslack = 0
+# J[0,0] = -1.33333
+# J[0,1] = 0
+# J[0,2] = 1.33333
+# J[1,0] = 0
+# J[1,1] = -2
+# J[1,2] = 0
+# J[2,0] = 0.666667
+# J[2,1] = 0.666667
+# J[2,2] = 0.666667
+# h[0,0] = -10.2222
+# h[0,1] = 0.444444
+# h[1,1] = 8
+# h[0,2] = -1.33333
+# h[1,2] = 0.444444
+# h[2,2] = 21.7778
+# No current problem
+# Current problem number = 0, mode 2 (fg), file ch3.nl
+# 3 variables, 3 constraints, 1 objectives
+# f[0] = 0.0555556
+
+# Gradient of objective 0:
+# g[0] = 0.444444
+# g[1] = 0
+# g[2] = -0.444444
+# c[0] = -0.666667, lslack = -0.333333, uslack = 0.333333
+# c[1] = -1, lslack = 0, uslack = 0
+# c[2] = 1, lslack = 0, uslack = 0
+# J[0,0] = -1.33333
+# J[0,1] = 0
+# J[0,2] = 1.33333
+# J[1,0] = 0
+# J[1,1] = -2
+# J[1,2] = 0
+# J[2,0] = 0.666667
+# J[2,1] = 0.666667
+# J[2,2] = 0.666667
+# No current problem
+# Current problem number = 0, mode 5 (pfgh), file hs100.nl
+# 8 variables, 3 constraints, 1 objectives
+# f[0] = 714
+
+# Gradient of objective 0:
+# g[0] = -18
+# g[1] = -100
+# g[2] = 0
+# g[3] = -42
+# g[4] = 0
+# g[5] = 0
+# g[6] = -8
+# g[7] = 0
+# c[0] = -114, lslack = 13, uslack = Infinity
+# c[1] = 4, lslack = 4, uslack = Infinity
+# c[2] = 1, lslack = 1, uslack = -1
+# J[0,0] = -4
+# J[0,1] = -96
+# J[0,2] = -1
+# J[0,3] = -32
+# J[0,4] = -5
+# J[1,0] = -2
+# J[1,1] = -1
+# J[1,2] = 0
+# J[1,5] = -5
+# J[1,6] = 11
+# J[2,0] = 1
+# J[2,7] = -1
+# h[0,0] = -10
+# h[0,1] = 3
+# h[1,1] = -136
+# h[2,2] = -4
+# h[3,3] = -2
+# h[4,4] = 0
+# h[5,5] = 14
+# h[5,6] = -4
+# h[6,6] = 12
+# No current problem
+# Current problem number = 0, mode 5 (pfgh), file hs100.nl
+# 8 variables, 3 constraints, 1 objectives
+# f[0] = 714
+
+# Gradient of objective 0:
+# g[0] = -18
+# g[1] = -100
+# g[2] = 0
+# g[3] = -42
+# g[4] = 0
+# g[5] = 0
+# g[6] = -8
+# g[7] = 0
+# c[0] = -114, lslack = 13, uslack = Infinity
+# c[1] = 4, lslack = 4, uslack = Infinity
+# c[2] = 1, lslack = 1, uslack = -1
+# J[0,0] = -4
+# J[0,1] = -96
+# J[0,2] = -1
+# J[0,3] = -32
+# J[0,4] = -5
+# J[1,0] = -2
+# J[1,1] = -1
+# J[1,2] = 0
+# J[1,5] = -5
+# J[1,6] = 11
+# J[2,0] = 1
+# J[2,7] = -1

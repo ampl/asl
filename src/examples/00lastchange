@@ -1,0 +1,4 @@
+20170719
+  Tweak amplfunc.c and spamfunc.c to banish an inane warning.  Add
+comments about Octave to makefile.u.  Withdraw makefile.sy and
+makefile.wat.

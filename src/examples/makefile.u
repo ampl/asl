@@ -27,7 +27,7 @@ CC = cc
 S = ..
 # "S = .." assumes this directory is solvers/examples .
 
-CFLAGS = -g -O -I$S
+CFLAGS = -O -I$S
 
 # If things don't run right, you may need to change -O to -g
 # so you can poke around with a debugger.
