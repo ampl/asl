@@ -14,6 +14,9 @@
 # BUILD_F2C to build the fortran to c converter (https://www.netlib.org/f2c/f2c.pdf)
 # BUILD_EXAMPLES to build the examples
 project(ASL)
+
+cmake_policy(SET CMP0077 NEW)
+
 cmake_minimum_required(VERSION 2.8)
 # Set the path to CMake modules.
 set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)

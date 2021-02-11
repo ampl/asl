@@ -9,6 +9,7 @@ function(aslExample name)
     target_link_libraries(${name} PRIVATE m dl)
   endif()
   add_to_folder(examples ${name})
+   install(TARGETS ${name} DESTINATION examples COMPONENT examples)
 endfunction()
 
 function(portExample name)
