@@ -18,6 +18,7 @@ function(portExample name)
 endfunction()
 
 add_library(funcadd0 OBJECT ../solvers/funcadd0.c)
+add_dependencies(funcadd0 arith-h)
 get_target_property(asl_INCLUDES asl INCLUDE_DIRECTORIES)
 target_include_directories(funcadd0 PUBLIC ${asl_INCLUDES})
 
