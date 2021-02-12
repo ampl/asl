@@ -13,10 +13,12 @@
 # BUILD_MT_LIBS to build the multithreaded libraries 
 # BUILD_F2C to build the fortran to c converter (https://www.netlib.org/f2c/f2c.pdf)
 # BUILD_EXAMPLES to build the examples
-project(ASL)
-if (${CMAKE_VERSION} GREATER 3.13)
+
+if (${CMAKE_VERSION} VERSION_GREATER "3.13.0")
   cmake_policy(SET CMP0077 NEW)
 endif()
+
+project(ASL)
 
 cmake_minimum_required(VERSION 2.8)
 # Set the path to CMake modules.
