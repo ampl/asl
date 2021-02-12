@@ -14,7 +14,7 @@
 # BUILD_F2C to build the fortran to c converter (https://www.netlib.org/f2c/f2c.pdf)
 # BUILD_EXAMPLES to build the examples
 project(ASL)
-if (${CMAKE_VERSION} GREATER "3.13")
+if (${CMAKE_VERSION} GREATER 3.13)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
