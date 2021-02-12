@@ -33,7 +33,7 @@ set(ASLEXAMPLES evalchk gjh nlcopy et)
 foreach(example ${ASLEXAMPLES})
   aslExample(${example})
 endforeach()
-if(UNIX)
+if(LINUX)
   target_link_libraries(et PRIVATE rt)
 endif()
 
