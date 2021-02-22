@@ -1,14 +1,19 @@
 # asl
 
 This repository contains the up-to-date version of ASL (AMPL Solver Library) as maintained by David Gay. It supports ```cmake``` multiplatform builds.
+There are a few cmake switches that define which optional modules will be built:
+
+- *BUILD_EXAMPLES* builds the ASL examples
+- *BUILD_F2c* build the f2c (Fortran To C) library; implied in case the examples are being compiled
+- *BUILD_MT_LIBS* builds the asl-mt and asl2-mt libraries, multithreaded, compiled using OpenMP switches
 
 ## Linux systems
-To build the static library under x86 Unix/Linux systems, simply do the following: 
+To build the static library under x86 Unix/Linux systems and the examples, simply do the following: 
 
 ```
 mkdir build
 cd build
-cmake .. 
+cmake .. -DBUILD_EXAMPLES=1
 make .
 ```
 
