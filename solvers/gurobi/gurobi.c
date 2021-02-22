@@ -1317,7 +1317,14 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			 1 = moderate cut generation\n\
 			 2 = aggressive cut generation.";
 #endif
-
+#ifdef GRB_INT_PAR_INTEGRALITYFOCUS
+ static char integrality_desc[] = "Setting this parameter to 1 requests the solver to work\n\
+		harder at finding solutions that are still (nearly) feasible\n\
+		when all integer variables are rounded to exact integral\n\
+		values:\n\
+			0 = no (default)\n\
+			1 = yes.";
+#endif
 #ifdef GRB_DBL_PAR_IMPROVESTARTGAP
  static char isg_desc[] = "Optimality gap below which the MIP solver switches from\n\
 		trying to improve the best bound to trying to find better\n\
@@ -1344,7 +1351,7 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			1 = yes (default).";
 #if GRB_VERSION_MAJOR >= 8
  static char kappa_desc[] = "Whether to return the estimated condition number (kappa) of\n\
-		the optimal basis (default 0): sum of \n\
+		the optimal basis (default 0): sum of\n\
 			1 = report kappa in Gurobi's result message;\n\
 			2 = return kappa in the solver-defined suffix kappa on\n\
 			    the objective and problem.\n\
@@ -1355,10 +1362,18 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 		problems with binary or integer variables:\n\
 			0 = no (ignore .lazy)\n\
 			1 = yes (default).\n\
-		Lazy constraints are indicated with .lazy values of 1, 2, or 3\n\
-		and are ignored until a solution feasible to the remaining\n\
-		constraints is found.  What happens next depends on the values\n\
-		of .lazy:\n\
+		Lazy constraints are indicated with .lazy values of "
+#if (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR >= 1) || GRB_VERSION_MAJOR > 9
+		"-1, "
+#endif
+		"1, 2,\n\
+		or 3 and are ignored until a solution feasible to the\n\
+		remaining constraints is found.  What happens next depends\n\
+		on the value of .lazy:\n\
+		      -1 ==> treat the constraint as a user cut; the\n\
+			      constraint must be redundant with respect to the\n\
+			      rest of the model, although it can cut off LP\n\
+			      solutions;\n\
 			1 ==> the constraint may still be ignored if another\n\
 			      lazy constraint cuts off the current solution;\n\
 			2 ==> the constraint will henceforth be enforced if it\n\
@@ -1460,6 +1475,17 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 				eliminate nonquadratic terms\n\
 			 2 = translate quadratic forms to bilinear form and use\n\
 				spatial branching.";
+#endif
+
+#ifdef GRB_DBL_PAR_NORELHEURTIME
+ static char norelheurtime_desc[] = "Limits the amount of time spent in the NoRel heuristic;\n\
+		see the description of norelheurwork for details.  This\n\
+		parameter will introduce non determinism; use norelheurwork\n\
+		for deterministic results.  Default 0.";
+ static char norelheurwork_desc[] = "Limits the amount of work spent in the NoRel heuristic.\n\
+		This heuristics searches for high-quality feasible solutions\n\
+		before solving the root relaxation.  The work metrix is hard\n\
+		to define precisely, as it depends on the machine.  Default 0.";
 #endif
 
 #ifdef GRB_INT_PAR_NUMERICFOCUS
@@ -2128,6 +2154,9 @@ keywds[] = {	/* must be in alphabetical order */
 #ifdef GRB_INT_PAR_INFPROOFCUTS
 	{ "infproofcuts", sf_ipar, GRB_INT_PAR_INFPROOFCUTS, infproofcuts_desc },
 #endif
+#ifdef GRB_INT_PAR_INTEGRALITYFOCUS
+	{ "integrality", sf_ipar, GRB_INT_PAR_INTEGRALITYFOCUS, integrality_desc },
+#endif
 	{ "intfeastol", sf_dpar, "IntFeasTol", intfeastol_desc },
 	{ "intstart", sf_mint, VP set_intstart, intstart_desc },
 	{ "iterlim", sf_dpar, "IterationLimit", "iteration limit (default: no limit)" },
@@ -2183,6 +2212,10 @@ keywds[] = {	/* must be in alphabetical order */
 #endif /*}*/
 #ifdef GRB_INT_PAR_NONCONVEX
 	{ "nonconvex", sf_ipar, GRB_INT_PAR_NONCONVEX, nonconvex_desc },
+#endif
+#ifdef GRB_DBL_PAR_NORELHEURTIME
+	{"norelheurtime",  sf_dpar, GRB_DBL_PAR_NORELHEURTIME, norelheurtime_desc },
+	{"norelheurwork",  sf_dpar, GRB_DBL_PAR_NORELHEURWORK, norelheurwork_desc },
 #endif
 #if GRB_VERSION_MAJOR > 1 /*{*/
 	{ "normadjust", sf_ipar, "NormAdjust", "synonym for \"multprice_norm\"" },
@@ -2371,7 +2404,7 @@ keywds[] = {	/* must be in alphabetical order */
 
  static Option_Info
 Oinfo = { "gurobi", verbuf, "gurobi_options", keywds, nkeywds, ASL_OI_keep_underscores, verbuf,
-	  0, MOkwf,0,0,0, YYYYMMDD, 0,0,0,0,0,0,0, ASL_OI_tabexpand | ASL_OI_addnewline };
+	  0, MOkwf,0,0,0, 20201130, 0,0,0,0,0,0,0, ASL_OI_tabexpand | ASL_OI_addnewline };
 
  static void
 enamefailed(GRBenv *env, const char *what, const char *name)
@@ -3563,16 +3596,16 @@ enum { MBL = 8192 };
 			/* assignment below does not happen, and after longjmp */
 			/* we get an erroneous attempt to fclose(nl). */
 
- double setSuffixKappa(ASL* asl, GRBmodel* mdl, double kvalue)
- {
-	 double* buffer;
-	 buffer = (real*)M1zapalloc(nobjno * sizeof(real));
-	 buffer[objno - 1] = kvalue;
-	 suf_rput("kappa", ASL_Sufkind_obj, buffer);
-	 suf_rput("kappa", ASL_Sufkind_prob, buffer);
-	 return kvalue;
- }
-int
+ static void
+setSuffixKappa(ASL* asl, GRBmodel* mdl, double kvalue)
+{
+	double* buffer = (real*)M1zapalloc(nobjno * sizeof(real));
+	buffer[objno - 1] = kvalue;
+	suf_rput("kappa", ASL_Sufkind_obj, buffer);
+	suf_rput("kappa", ASL_Sufkind_prob, buffer);
+}
+
+ int
 main(int argc, char **argv)
 {
 	ASL *asl;
@@ -4272,18 +4305,43 @@ main(int argc, char **argv)
 		i1 = nc - nqc;
 		lz = lazyd->u.i + nqc;
 		for(i = 0; i < i1; ++i) {
+
+#if((GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR == 1) || GRB_VERSION_MAJOR >= 9) /*{{*/
+			if ((i2 = lz[i]) >= -1) {
+#if (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR == 1) /*{{{*/
+				if (i2 == -1)
+				{
+					if (sense[i2] == '>')
+					{
+						fprintf(Stderr, "Cannot specify user cuts that are >= inequalities, see:\n"
+							"https://support.gurobi.com/hc/en-us/articles/360052709391\n");
+						exit(1);
+					}
+					if (!Wflist[0]) // If the user did not request a model write, fail, as gurobi would
+						// crash due to a bug (reported on 19/11/2020)
+					{
+						fprintf(Stderr, "Gurobi version 9.1 has a bug that prevents model solution if writeprob is not\n"
+							"specified. If the solver crashes, see the 'writeprob' option.\n");
+						fflush(Stderr); // flush otherwise the message is not shown
+					}
+				}
+#endif /*}}}*/
+				if (i2 == 0)
+					continue;
+#else /*{{*/
 			if ((i2 = lz[i]) > 0) {
+#endif /*}}*/
 				if (i2 > 3)
 					i2 = 3;
 				rv = GRBsetintattrelement(mdl, GRB_INT_ATTR_LAZY, i, i2);
-#if 1
+#if 1  /*{{*/
 				if (rv) {
 					fprintf(Stderr, "Surprise return %d from "
 						"GRBsetintattrelement(mdl, \"Lazy\", %d, %d)\n",
 						rv, i, i2);
 					exit(1);
 					}
-#endif
+#endif  /*}}*/
 				}
 			}
 		}
@@ -4617,7 +4675,7 @@ main(int argc, char **argv)
 		if(GRBgetdblattr(mdl, GRB_DBL_ATTR_KAPPA, &kvalue))
 			failed(env, "GRBgetdblattr(GRB_DBL_ATTR_KAPPA)");
 		if (kappa & 2)
-		 setSuffixKappa(asl, mdl, kvalue);
+			setSuffixKappa(asl, mdl, kvalue);
 		if (kappa & 1)
 			dpf(&dims, "\nkappa value: %g", kvalue);
 	}

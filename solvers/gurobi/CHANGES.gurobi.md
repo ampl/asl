@@ -1,9 +1,9 @@
 # Summary of recent updates to Gurobi for AMPL
 
 ## 20201230
-- Update to Gurobi 9.1.1, which contains many bug fixes.
+- Relinked with Gurobi 9.1.1, which contains many bug fixes.
 
-## 20201125
+## 20201130
 ### Changed
 - Update to Gurobi 9.1, which contains performance improvements and bug fixes.
 ### Added
