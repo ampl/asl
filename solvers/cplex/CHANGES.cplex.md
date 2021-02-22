@@ -1,11 +1,15 @@
 # Summary of recent updates to CPLEX for AMPL
 
+## 20210206
+### Added
+- Added option benders_worker to control the algorithm used when 
+  solving subproblems using Benders decomposition.
+
 ## 20210105
 ### Updated
 - Updated to CPLEX 20.1, which includes algorithmic improvements,
   a new possible value for 'mipemphasis' and the new option 
   'nodecuts'. See -= output for details.
-
 
 ## 20201020
 ### Fixed

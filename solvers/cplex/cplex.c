@@ -38,9 +38,9 @@ of or in connection with the use or performance of this software.
 #include "limits.h"
 
 #if CPX_APIMODEL == CPX_APIMODEL_LARGE
-#include "ilcplex/cplexx.h"
+#include "cplexx.h"
 #endif
-#include "ilcplex/cplex.h"
+#include "cplex.h"
 
 #if CPX_VERSION < 12060200
 #define OBJ_ADJ
@@ -308,7 +308,7 @@ mdbl_val[] = {
 #else
  static CPXFILEptr Logf;
 #endif
- static char cplex_version[] = "AMPL/CPLEX with bad license\0\nAMPL/CPLEX Driver Version YYYYMMDD\n";
+ static char cplex_version[] = "AMPL/CPLEX with bad license\0\nAMPL/CPLEX Driver Version 20210215\n";
  static char *baralgname, *endbas, *endsol, *endtree, *endvec, *logfname;
  static char *paramfile, *poolstub, *pretunefile, *pretunefileprm;
  static char *startbas, *startsol, *starttree, *startvec, *tunefile, *tunefileprm;
@@ -490,7 +490,7 @@ badret(const char *what, int i, int rc)
 	char buf[4096];
 	if (!CPXgeterrorstring(Env, i, buf))
 		badretfmt(rc, "%s failed; error code %d.", what, i);
-	else 
+	else
 		badretfmt(rc, "%s failed; %s.", what, buf);
 	if (rc)
 		exit(1);
@@ -1997,6 +1997,16 @@ MOcheck(ASL *asl)
 		    2 = similar to 0, but suffix benders is required\n\
 		    3 = similar to 0, but ignore suffix benders (if\n\
 				present).",
+#ifdef CPXPARAM_Benders_WorkerAlgorithm
+	benders_worker_desc[] = "Designate the algorithm that CPLEX applies to solve the\n\
+		subproblems when using Benders decomposition:\n\
+		    0 = automatic (default)\n\
+		    1 = primal simplex\n\
+		    2 = dual simplex\n\
+		    3 = network simplex\n\
+		    4 = barrier algorithm\n\
+		    5 = sifting algorithm.",
+#endif
 	bendersopt_desc[] = "Single-word phrase:  use Benders algorithm.\n\
 		Both integer and continuous variables must be present.",
 #endif /*}*/
@@ -2258,11 +2268,24 @@ cutsfactor_desc[] =
 		       (as controlled by \"display\")\n\
 		   4 = same as 2, plus LP relaxation info\n\
 		   5 = same as 2, plus LP subproblem info.",
-	mipemphasis_desc[] = "Whether to emphasize seeking optimality\n\
-		(0 = default) or finding feasible solutions (1).\n\
-		For CPLEX versions >= 8, two other values are\n\
-		possible:  emphasizing optimality over\n\
-		feasibility (2) and emphasizing best bound (3).",
+	mipemphasis_desc[] = "How to balance seeking seeking\n\
+		feasibility versus optimality when solving a MIP:\n\
+		  0 = balance optimality and feasibility (default)\n"
+#ifdef CPX_MIPEMPHASIS_FEASIBILITY
+		"\
+		  1 = emphasize feasibility over optimality\n\
+		  2 = emphasize optimality over feasibility\n\
+		  3 = emphasize moving the best bound"
+#endif
+#ifdef CPX_MIPEMPHASIS_HIDDENFEAS
+		"\n\
+		  4 = emphasize finding hidden feasible solutions"
+#endif
+#ifdef CPX_MIPEMPHASIS_HEURISTIC
+		"\n\
+		  5 = emphasize finding good feasible solutions sooner"
+#endif
+		".",
 	mipgap_desc[] = "Relative tolerance for optimizing integer\n\
 		variables: stop if\n\
 		   abs((best bound) - (best integer))\n\
@@ -2373,6 +2396,15 @@ cutsfactor_desc[] =
 		    1 = moderate generation\n\
 		    2 = aggressive generation.",
 	node_desc[] = "Synonym for \"nodes\".",
+#ifdef CPX_PARAM_NODECUTS
+	nodecuts_desc[] = "Decides whether or not cutting planes are separated\n\
+		at the nodes of the branch-and-bound tree:\n\
+			   -1 = do not generate node cuts\n\
+			    0 = automatic (default)\n\
+			    1 = generate moderately\n\
+			    2 = generate aggressively\n\
+			    3 = genertate very aggresively.",
+#endif
 	nodefile_desc[] = "Whether to save node information in a temporary file:\n\
 		   0 = no\n\
 		   1 (default) = compressed node file in memory\n\
@@ -3559,6 +3591,7 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 	{ "benders_feascut_tol", sf_dbl,VP CPXPARAM_Benders_Tolerances_feasibilitycut, benders_feascut_desc },
 	{ "benders_optcut_tol",	sf_dbl,	VP CPXPARAM_Benders_Tolerances_optimalitycut, benders_optcut_desc },
 	{ "benders_strategy", sf_int,	VP CPXPARAM_Benders_Strategy, benders_strategy_desc },
+	{ "benders_worker", sf_int, VP CPXPARAM_Benders_WorkerAlgorithm, benders_worker_desc },
 	{ "bendersopt", sf_known,	VP set_benders, bendersopt_desc },
 #endif
 	{ "bestbound",	sf_known,	VP set_bestbound, bestbound_desc },
@@ -3773,6 +3806,9 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 	{ "netpricing",	sf_int,		VP CPX_PARAM_NETPPRIIND, netpricing_desc },
 #ifdef CPLEX_MIP
 	{ "node",	sf_int2,	VP CPX_PARAM_NODELIM, node_desc },
+#ifdef CPX_PARAM_NODECUTS
+	{ "nodecuts",	sf_int,		VP CPX_PARAM_NODECUTS, nodecuts_desc },
+#endif
 	{ "nodefile",	sf_int,		VP CPX_PARAM_NODEFILEIND, nodefile_desc },
 	{ "nodefiledir", sf_char,	VP set_workfiledir, nodefiledir_desc },
 #ifdef CPX_PARAM_NODEFILELIM
@@ -4065,7 +4101,7 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 
  static Option_Info Oinfo = { "cplex", 0, "cplex_options", keywds, nkeywds,
 				ASL_OI_keep_underscores, cplex_version, 0,
-				MOkwf,0,0,0, YYYYMMDD, 0,0,0,0,0,0,0,
+				MOkwf,0,0,0, 20210215, 0,0,0,0,0,0,0,
 				ASL_OI_tabexpand | ASL_OI_addnewline };
 
  static void
