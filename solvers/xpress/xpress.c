@@ -569,6 +569,17 @@ static char
 	autoperturb_desc[]	= "whether to introduce perturbations when the simplex method\n\
 		encounters too many degenerate pivots:\n\
 			1 = yes (default); 0 = no",
+#ifdef XPRS_AUTOSCALING
+	autoscaling_desc[]  = "whether the Optimizer should automatically select between\n\
+		different scaling algorithms:\n\
+		    -1 = automatic (default)\n\
+		     0 = disabled\n\
+		     1 = cautious strategy.  Non-standard scaling will only\n\
+			    be selected if it appears to be clearly superior\n\
+		     2 = moderate strategy\n\
+		     3 = aggressive strategy.  Standard scaling will only be\n\
+			    selected if it appears to be clearly superior",
+#endif
 	backtrack_desc[]	= "choice of next node when solving MIP problems:\n\
 			-1 = automatic choice (default)\n\
 			 1 = withdrawn; formerly choice 2 until a feasible\n\
@@ -907,6 +918,12 @@ static char
 			0 = no (default)\n\
 			1 = yes\n\
 			2 = only if other heurstics found no integer solution",
+#ifdef XPRS_FEASTOLPERTURB
+	feastol_perturb_desc[] = "how much a feasible primal basic solution is allowed to\n\
+		be perturbed when performing basis changes.  The tolerance\n\
+		specified by \"feastol\" is always considered as an upper\n\
+		limit for the perturbations; default = 1.0E-06",
+#endif
 #ifdef XPRS_FEASTOLTARGET
 	feastol_target_desc[]	= "feasibility tolerance on constraints for solution refiner\n\
 		(see refineops):  if feastol_target > 0 is specified, it is\n\
@@ -1601,6 +1618,16 @@ static char
 		"\t\t	32 ==> refine all solutions\n\
 			64 ==> use higher precision during iterative refinement\n"
 #endif
+#if XPVERSION >= 36
+		"\t    128 ==> use the primal simplex algorithm for refining\n\
+	    256 ==> use the dual simplex algorithm for refining\n\
+	    512 ==> refine MIP solutions such that rounding them\n\
+				keeps the problem feasible when reoptimized\n\
+	   1024 ==> attempt to refine MIP solutions such that\n\
+				rounding them keeps the problem feasible when\n\
+				reoptimized, but accept integers solutions\n\
+				even if refinement fails.\n"
+#endif
 		"\t\tdefault = 1 + 2 + 16 = 19.",
 #endif
 #endif
@@ -1857,6 +1884,9 @@ static keyword keywds[]={
   KW("archconsistent",	I_val,	&archconsistent,	archconsistent_desc),
 #endif
   KW("autoperturb",	set_int, XPRS_AUTOPERTURB,	autoperturb_desc),
+#ifdef XPRS_AUTOSCALING
+	KW("autoscaling", set_int, XPRS_AUTOSCALING, autoscaling_desc),
+#endif
   KW("backtrack",	set_int, XPRS_BACKTRACK,	backtrack_desc),
   KW("backtracktie",	set_int, XPRS_BACKTRACKTIE,	backtracktie_desc),
 #ifdef XPRS_BARALG /*{*/
@@ -1967,6 +1997,9 @@ static keyword keywds[]={
   KW("etatol",		set_dbl, XPRS_ETATOL,		etatol_desc),
   KW("feaspump",	set_int, XPRS_FEASIBILITYPUMP,	feaspump_desc),
   KW("feastol",		set_dbl, XPRS_FEASTOL,		"zero tolerance on RHS; default = 1e-6"),
+#ifdef XPRS_FEASTOLPERTURB
+  KW("feastol_perturb", set_dbl, XPRS_FEASTOLPERTURB, feastol_perturb_desc),
+#endif
 #ifdef XPRS_FEASTOLTARGET
   KW("feastol_target",	set_dbl, XPRS_FEASTOLTARGET,	feastol_target_desc),
 #endif
@@ -2244,7 +2277,7 @@ static keyword keywds[]={
      };
 
 static Option_Info Oinfo = { "xpress", NULL, "xpress_options",
-		keywds,nkeywds,0,"XPRESS", 0,0,0,0,0, 20191230, 0,0,0,0,0,0,0,
+		keywds,nkeywds,0,"XPRESS", 0,0,0,0,0, 20201210, 0,0,0,0,0,0,0,
 		ASL_OI_tabexpand | ASL_OI_addnewline };
 
  static char *
