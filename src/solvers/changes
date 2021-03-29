@@ -3239,7 +3239,7 @@ both in solvers.tgz and in solvers2.tgz.
   solvers2.tgz:  pfghread.c:  fix a glitch with atan2:  the cases for
 atan2(const,varexpr) and atan2(varexpr,const) were interchanged.
 
-20200930
+20201030
   solvers.tgz: pshvprod.c: supply a missing return statement to
 hvpcompse_ASL().
   solvers.tgz and solvers2.tgz:  export report_where again:  yesterday
@@ -3254,3 +3254,15 @@ compute nvinc from values that could have been changed by sos_add(),
 and use asl->i.n_var0 at one point rather than the possibly changed
 n_var.  The solvers2.tgz versions of mqpcheckv.c and nqpcheck.c work
 differently and do not use nvinc.
+
+20201113
+  solvers.tgz: fix a bug in conpval.c that silently crept in during
+the updates of 20201029.  Line 752 should be
+		deriv_errchk_ASL((ASL*)asl, i, 1, 1);
+but "deriv_errchk_ASL" somehow got removed.  This call is for
+printing an error message when a constraint body but not its
+derivative can be computed.
+
+20219327
+  solvers.tgz and solvers2.tgz: mpec_adj.c:  fix an obscure bug
+that could cause a fault on some complementarity problems.

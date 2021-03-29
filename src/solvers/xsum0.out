@@ -9,7 +9,7 @@ arithchk.c	63b0185	6532
 asl.h	1fe3527a	42925
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	159b97a5	29
+asldate.c	ecc14848	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -26,7 +26,7 @@ con2val.c	1e0199ce	4866
 conadj.c	bb213ed	2040
 configure	1679ad6	1706
 configurehere	1f384d7	1690
-conpval.c	e7026a23	20300
+conpval.c	f1318be6	20316
 conscale.c	9a0f9de	3482
 conval.c	f1e4dc7d	4569
 degree.c	3eafa26	4337
@@ -80,7 +80,7 @@ makefile.vc	1bb69704	7500
 makefile.wat	c465856	5860
 mip_pri.c	f1dd1d47	7887
 misc.c	11214d99	31518
-mpec_adj.c	e29fd62a	9150
+mpec_adj.c	f15f4697	9223
 mpec_adj0.c	efb8be74	70
 mqpcheckv.c	1f7a799a	19707
 mypow.c	f6f74614	2464

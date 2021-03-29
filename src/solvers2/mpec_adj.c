@@ -353,7 +353,14 @@ mpec_auxvars_ASL(ASL *asl, real *c, real *x)
 		t = c[i = *cc++];
 		c[i] = 0.;
 		j = cv[i] - 1;
-		for(cg = *Cga++; cg->varno < n0; cg = cg->next);
+		for(cg = *Cga++; ; cg = cg->next) {
+			if (!cg)
+				goto continue2;
+			if (cg->varno >= n0)
+				break;
+			}
+		if (!cg)
+			continue;
 		Lc = Lc0 + i*incc;
 		if (!*ck++) {
 			if (t >= 0.)
@@ -381,5 +388,6 @@ mpec_auxvars_ASL(ASL *asl, real *c, real *x)
 				Lc1 += incc;
 				}
 			}
+ continue2:	;
 		} while(cc < cce);
 	}
