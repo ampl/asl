@@ -3263,6 +3263,10 @@ but "deriv_errchk_ASL" somehow got removed.  This call is for
 printing an error message when a constraint body but not its
 derivative can be computed.
 
-20219327
+20210327
   solvers.tgz and solvers2.tgz: mpec_adj.c:  fix an obscure bug
 that could cause a fault on some complementarity problems.
+
+20210410
+  solvers2.tgz: eval2.c, pfghread.c pshvprod.c sphes.c: fix some bugs
+related to Hessian computations.
