@@ -1929,8 +1929,7 @@ alignarg(more_func1:)
 		goto top;
 
 	  case OPGOTOF:
-		pop = (int**)&o[1];
-		o = (int*)&pop[1];
+		o = (int*)&((int**)(o+1))[1];
 		goto top;
 
 	  case OPGOTOF2:
@@ -1955,8 +1954,7 @@ alignarg(more_func1:)
 		goto top;
 
 	  case OPGOTOFalign:
-		pop = (int**)&o[2];
-		o = (int*)&pop[1];
+		o = (int*)&((int**)(o+2))[1];
 		goto top;
 
 	  case OPGOTOF2align:

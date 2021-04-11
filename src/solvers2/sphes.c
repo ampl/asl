@@ -35,6 +35,7 @@ hv_fwd(int *o, real *w, int *oend)	/* for determining sparsity */
 	plterm **pp;
 	real dO, *rp;
 	tfinfo **ptfi, *tfi;
+	void **v;
 
 	for(;;) {
 		o0 = o;
@@ -217,33 +218,31 @@ alignarg(more_maxminlist:)
 		case nOPIF13:
 			cp = (Condptrs*)&o[5];
 alignarg(more_if13:)
-			if (cp->bder) {
+			r = (Eresult*)(w + o[2]);
+			r->dO = 0.;
+			if (cp->bder >= 0) {
 				o = cp->f;
-				if (cp[1].bder) {
-					if (*o == OPRET) {
-						o = cp->b;
-						if (*o == OPCOPY1 || *o == OPCOPY1a) {
-							r = (Eresult*)(w + o[2]);
-							L = (Eresult*)(w + o[3]);
-							r->dO = L->dO;
-							}
+				if (*o == OPRET) {
+					o = cp->b;
+					if (*o == OPCOPY1 || *o == OPCOPY1a) {
+						r = (Eresult*)(w + o[2]);
+						L = (Eresult*)(w + o[3]);
+						r->dO = L->dO;
 						}
-					else
-						hv_fwd(o, w, cp->b);
-					o = cp[1].f;
 					}
+				else
+					hv_fwd(o, w, cp->b);
 				}
-			else
-				o = cp[1].f;
+			o = cp[1].f;
 			continue;
 		case nOPIF1:
 			cp = (Condptrs*)&o[5];
 alignarg(more_if:)
 			r = (Eresult*)(w + o[2]);
 			r->dO = 0.;
-			if (cp->bder < 0)
-				++cp;
-			o = cp->f;
+			if (cp->bder >= 0)
+				hv_fwd(cp->f, w, cp->b);
+			o = cp[1].f;
 			continue;
 
 /*		case Hv_plterm:*/
@@ -438,6 +437,7 @@ hv_back1(int *o, real *w, int *oend)
 	Minmaxptrs *mmp, *mmp1;
 	int k, *o1, *oe, *opg1;
 	real adO, t1, t2;
+	void **v;
 
  top:
 	for(;;) {
@@ -594,8 +594,9 @@ alignarg(more_maxminlist:)
 alignarg(more_if:)
 			if (cp[1].bder >= 0)
 				hv_back1(cp[1].b, w, cp[1].f);
-			o = cp->b;
-			continue;
+			if (cp[0].bder >= 0)
+				hv_back1(cp[0].b, w, cp[0].f);
+			break;
 
 #ifdef X64_bit_pointers
 		case OP_PLTERM1align:

@@ -931,8 +931,14 @@ hfg_fwd(Ops *O, real *w)
 
 /*		case Hv_if:	*/
 		case nOPIF1:
+		case nOPIF11:
+		case nOPIF12:
+		case nOPIF13:
 #ifdef X64_bit_pointers
 		case OPIF1align:
+		case OPIF11align:
+		case OPIF12align:
+		case OPIF13align:
 #endif
 			v = (void**)&w[o[4]];
 			cp = (Condptrs*)v[1];
@@ -973,14 +979,33 @@ alignarg(more_func:)
 			break;
 
 		case OP_GOTO:
+		case OPGOTO2:
 		case OP_NEXTBLK:
+			o = *(int**)(o+1);
+			continue;
+
 		case OPGOTOF:
 			o = *(int**)(o+1);
 			continue;
+
+		case OPGOTOF2:
+		case OPGOTOF2n:
+			pop = (int**)&o[1];
+			o = (int*)&pop[2];
+			continue;
+
+		case OPGOTOMM:
+			o += 2;
+			continue;
+
 #ifdef X64_bit_pointers
 		case OP_GOTOalign:
-		case OP_NEXTBLKalign:
+		case OPGOTO2align:
 		case OPGOTOFalign:
+			o = *(int**)(o+2);
+			continue;
+
+		case OP_NEXTBLKalign:
 			o = *(int**)(o+2);
 			continue;
 

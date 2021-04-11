@@ -607,6 +607,10 @@ new_opblock(Static *S, int need)
 	return opnew;
 	}
 
+#ifdef DEBUG
+	/*DEBUG*/int zorkheswork, zorkheswork1, *zorkopnext;
+#endif
+
  static int*
 nextop(Static *S, int n)
 {
@@ -619,6 +623,10 @@ nextop(Static *S, int n)
 		op1 = op + n;
 		}
 	opnext = op1;
+#ifdef DEBUG
+	/*DEBUG*/ if (op <= zorkopnext && op1 > zorkopnext)
+	/*DEBUG*/	printf("");
+#endif
 	return op;
 	}
 
@@ -3040,7 +3048,7 @@ db_reset(Static *S)
 	S->curdb.nxt = 0;
 	}
 
- static int *
+ static void
 new_dop(Static *S)
 {
 	int **dop, *op;
@@ -3057,7 +3065,6 @@ new_dop(Static *S)
 		}
 	S->dop = dop;
 	opnext = (int*)&dop[1];
-	return op;
 	}
 
  static derpblock*
@@ -4012,17 +4019,17 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		break;
 	  case OPIFnl:
 		eif = (expr_if*)e;
-		if (!(dop[0] = S->dop) && deriv)
-			new_dop(S);
-		dop[1] = S->dop;
 		k = ewalk(S, eif->test, 0, 0);
 		oprev[0] = S->opprev;
 		ia = ja = ka = 0;
 		db = 0;
 		dbsave = S->curdb;
+		dop[0] = dop[1] = S->dop;
 		if (deriv) {
 			pia = &ia;
 			pja = &ja;
+			new_dop(S);
+			dop[1] = S->dop;
 			op = nextopp(S, 6 + (2*sizeof(Condptrs) + sizeof(int*))/sizeof(int));
 			if (!(ka = atop))
 				ka = new_a(S);
@@ -4061,7 +4068,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		cp0[0].bder = cp0[1].bder = -1;
 		if (ia) {
 			cp0[0].bder = i;
-			opg = nextop(S, alignnum(7,10));
+			opg = nextop(S, alignnum(9,10));
 			if (needalign(opg,5))
 				pop = (int**)&opg[6];
 			else
@@ -4079,14 +4086,14 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				S->curdb.nxt = 1;
 			}
 		else {
-			opg = nextop(S, alignnum(5,7));
+			opg = nextop(S, alignnum(6,7));
 			if (needalign(opg,4))
 				pop = (int**)&opg[5];
 			else
 				pop = (int**)&opg[4];
 			opnext = (int*)&pop[1];
-			wlast = a0;
 			}
+		wlast = a0;
 		cp0[1].e = opnext;
 		cp0[1].f = 0;
 		S->dop = &cp0[1].f;
@@ -4125,7 +4132,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				else
 					goto newrv;
 				}
-			else if (j < af || a2 <= i)
+			else if (j < (int)af || a2 <= i)
 				rv = i;
 			else
 				goto newrv;
@@ -4196,14 +4203,10 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				*dop[0] = op;
 			S->dop = 0;
 			opg2 = opnext;
-			if (!cp0[0].f) {
+			if (!cp0[0].f)
 				cp0[0].f = opg2;
-				cp0[0].bder = -1;
-				}
-			if (!cp0[1].f) {
+			if (!cp0[1].f)
 				cp0[1].f = opg2;
-				cp0[1].bder = -1;
-				}
 			if (ia)
 				pop[1] = cp0[1].f;
 			memcpy(cp, cp0, 2*sizeof(Condptrs));
@@ -6296,7 +6299,20 @@ heswork(int *o, int *oe)
 
 	n = 0;
 	while(o != oe) {
+#ifdef DEBUG
+		/*DEBUG*/ if (++zorkheswork == zorkheswork1)
+		/*DEGUG*/	printf("");
+#endif
 	    switch(*o) {
+
+		case OPCOPY0:
+			o += 3;
+			break;
+
+		case OPCOPY1:
+		case OPCOPY1a:
+			o += 4;
+			break;
 
 /*		case Hv_timesR: */
 /*		case Hv_timesL: */
@@ -6429,17 +6445,23 @@ alignarg(more_minmax:)
 /*		case Hv_if: */
 #ifdef X64_bit_pointers
 		case OPIF1align:
-			cp = (Condptrs*)&o[4];
+		case OPIF11align:
+		case OPIF12align:
+		case OPIF13align:
+			cp = (Condptrs*)&o[6];
 			goto more_OPIF;
 #endif
 		case nOPIF1:
-			cp = (Condptrs*)&o[3];
+		case nOPIF11:
+		case nOPIF12:
+		case nOPIF13:
+			cp = (Condptrs*)&o[5];
 alignarg(more_OPIF:)
 			o = *(int**)&cp[2];
 			i = 0;
-			if (cp[0].f != o)
+			if (cp[0].bder >= 0)
 				i = heswork(cp[0].f, cp[0].b);
-			if (cp[1].f != o) {
+			if (cp[1].bder >= 0) {
 				j = heswork(cp[1].f, cp[1].b);
 				if (i < j)
 					i = j;
