@@ -1121,10 +1121,11 @@ indicator_constrs_ASL(ASL *asl, void *v, Add_Indicator add_indic, int errinfo[2]
 	Linform *lf;
 	cde *logc;
 	cexp *ce;
+	cexp1 *ce1;
 	lincoef *lc, *lce;
 	ograd *og, *og1;
 	head *h;
-	int i, n, nlogc, nbc, nw, rc;
+	int i, n, nlogc, nbc, nbc1, nw, rc;
 	linpart *lp;
 	real chunk1[Gulp];
 
@@ -1176,6 +1177,23 @@ indicator_constrs_ASL(ASL *asl, void *v, Add_Indicator add_indic, int errinfo[2]
 			lf->og = ogsum(&lci, lf->og, og);
 			}
 		lci.w0[i] = h;
+		}
+	nbc1 = comc1;
+	ce1 = ((ASL_fg*)asl)->I.cexps1_;
+	for(i = 0; i < nbc1; ++i) {
+		if ((h = lci.Leval(&lci, ce1[i].o.e)) && h->type == Lintype && (lp = ce1[i].lp)) {
+			lc = lp->lc;
+			lce = lc + lp->n;
+			og = 0;
+			while(lce > lc) {
+				--lce;
+				(og1 = new_og(&lci, lce->varno, lce->coef))->next = og;
+				og = og1;
+				}
+			lf = (Linform*)h;
+			lf->og = ogsum(&lci, lf->og, og);
+			}
+		lci.w0[nbc+i] = h;
 		}
 	logc = ((ASL_fg*)asl)->I.lcon_de_;
 	for(i = rc = 0; i < nlogc; ++i)

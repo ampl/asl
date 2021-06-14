@@ -3268,5 +3268,11 @@ derivative can be computed.
 that could cause a fault on some complementarity problems.
 
 20210410
-  solvers2.tgz: eval2.c, pfghread.c pshvprod.c sphes.c: fix some bugs
-related to Hessian computations.
+  eval2.c, pfghread.c, pshvprod.c, sphes.c:  fix some obscure bugs with
+Hessian computations, such as certain if-then-else expressions.
+
+20210613
+  indic_cons.c (for function indicator_constrs_ASL):  in solvers.tgz,
+flx a possible fault and provide a missing nvinc adjustment for defined
+variables; in solvers2.tgz, add missing code for defined variables
+used in just one constraint.

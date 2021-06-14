@@ -364,7 +364,7 @@ linform(LCADJ_Info *lci, expr *e, ograd **oglp)
 		asl = (ASL_fg*)lci->asl;
 		if ((i = (expr_v *)e - var_e) < n_var)
 			return *oglp = new_og(lci, i, 1.);
-		if ((i -= n_var) < ncom0) {
+		if ((i -= n_var + asl->i.nvinc) < ncom0) {
 			ce = cexps + i;
 			en = (expr_n*)ce->e;
 			L =  ce->L;
@@ -376,12 +376,14 @@ linform(LCADJ_Info *lci, expr *e, ograd **oglp)
 			L = ce1->L;
 			Le = L + ce1->nlin;
 			}
-		if ((Intcast en->op) != OPNUM)
-			return 0;
 		ogp = &og2;
-		if (en->v != 0.) {
-			og2 = new_og(lci, -1, en->v);
-			ogp = &og2->next;
+		if (en) {
+			if ((Intcast en->op) != OPNUM)
+				return 0;
+			if (en->v != 0.) {
+				og2 = new_og(lci, -1, en->v);
+				ogp = &og2->next;
+				}
 			}
 		for(og = 0; L < Le; L++) {
 			i = (expr_v*)((char*)L->v.rp - (char*)voffset_of(expr_v,v)) - var_e;
