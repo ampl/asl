@@ -313,12 +313,14 @@ comterm(Static *S, int i)
  static void
 Comeval(Static *S, int i, int ie)
 {
+	int ctsave;
 	term **Cterms;
 
+	ctsave = S->comterms;
 	S->comterms = 1;
 	for(Cterms = cterms; i < ie; ++i)
 		Cterms[i] = comterm(S, i);
-	S->comterms = 0;
+	S->comterms = ctsave;
 	}
 
  static term *
@@ -346,7 +348,7 @@ ewalk(Static *S, expr *e)
 {
 	ASL_fg *asl;
 	expr **ep, **epe;
-	int i;
+	int ctsave, i;
 	ograd *o, *oR;
 	term *L, *R, *T;
 
@@ -452,11 +454,12 @@ ewalk(Static *S, expr *e)
 		i -= asl->i.nvinc;
 		if (!(L = cterms[i -= asl->i.n_var0])) {
 			/* c_cexp1st and o_cexp1st may not have been allocated */
+			ctsave = S->comterms;
 			S->comterms = 1;
 			if (!(L = comterm(S, i)))
 				return 0;
 			cterms[i] = L;
-			S->comterms = 0;
+			S->comterms = ctsave;
 			}
 		return termdup(S, L);
 		}

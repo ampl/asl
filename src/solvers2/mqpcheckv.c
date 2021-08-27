@@ -313,12 +313,14 @@ comterm1(Static *S, int i)
  static void
 comeval1(Static *S, int i, int ie)
 {
+	int ctsave;
 	term **Cterms;
 
+	ctsave = S->comterms;
 	S->comterms = 1;
 	for(Cterms = cterms; i < ie; ++i)
 		Cterms[i] = comterm1(S, i);
-	S->comterms = 0;
+	S->comterms = ctsave;
 	}
 
  static term *
@@ -354,13 +356,14 @@ comeval2(Static *S, int i, int ie)
 {
 	ASL_pfgh *asl;
 	cexp2 *c, *c1;
-	int *dvsp0, j, k, nv1, *ndvsp;
+	int ctsave, *dvsp0, j, k, nv1, *ndvsp;
 	term **Cterms;
 
 	asl = (ASL_pfgh*)S->asl;
 	dvsp0 = asl->P.dvsp0;
 	ndvsp = asl->P.ndvsp;
 	c = asl->I.cexps2_;
+	ctsave = S->comterms;
 	S->comterms = 1;
 	for(Cterms = cterms; i < ie; ++i) {
 		if ((k = ndvsp[i])) {
@@ -374,7 +377,7 @@ comeval2(Static *S, int i, int ie)
 			}
 		Cterms[i] = comterm2(S, i);
 		}
-	S->comterms = 0;
+	S->comterms = ctsave;
 	}
 
  static term *
@@ -907,7 +910,7 @@ mqpcheckv_ASL(ASL *a, int co, QPinfo **QPIp, void **vp)
 	dispatch *cd, *cd0, **cdisp, **cdisp0, *cdnext, **cdp;
 	dyad *d, *d1, **q, **q1, **q2;
 	int *C1, C10, *cm, *colno, *e, *ov, *qm, *rowq, *rowq0, *rowq1, *s, *vmi, *w, *z;
-	int akind, arrays, co0, dv0, dv1, dvbit, ftn, i, icol, icolf, j;
+	int akind, arrays, co0, ctsave, dv0, dv1, dvbit, ftn, i, icol, icolf, j;
 	int ncol, ncom, nv, nv1, nv2, nva, nw, nz, nz1, pass;
 	linarg *la;
 	lincoef *lc, *lce;
@@ -1049,6 +1052,7 @@ mqpcheckv_ASL(ASL *a, int co, QPinfo **QPIp, void **vp)
 		cterms = Cterms;
 		S->AQ = AVL_Tree_alloc2(0, vcomp, mymalloc, 0);
 		if (asl2) {
+			ctsave = S->comterms;
 			S->comterms = 1;
 			for(la = asl2->P.lalist; la; la = la->lnext) {
 				if ((i = la->u.v)) {
@@ -1061,7 +1065,7 @@ mqpcheckv_ASL(ASL *a, int co, QPinfo **QPIp, void **vp)
 					Cterms[i-nv1] = new_term(S, og);
 					}
 				}
-			S->comterms = 0;
+			S->comterms = ctsave;
 			nv1 *= 4;
 			}
 		S->nv1 = nv1;

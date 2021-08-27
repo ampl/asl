@@ -9,7 +9,7 @@ arithchk.c	63b0185	6532
 asl.h	1fe3527a	42925
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	fb183417	29
+asldate.c	577c1df	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -82,7 +82,7 @@ mip_pri.c	f1dd1d47	7887
 misc.c	11214d99	31518
 mpec_adj.c	f15f4697	9223
 mpec_adj0.c	efb8be74	70
-mqpcheckv.c	1f7a799a	19707
+mqpcheckv.c	1018fd10	19786
 mypow.c	f6f74614	2464
 names.c	1fc87a42	4343
 nl_obj.c	e8fa1e1	2560

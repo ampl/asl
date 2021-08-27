@@ -3276,3 +3276,9 @@ Hessian computations, such as certain if-then-else expressions.
 flx a possible fault and provide a missing nvinc adjustment for defined
 variables; in solvers2.tgz, add missing code for defined variables
 used in just one constraint.
+
+20210819
+  mqcheckv.c in both solvers.tgz and solvers2.tgz:  fix a bug
+involving a defined variable that references another defined variable
+and that is shared by two or more objectives or constraints.  In the
+example that exposed the bug, the solver faulted.
