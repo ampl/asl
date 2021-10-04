@@ -27,6 +27,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${AMPL_CMAKE_MODULE_DIR})
 if(NOT BUILD_MCMODELLARGE)
   option(BUILD_MCMODELLARGE "Build the library linked with mcmodel=large flag, used for compiling lgo" OFF)
 endif()
+
+if(NOT BUILD_LICCHECK_PRINT)
+  option(BUILD_LICCHECK_PRINT "Build libraries with licence check flag" OFF)
+endif()
 if(NOT BUILD_DYNRT_LIBS)
   option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime (windows only)" OFF)
 endif()
@@ -242,9 +246,12 @@ if(hasParent)
   set(ASL1_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
   set(ASL1_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
     ${ASL_SOURCE_DIR} PARENT_SCOPE)
+  set(ASL1_SOURCES ${ASL_SOURCES} PARENT_SCOPE)
+    
   set(ASL2_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
   set(ASL2_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
     ${ASL2_SOURCE_DIR} PARENT_SCOPE)  
+  set(ASL2_SOURCES ${ASL2_SOURCES} PARENT_SCOPE)
 endif()
 
 # Set preprocessor flags
@@ -268,12 +275,22 @@ if(NOT WIN32)
 endif()
 
 macro(createSingleASL name sourcedir sources)
+  cmake_parse_arguments(PAR "" "" "DEFINITIONS;INCLUDE;OPTIONS" ${ARGN})
   add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
+
+  if(PAR_DEFINITIONS)
+    set(ASL_COMPILE_DEFINITIONS ${PAR_DEFINITIONS} ${ASL_COMPILE_DEFINITIONS})
+  endif()
+ 
+ 
   target_include_directories(${name} PUBLIC $<BUILD_INTERFACE:${GENERATED_INCLUDE_DIR}>
                                             $<BUILD_INTERFACE:${sourcedir}>
                                             $<INSTALL_INTERFACE:include>)
-
+  if(PAR_INCLUDE)
+    target_include_directories(${name} PUBLIC ${PAR_INCLUDE})
+  endif()
   target_compile_definitions(${name} PRIVATE ${ASL_COMPILE_DEFINITIONS})
+  
   add_dependencies(${name} arith-h)
   target_link_libraries(${name} PUBLIC ${CMAKE_DL_LIBS})
   if(NOT WIN32)
@@ -291,6 +308,10 @@ macro(createSingleASL name sourcedir sources)
     target_compile_options(${name} PRIVATE -Wno-unused-result -Wno-parentheses)
   endif()
   set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+   if(PAR_OPTIONS)
+    target_compile_options(${name} PUBLIC ${PAR_OPTIONS})
+  endif()
 endmacro()
 
 set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS})
@@ -301,20 +322,37 @@ createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
 # Create ASL 2
 createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
 
+if(BUILD_LICCHECK_PRINT)
+  createSingleASL(asl-lc ${ASL_SOURCE_DIR} ASL_SOURCES 
+                        DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+  createSingleASL(asl2-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                        DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+endif()
+
 # Create libs with support for multiple threads
 if(BUILD_MT_LIBS)
-  createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES)
-  createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
-  target_compile_definitions(asl-mt PUBLIC ALLOW_OPENMP)
-  target_compile_definitions(asl2-mt PUBLIC ALLOW_OPENMP)
-  include(FindOpenMP)
-  if(APPLE) 
-    target_include_directories(asl-mt PUBLIC ${OpenMP_C_INCLUDE_DIRS})
-    target_include_directories(asl2-mt PUBLIC ${OpenMP_C_INCLUDE_DIRS})
-  else()
-    target_compile_options(asl-mt PUBLIC ${OpenMP_C_FLAGS}) 
-    target_compile_options(asl2-mt PUBLIC ${OpenMP_C_FLAGS})
+  set(aslnames asl-mt asl2-mt)
+  createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES
+                              DEFINITIONS ALLOW_OPENMP)
+  createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                              DEFINITIONS ALLOW_OPENMP)
+
+  if(BUILD_LICCHECK_PRINT)
+    createSingleASL(asl-mt-lc ${ASL_SOURCE_DIR} ASL_SOURCES
+                            DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ALLOW_OPENMP)
+    createSingleASL(asl2-mt-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                            DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ALLOW_OPENMP)
+    set(aslnames ${aslnames} asl-mt-lc asl2-mt-lc)
   endif()
+
+  include(FindOpenMP)
+  foreach(name ${aslnames})
+    if(APPLE) 
+      target_include_directories(${name} PUBLIC ${OpenMP_C_INCLUDE_DIRS})
+    else()
+      target_compile_options(${name}  PUBLIC ${OpenMP_C_FLAGS}) 
+    endif()
+  endforeach()
 endif()
 
 
@@ -324,11 +362,24 @@ if(MSVC AND BUILD_DYNRT_LIBS)
   # matches "dynrt"
   createSingleASL(asl-dynrt ${ASL_SOURCE_DIR} ASL_SOURCES)
   createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+  if(BUILD_LICCHECK_PRINT)
+    createSingleASL(asl-dynrt-lc ${ASL_SOURCE_DIR} ASL_SOURCES
+                                DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+    createSingleASL(asl2-dynrt-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                                DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+  endif()
 endif()
 if(BUILD_MCMODELLARGE)
  createSingleASL(asl2-large ${ASL2_SOURCE_DIR} ASL2_SOURCES)
  if(${ARCH} EQUAL 64)
  target_compile_options(asl2-large PUBLIC "-mcmodel=large")
+ endif()
+ if(BUILD_LICCHECK_PRINT)
+ createSingleASL(asl2-large-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                               DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+ if(${ARCH} EQUAL 64)
+  target_compile_options(asl2-large-lc PUBLIC "-mcmodel=large")
+ endif()
  endif()
 endif()
 

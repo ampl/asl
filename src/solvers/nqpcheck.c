@@ -375,8 +375,9 @@ ewalk(Static *S, expr *e)
 		oR = R->L;
 		if (o->next || o->varno >= 0) {
 			if (oR->next || oR->varno >= 0) {
-				L->Q = L->Qe = new_dyad(S, 0,o,oR,1);
 				L->L = L->Le = 0;
+				if (!(L->Q = L->Qe = new_dyad(S, 0,o,oR,1)))
+					goto no_L;
 				}
 			else {
 				scale(S, L, oR->coef);
@@ -385,6 +386,7 @@ ewalk(Static *S, expr *e)
 			free_term(S, R);
 			return L;
 			}
+ no_L:
 		scale(S, R, o->coef);
 		free_og(S, o);
 		free_term(S, L);

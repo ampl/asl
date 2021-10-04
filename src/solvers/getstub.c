@@ -332,6 +332,9 @@ get_opt_ASL(Option_Info *oi, char *s)
 	return s1;
 	}
 
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
  void
 show_version_ASL(Option_Info *oi)
 {
@@ -354,6 +357,9 @@ show_version_ASL(Option_Info *oi)
 		printf(" (%s)", sysdetails_ASL);
 	if (oi->driver_date > 0)
 		printf(", driver(%ld)", oi->driver_date);
+#ifdef LICCHECKVERSION
+	printf(", liccheck(" QUOTE(LICCHECKVERSION) ")" );
+#endif
 	printf(", ASL(%ld)\n", ASLdate_ASL);
 	if (Lic_info_add_ASL)
 		printf("%s\n", Lic_info_add_ASL);

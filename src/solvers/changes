@@ -3282,3 +3282,14 @@ used in just one constraint.
 involving a defined variable that references another defined variable
 and that is shared by two or more objectives or constraints.  In the
 example that exposed the bug, the solver faulted.
+
+20210924
+  mqpcheckv.c and nqpcheck.c in both solvers.tgz and solvers2.tgz:
+fix a rarely seen bug (fault) arising when cancellation cause a term
+to completely vanish.
+
+20211001
+  getstub.c in both solvers.tgz and solvers2.tgz:  arrange for
+", liccheck(yyyymmdd)" to appear in the output produced by
+show_version_ASL(oi) when getstub.c is compiled with
+-DLICCHECKVERSION=yyyymmdd .

@@ -8,7 +8,7 @@ arithchk.c	63b0185	6532
 asl.h	13a346a3	48776
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	577c1df	29
+asldate.c	e9f2513f	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -52,7 +52,7 @@ funcaddr.c	fc16b89a	1197
 g_fmt.c	642f235	3141
 genrowno.c	1a8171dc	1805
 getenv.c	e86c81a2	1466
-getstub.c	fd54164	13070
+getstub.c	e7c9ed06	13191
 getstub.h	f626e91d	7079
 htcl.c	f7623114	2070
 indic_cons.c	20213d	21941
@@ -72,13 +72,13 @@ mip_pri.c	f1dd1d47	7887
 misc.c	19b6d3a9	31389
 mpec_adj.c	8e59ceb	9172
 mpec_adj0.c	efb8be74	70
-mqpcheckv.c	1ed577a1	28629
+mqpcheckv.c	1d311bca	28707
 mypow.c	f6f74614	2464
 names.c	1fc87a42	4343
 nl_obj.c	ef44e7d	2384
 nlp.h	f4e528f6	4524
 nlp2.h	75d2c79	4697
-nqpcheck.c	f1ac9312	26156
+nqpcheck.c	f2e4e01c	26234
 nqpcheckZ.c	ea215f98	1188
 obj_adj.c	32ac378	18019
 obj_adj.h	eed794cf	2218
