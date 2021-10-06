@@ -480,8 +480,9 @@ ewalk1(Static *S, int *e)
 		oR = R->L;
 		if (o->next || o->varno >= 0) {
 			if (oR->next || oR->varno >= 0) {
-				L->Q = L->Qe = new_dyad(S, 0,o,oR,1);
 				L->L = L->Le = 0;
+				if (!(L->Q = L->Qe = new_dyad(S, 0,o,oR,1)))
+					goto no_L;
 				}
 			else {
 				scale(S, L, oR->coef);
@@ -491,6 +492,7 @@ ewalk1(Static *S, int *e)
 			w[i] = L;
 			goto top;
 			}
+ no_L:
 		scale(S, R, o->coef);
 		free_og(S, o);
 		free_term(S, L);
@@ -644,8 +646,9 @@ ewalk2(Static *S, int *e)
 		oR = R->L;
 		if (o->next || o->varno >= 0) {
 			if (oR->next || oR->varno >= 0) {
-				L->Q = L->Qe = new_dyad(S, 0,o,oR,1);
 				L->L = L->Le = 0;
+				if (!(L->Q = L->Qe = new_dyad(S, 0,o,oR,1)))
+					goto no_L;
 				}
 			else {
 				scale(S, L, oR->coef);
@@ -655,6 +658,7 @@ ewalk2(Static *S, int *e)
 			w[i] = L;
 			goto top;
 			}
+ no_L:
 		scale(S, R, o->coef);
 		free_og(S, o);
 		free_term(S, L);
@@ -1126,11 +1130,12 @@ mqpcheck_ASL(ASL *a, int co, fint **rowqp, Fint **colqp, real **delsqp)
 				if (ogs)
 					og1 = new_og(S, og1, ogs->varno, scal*ogs->coef);
 				}
-			T1->Q = T1->Qe = new_dyad(S, 0, og, og1, 0);
-			if (!T)
-				T = T1;
-			else
-				T = termsum(S, T, T1);
+			if ((T1->Q = T1->Qe = new_dyad(S, 0, og, og1, 0))) {
+				if (!T)
+					T = T1;
+				else
+					T = termsum(S, T, T1);
+				}
 			}
 		be = p->pi.be;
 		for(b = p->pi.b; b < be; ++b) {
