@@ -279,7 +279,7 @@ macro(createSingleASL name sourcedir sources)
   add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
 
   if(PAR_DEFINITIONS)
-    set(ASL_COMPILE_DEFINITIONS ${PAR_DEFINITIONS} ${ASL_COMPILE_DEFINITIONS})
+    set(MY_COMPILE_DEFINITIONS ${PAR_DEFINITIONS} ${ASL_COMPILE_DEFINITIONS})
   endif()
  
  
@@ -289,7 +289,7 @@ macro(createSingleASL name sourcedir sources)
   if(PAR_INCLUDE)
     target_include_directories(${name} PUBLIC ${PAR_INCLUDE})
   endif()
-  target_compile_definitions(${name} PRIVATE ${ASL_COMPILE_DEFINITIONS})
+  target_compile_definitions(${name} PRIVATE ${MY_COMPILE_DEFINITIONS})
   
   add_dependencies(${name} arith-h)
   target_link_libraries(${name} PUBLIC ${CMAKE_DL_LIBS})
