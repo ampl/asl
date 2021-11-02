@@ -3293,3 +3293,7 @@ to completely vanish.
 ", liccheck(yyyymmdd)" to appear in the output produced by
 show_version_ASL(oi) when getstub.c is compiled with
 -DLICCHECKVERSION=yyyymmdd .
+
+20211029
+  readsol.c in both solvers.tgz and solvers2.tgz: fix a bug with
+binary .sol files and no constraints.

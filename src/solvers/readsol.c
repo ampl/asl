@@ -260,6 +260,8 @@ fread_sol_ASL(ASL *asl, const char *fname, real **xp, real **yp)
 		j = n_con;
 	if (!j) {
 		*yp = 0;
+		if (binary && (!fread(&L, sizeof(ftnlen), 1, f) || L != L1))
+			goto badbinary;
 		goto get_x;
 		}
 	y = *yp = (real *)Malloc(n_con * sizeof(real));
