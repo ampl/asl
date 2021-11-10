@@ -86,15 +86,11 @@ addfunc_ASL(const char *fname, ufunc *f, int ftype, int nargs, void *funcinfo, A
 	ASL *asl = (ASL*)ae->asl;
 	if (ftype && ftype != 1) {
 #ifndef COMPLAIN_AT_BAD_FTYPE
-		if (ftype < 0 || ftype > 6)
-#endif
-		{
+		return;
+#else
 		fprintf(Stderr, "function %s: ftype = %d; expected 0 or 1\n",
 			fname, ftype);
 		exit(1);
-		}
-#ifndef COMPLAIN_AT_BAD_FTYPE
-		return;
 #endif
 		}
 	if ((fi = func_lookup(asl, fname, 1))) {

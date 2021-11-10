@@ -3297,3 +3297,11 @@ show_version_ASL(oi) when getstub.c is compiled with
 20211029
   readsol.c in both solvers.tgz and solvers2.tgz: fix a bug with
 binary .sol files and no constraints.
+
+20211109
+  func_add.c in both solvers.tgz and solvers2.tgz:  quietly ignore
+inappropriate funcadd calls unless compiled with
+-DCOMPLAIN_AT_BAD_FTYPE.  This allows AMPL and solvers to use a .dll
+that includes some functions that can only be used in an AMPL session
+-- the solvers quietly ignore them.
+
