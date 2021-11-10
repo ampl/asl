@@ -21,6 +21,7 @@ endif()
 project(ASL)
 
 cmake_minimum_required(VERSION 2.8)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Set the path to CMake modules.
 set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${AMPL_CMAKE_MODULE_DIR})
@@ -53,6 +54,20 @@ endif()
 # Base directory
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(GENERATED_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
+
+# Test if I have a parent project, in which case put generated targets 
+# in the asl folder on supported generators
+get_directory_property(hasParent PARENT_DIRECTORY)
+
+function(addToASLFolder folder)
+    if(hasParent)
+        set(prefix asl/)
+    else()
+        set(prefix "")
+    endif()
+    add_to_folder("${prefix}${folder}" ${ARGN})
+endfunction()
+
 # Set output directories.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -178,7 +193,8 @@ endif()
 # multiple times in a parallel build which doesn't work in msbuild. See:
 # http://www.cmake.org/pipermail/cmake/2008-October/024492.html
 add_custom_target(arith-h DEPENDS ${GENERATED_INCLUDE_DIR}/arith.h)
-add_to_folder(support arith-h)
+addToASLFolder(support arith-h arithchk)
+
 # ASL 1 sources
 set(ASL_SOURCE_DIR ${SRCDIR}/solvers)
 set(ASL_SOURCES ${GENERATED_INCLUDE_DIR}/details.c)
@@ -241,7 +257,6 @@ add_prefix(ASL2_SOURCES  ${ASL2_SOURCE_DIR}/
   ws_desc.c       wsu_desc.c      xectim.c        xp2known.c)
 
 # Set the properties in the parent project, if present
-get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
   set(ASL1_SOURCE_DIR ${ASL_SOURCE_DIR} PARENT_SCOPE)
   set(ASL1_INCLUDE_DIRS ${GENERATED_INCLUDE_DIR}
@@ -312,6 +327,7 @@ macro(createSingleASL name sourcedir sources)
    if(PAR_OPTIONS)
     target_compile_options(${name} PUBLIC ${PAR_OPTIONS})
   endif()
+  addToASLFolder("" ${name})
 endmacro()
 
 set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS})
@@ -393,10 +409,12 @@ if(BUILD_CPP)
     if(NOT WIN32)
       target_link_libraries(aslcpp PRIVATE m)
     endif()
+    addToASLFolder("" aslcpp)
 endif()
 
 if(BUILD_F2C)
   add_subdirectory(${SRCDIR}/f2c)
+  addToASLFolder(support f2c)
 endif()
  if(BUILD_EXAMPLES)
   add_subdirectory(${SRCDIR}/examples)
