@@ -283,10 +283,12 @@ macro(createSingleASL name sourcedir sources)
   cmake_parse_arguments(PAR "" "" "DEFINITIONS;INCLUDE;OPTIONS" ${ARGN})
   add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
 
+  
   if(PAR_DEFINITIONS)
     set(MY_COMPILE_DEFINITIONS ${PAR_DEFINITIONS} ${ASL_COMPILE_DEFINITIONS})
+  else()
+    set(MY_COMPILE_DEFINITIONS ${ASL_COMPILE_DEFINITIONS})
   endif()
- 
  
   target_include_directories(${name} PUBLIC $<BUILD_INTERFACE:${GENERATED_INCLUDE_DIR}>
                                             $<BUILD_INTERFACE:${sourcedir}>
