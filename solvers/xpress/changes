@@ -262,3 +262,17 @@ as "deprecated and ignored".  See the "xpress -=" output.
 improvements.  New keywords:  autoscaling, feastol_perturb.
 New control bits for refineops.  See the "xpress -=" output
 for details.
+  No changes to xpress.c for later XPRESS versions through 8.11.2.
+
+20210614
+  xpress.c:  minor fiddle with EXPRESS_RELEASE and XPRS_XPRESSVERSION,
+relevant to output of "xpress -v".
+  README.xpress: minor updates to keyword descriptions.
+
+20220112
+  xpress.c:  update to XPRESS 11.0.  New keywords:  autocutting,
+barobjperturb, barrefiter, clamping, heuremphasis, inputtol,
+maxstalltime, mipcomponents, mipconcurnodes, mipconcursolves,
+miprestart, miprestartfactor, miprestartgaptol, netstalllimit,
+nodeprobingeffort, prefolding, siftpasses, siftpresolveops,
+siftswitch.  See the "xpress -=" output for details.

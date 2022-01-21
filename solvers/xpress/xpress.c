@@ -188,6 +188,29 @@ Defer_setting {
 
  static Defer_setting *Defer1, **Defer_next = &Defer1;
 
+#if XPVERSION >= 39
+#undef XPRSsetcbmessage
+#define XPRSsetcbmessage(a,b,c) XPRSaddcbmessage(a,b,c,0)
+#ifndef USE_FICO_MINMAXIM
+ static int XPRS_CC
+myXPRSmaxim(XPRSprob prob, const char *flags)
+{
+	if (XPRSchgobjsense(prob, XPRS_OBJ_MAXIMIZE))
+		fprintf(Stderr, "XPRSchgobjsense(prob, XPRS_OBJ_MAXIMIZE) failed\n");
+	return (flags[1] == 'g') ? XPRSmipoptimize(prob, flags) : XPRSlpoptimize(prob, flags);
+	}
+ static int XPRS_CC
+myXPRSminim(XPRSprob prob, const char *flags)
+{
+	if (XPRSchgobjsense(prob, XPRS_OBJ_MINIMIZE))
+		fprintf(Stderr, "XPRSchgobjsense(prob, XPRS_OBJ_MINIMIZE) failed\n");
+	return (flags[1] == 'g') ? XPRSmipoptimize(prob, flags) : XPRSlpoptimize(prob, flags);
+	}
+#define XPRSmaxim myXPRSmaxim
+#define XPRSminim myXPRSminim
+#endif
+#endif
+
  static Defer_setting *
 new_Defer_setting(int (*Dset)(Defer_setting*), keyword *kw, int ipar)
 {
@@ -566,6 +589,14 @@ static char
 			0 = no (default)\n\
 			1 = yes",
 #endif
+#ifdef XPRS_AUTOCUTTING
+	autocutting_desc[] =
+		"whether to automatically decide if to generate cutting\n\
+		planes at local nodes (overriden by cutfreq):\n\
+			-1 = automatic (default)\n\
+			 0 = disabled\n\
+			 1 = enabled",
+#endif
 	autoperturb_desc[]	= "whether to introduce perturbations when the simplex method\n\
 		encounters too many degenerate pivots:\n\
 			1 = yes (default); 0 = no",
@@ -636,6 +667,15 @@ static char
 				from [+1, -barkernel].\n\
 		Default = 1.",
 #endif
+#ifdef XPRS_BAROBJPERTURB
+	barobjperturb_desc[] =
+		"defines how the barrier perturbs the objective (default\n\
+		1e-6); values >0 let the optimizer decide if to perturb the\n\
+		objective, values <0 force the perturbation:\n\
+			n > 0 = automatic decison, scale n\n\
+			    0 = turn off perturbation\n\
+			n < 0 = force perturbation by abs(n)",
+#endif
 	barobjscale_desc[]	= "how the barrier algorithm scales the objective:\n\
 			 -1 = automatic chocie (default)\n\
 			  0 = scale by the geometric mean of the objective\n\
@@ -662,6 +702,13 @@ static char
 			2 = do full matrix eliminations for size reduction",
 	barprimalstop_desc[]	= "barrier method convergence tolerance on\n\
 		primal infeasibilities; default = 0 (automatic choice)",
+#ifdef XPRS_BARREFITER
+	barrefiter_desc[] =
+		"maximum number of refinement iterations, helpful when the\n\
+		the solution is near to the optimum using barrier or crossover:\n\
+			    0 = default\n\
+			n > 0 = perform n refinement iterations",
+#endif
 #ifdef XPRS_BARREGULARIZE
 	barreg_desc[]		= "regularization to use with \"barrier\":\n\
 			-1 = automatic choice (default with just \"barrier\")\n\
@@ -742,11 +789,26 @@ static char
 			default = -1 (automatic choice)",
 	choleskytol_desc[]	= "zero tolerance for Cholesky pivots in the\n\
 		Newton Barrier algorithm; default = 1e-15",
+#ifdef XPRS_CLAMPING
+	clamping_desc[] =
+		"control adjustements of the returned solution values\n\
+		 such that they are always within bounds:\n\
+			-1 ==> determined automatically\n\
+			 0 ==> adjust primal solution to be within\n\
+			       primal bounds (default)\n\
+			 1 ==> adjust primal slack values to be within\n\
+			       primal bounds\n\
+			 2 ==> adjust dual solution to be within dual\n\
+			       bounds\n\
+			 3 ==> adjust reduced costs to be within dual\n\
+			       bounds",
+#endif
 	convexitychk_desc[]	= "whether to check convexity before solving:\n\
 			0 = no\n\
 			1 = yes (default)",
 #ifdef XPRS_PRECONEDECOMP
-	conedecomp_desc[]	= "whether to decompose regular and rotated cone constraints\n\
+	conedecomp_desc[]	=
+		"whether to decompose regular and rotated cone constraints\n\
 		having more than two elements and to use the result in an\n\
 		outer approximation:\n\
 			-1 = automatic choice (default)\n\
@@ -874,7 +936,11 @@ static char
 			0 = automatic choice (default)",
 	deterministic_desc[]	= "whether a MIP search should be deterministic:\n\
 			0 = no\n\
-			1 = yes (default)",
+			1 = yes (default)"
+#if XPVERSION >= 38
+		"\n\t\t\t2 = yes, with opportunistic root LP solve"
+#endif
+				,
 	dual_desc[]		= "[no assignment] use the dual simplex algorithm",
 	dualgradient_desc[]	= "dual simplex pricing strategy:\n\
 			-1 = automatic choice\n\
@@ -943,6 +1009,8 @@ static char
 	heureffort_desc[]	= "factor affecting how much work local search heuristics\n\
 		should expend.  Default = 1; higher values cause more\n\
 		local searches over larger neighborhoods.",
+
+
 	hdive_rand_desc[]	= "value between 0 and 1 inclusive affecting randomization\n\
 		in the diving heuristic:  0 (default) ==> none;\n\
 			1 ==> full;\n\
@@ -974,6 +1042,17 @@ static char
 #endif
 		"maximum depth of branch-and-bound tree search at which to\n\
 		apply heuristics; 0 = no heuristics; default = -1",
+
+#ifdef XPRS_HEUREMPHASIS
+	heuremphasis_desc[] =
+		"epmphasis for the heuristic search for branch and\n\
+		bound.  Setting it to 1 gets a gap quicker at the\n\
+		expense of time to optimality:\n\
+			-1 = default strategy\n\
+			 0 = disable heuristics\n\
+			 1 = focus on reducing the gap early\n\
+			 2 = extremely aggressive heuristics",
+#endif
 #ifdef XPRS_HEURFORCESPECIALOBJ
 	heurforcespecobj_desc[] = "whether to use special objective heuristics on large\n\
 		problems and even if an incumbant exists:\n\
@@ -1030,7 +1109,11 @@ static char
 			-1 = automatic choice (default)\n\
 			 0 = never\n\
 			 n > 0 ==> every n nodes",
-	heurstrategy_desc[]	= "heuristic strategy for branch and bound: one of\n\
+	heurstrategy_desc[] =
+#ifdef XPRS_HEUREMPHASIS
+	"deprecated, use heuremphasis:\n\t\t"
+#endif
+	"heuristic strategy for branch and bound: one of\n\
 			-1 = automatic choice (default)\n\
 			 0 = no heuristics\n\
 			 1 = basic heuristics\n\
@@ -1055,6 +1138,11 @@ static char
 	indprelinbigm_desc[]	= "largest \"big M\" value to use in converting indicator\n\
 		constraints to regular constraints during XPRESS\n\
 		presolve; default = 100.0",
+#ifdef XPRS_INPUTTOL
+		inputtol_desc[] =
+		"tolerance on input elements (default 0.0); any value v where\n\
+		abs(v) <= inputtol is treated as 0",
+#endif
 	invertfreq_desc[]	=
 		"maximum simplex iterations before refactoring the basis:\n\
 		-1 = automatic choice (default)",
@@ -1145,7 +1233,7 @@ static char
 #endif
 #ifdef XPRS_MAXMIPTASKS
 	maxmiptasks_desc[]	= "maximum tasks to run in parallel during a MIP solve:\n\
-			-1 ==> use mipthreads\n\
+			   -1 ==> use mipthreads\n\
 			n > 0 ==> at most n tasks running at once\n\
 		For maxmiptasks > 0, branch-and-bound nodes are solved in a\n\
 		deterministic way, but the barrier algorithm (if used) may\n\
@@ -1155,6 +1243,16 @@ static char
 	maxslaves_desc[]	= "how many processors to use in parallel when solving\n\
 		mixed-integer problems:  must be at most the number of\n\
 		processors available and licensed",
+#endif
+
+#ifdef XPRS_MAXSTALLTIME
+	maxstalltime_desc[] =
+		"maximum time in seconds that the Optimizer will continue to\n\
+		search for improving solution after finding a new incumbent:\n\
+			    0 ==> no limit (default)\n\
+			n > 0 ==> stop after n seconds without a\n\
+			          new incumbent (no effet before\n\
+			          the first has been found",
 #endif
 	maxtime_desc[]		= "limit on solution time:  for maxtime=n (an integer),\n\
 			n < 0 ==> stop LP or MIP search after -n seconds\n\
@@ -1174,6 +1272,28 @@ static char
 	mipaddcutoff_desc[]	=
 		"amount to add to the objective function of the best integer\n\
 		solution found to give the new MIP cutoff; default -1e-5",
+#ifdef XPRS_MIPCOMPONENTS
+	mipcomponents_desc[] =
+		"determines whether disconnected components in a MIP should\n\
+		be solved as separate MIPs:\n\
+			-1 ==> automatic (default)\n\
+			 0 ==> disable\n\
+			 1 ==> enable",
+#endif
+
+#ifdef XPRS_MIPCONCURRENTNODES
+	mipconcurrentnodes_desc[] =
+		"node limit to choose the winning solve when concurrent\n\
+		solves are enabled:\n\
+			   -1 ==> automatic (default)\n\
+			n > 0 ==> number of nodes to complete",
+	mipconcurrentsolves_desc[] =
+		"select the number of concurrent solves to start for a MIP:\n\
+			   -1 ==> enabled, the number of concurrent solves\n\
+				  depends on mipthreads\n\
+			 0, 1 ==> disabled (default)\n\
+			n > 1 ==> number of concurrent solves = n",
+#endif
 #ifdef XPRS_MIPDUALREDUCTIONS
 	mipdualreductions_desc[] = "kinds of dual reductions allowed during branch and bound:\n\
 			0 ==> none\n\
@@ -1216,12 +1336,15 @@ static char
 			7 = also do single-pivot crash\n\
 			8 = suppress aggressive dual perturbations",
 	mippresolve_desc[]	= "MIP presolve done at each node: sum of\n\
-			 1 = reduced-cost fixing\n\
-			 2 = logical preprocessing of binary variables\n\
-			 4 = ignored; replaced by \"preprobing\"\n\
-			 8 = allow changing continuous-variable bounds\n\
-			16 = allow dual reductions\n\
-			32 = use objective function\n\
+		         1 = reduced-cost fixing\n\
+		         2 = logical preprocessing of binary variables\n\
+		         4 = ignored; replaced by \"preprobing\"\n\
+		         8 = allow changing continuous-variable bounds\n\
+		        16 = allow dual reductions\n\
+		        32 = allow global tightening of the problem\n\
+		        64 = use objective function\n\
+		       128 = allow restarting\n\
+		       256 = allow use of symmetry\n\
 		default = -1 (automatic choice)",
 #ifdef XPRS_MIPRAMPUP
 	miprampup_desc[]	= "whether to limit the number of parallel tasks\n\
@@ -1241,6 +1364,26 @@ static char
 	miprelstop_desc[]	= "stop MIP search if\n\
 		abs(MIPOBJVAL - BESTBOUND) < miprelstop * abs(BESTBOUND);\n\
 		default = 0.0001",
+#ifdef XPRS_MIPRESTART
+	miprestart_desc[] =
+		"MIP: control strategy for in-tree restarts:\n\
+		-1 = determined automatically (default)\n\
+		 0 = disable in-tree restarts\n\
+		 1 = normal aggressiveness\n\
+		 2 = higher aggressiveness",
+#endif
+#ifdef XPRS_MIPRESTARTGAPTHRESHOLD
+	miprestartgapthreshold_desc[]=
+		"MIP: initial gap threshold to delay in-tree restart;\n\
+		the restart is delayed if the relative gap is below the\n\
+		threshold (default 0.02)",
+#endif
+#ifdef XPRS_MIPRESTARTFACTOR
+	miprestartfactor_desc[] =
+	"MIP: fine tune initial conditions to trigger an in-tree\n\
+		restart; values > 1 increase the aggressiveness, < 1\n\
+		decrease it (default 1.0)",
+#endif
 	mipstartstatus_desc[]	= "whether to use incoming statuses on MIP problems;\n\
 		default 1 ==> yes",
 	mipstartvalue_desc[]	= "whether to use the specified initial guess (if supplied)\n\
@@ -1277,6 +1420,14 @@ static char
 			 0 = barrier algorithm during branch and bound\n\
 			 1 = outer approximations during branch and bound",
 #endif
+#ifdef XPRS_NETSTALLLIMIT
+	netstalllimmit_desc[] =
+		"limit the number of degenerate pivots of the network\n\
+		simplex algorithmm before switching to primal or dual:\n\
+			   -1 ==> automatic\n\
+			    0 ==> no limit\n\
+			n > 0 ==> limit to n iterations",
+#endif
 	network_desc[]		= "[no assignment] try to find and exploit an embedded network",
 	nodefilebias_desc[]	=
 #if (XPVERSION) >= 34
@@ -1291,6 +1442,12 @@ static char
 			  1 ==> write nodes to the \"nodefile\" immediately;\n\
 		values between 0 and 1 give intermediate behavior;\n\
 		default = 0.5",
+#ifdef XPRS_NODEPROBINGEFFORT
+	nodeprobingeffort_desc[] =
+		"effort put into probing during branch and bound; the\n\
+		number is used as a multiplier on the default amount of\n\
+		work.  Set to 0 to disable node probing; default 1.",
+#endif
 	nodeselection_desc[]	= "next MIP node control:\n\
 			1 = local first:  choose among descendant and sibling\n\
 			    nodes if available, else from all outstanding nodes\n\
@@ -1486,6 +1643,14 @@ static char
 			 1 = remove duplicate rows identical in all variables\n\
 			 2 = like 1 but allowing simple penalty variables\n\
 			 3 = like 1 but allowing more complex penalty variables",
+#endif
+#ifdef XPRS_PREFOLDING
+	prefolding_desc[] =
+		"choose if folding aggregate continuous column in an\n\
+		equitable partition:\n\
+			-1 = automatic choiche (default)\n\
+			 0 = disabled\n\
+			 1 = enabled",
 #endif
 #ifdef XPRS_PREIMPLICATIONS
 	preimplications_desc[] = "whether XPRESS's presolve should use implication\n\
@@ -1700,13 +1865,34 @@ static char
 #endif
 				"\n\
 		Default = 163.",
+#ifdef XPRS_SIFTPASSES
+	siftpasses_desc[] =
+		"how quickly we allow the worker problems to grow during the\n\
+		sifting algorithm; large values might reduce the number of\n\
+		iterations but increase the solve time for each.  Default 4.",
+#endif
 #ifdef XPRS_SIFTING
-	sifting_desc[]		= "when using dual simplex, whether to enable sifting,\n\
+	sifting_desc[] = "when using dual simplex, whether to enable sifting,\n\
 		which can speed up the solve when there are many more\n\
 		variables than constraints:\n\
 			-1 = automatic choice (default)\n\
 			 0 = no\n\
 			 1 = yes",
+#endif
+#ifdef XPRS_SIFTPRESOLVEOPS
+	siftpresolveops_desc[] =
+		"presolve operations for solving the subproblems during\n\
+		sifting:\n\
+			 -1 = use presolveops value (default)\n\
+			> 0 = use this value",
+#endif
+#ifdef XPRS_SIFTSWITCH
+			siftswitch_desc[] =
+			"determines which algoorithm to use during sifting\n\
+			   -1 ==> dual simplex\n\
+			    0 ==> barrier\n\
+			n > 0 ==> barrier if the number of dual\n\
+				  infeasibilities > n else dual simplex",
 #endif
 #ifdef XPRS_SLEEPONTHREADWAIT
 	sleeponthreadwait_desc[]	=
@@ -1883,6 +2069,9 @@ static keyword keywds[]={
 #if XPVERSION >= 30
   KW("archconsistent",	I_val,	&archconsistent,	archconsistent_desc),
 #endif
+#ifdef XPRS_AUTOCUTTING
+  KW("autocutting",	set_int, XPRS_AUTOCUTTING,	autocutting_desc),
+#endif
   KW("autoperturb",	set_int, XPRS_AUTOPERTURB,	autoperturb_desc),
 #ifdef XPRS_AUTOSCALING
 	KW("autoscaling", set_int, XPRS_AUTOSCALING, autoscaling_desc),
@@ -1906,6 +2095,9 @@ static keyword keywds[]={
 #ifdef XPRS_BARKERNEL
   KW("barkernel",	set_dbl, XPRS_BARKERNEL,	barkernel_desc),
 #endif
+#ifdef XPRS_BAROBJPERTURB
+  KW("barobjperturb", set_dbl, XPRS_BAROBJPERTURB, barobjperturb_desc),
+#endif
   KW("barobjscale",	set_dbl, XPRS_BAROBJSCALE,	barobjscale_desc),
   KW("barorder",	set_int, XPRS_BARORDER,		barorder_desc),
 #ifdef XPRS_BARORDERTHREADS
@@ -1914,6 +2106,9 @@ static keyword keywds[]={
   KW("baroutput",	set_int, XPRS_BAROUTPUT,	barout_desc),
   KW("barpresolve",	set_int, XPRS_BARPRESOLVEOPS,	barpresolve_desc),
   KW("barprimalstop",	set_dbl, XPRS_BARPRIMALSTOP,	barprimalstop_desc),
+#ifdef XPRS_BARREFITER
+  KW("barrefiter",	set_int, XPRS_BARREFITER,	barrefiter_desc),
+#endif
 #ifdef XPRS_BARREGULARIZE
   KW("barreg",		set_int, XPRS_BARREGULARIZE,	barreg_desc),
 #endif
@@ -1933,6 +2128,9 @@ static keyword keywds[]={
   KW("cachesize",	set_int, XPRS_CACHESIZE,	cachesize_desc),
   KW("choleskyalg",	set_int, XPRS_CHOLESKYALG,	choleskyalg_desc),
   KW("choleskytol",	set_dbl, XPRS_CHOLESKYTOL,	choleskytol_desc),
+#ifdef XPRS_CLAMPING
+  KW("clamping",	set_int, XPRS_CLAMPING,	clamping_desc),
+#endif
   KW("concurrentthreads", set_int, XPRS_LPTHREADS,	"synonym for lpthreads"),
 #ifdef XPRS_PRECONEDECOMP
   KW("conedecomp",	set_int, XPRS_PRECONEDECOMP,	conedecomp_desc),
@@ -2018,6 +2216,9 @@ static keyword keywds[]={
   KW("hdive_strategy",	set_int, XPRS_HEURDIVESTRATEGY,	hdive_strategy_desc),
   KW("heurdepth",	set_int, XPRS_HEURDEPTH,	heurdepth_desc),
   KW("heureffort",	set_dbl, XPRS_HEURSEARCHEFFORT,	heureffort_desc),
+#ifdef XPRS_HEUREMPHASIS
+	  KW("heuremphasis", set_int, XPRS_HEUREMPHASIS, heuremphasis_desc),
+#endif
 #ifdef XPRS_HEURFORCESPECIALOBJ
   KW("heurforcespecobj", set_int, XPRS_HEURFORCESPECIALOBJ, heurforcespecobj_desc),
 #endif
@@ -2035,6 +2236,9 @@ static keyword keywds[]={
   KW("iis",		set_known, set_iis,		iis_desc),
   KW("indlinbigm",	set_dbl, XPRS_INDLINBIGM,	indlinbigm_desc),
   KW("indprelinbigm",	set_dbl, XPRS_INDPRELINBIGM,	indprelinbigm_desc),
+#ifdef XPRS_INPUTTOL
+  KW("inputtol",	set_dbl, XPRS_INPUTTOL, inputtol_desc),
+#endif
   KW("invertfreq",	set_int, XPRS_INVERTFREQ,	invertfreq_desc),
   KW("invertmin",	set_int, XPRS_INVERTMIN,	invertmin_desc),
   KW("keepbasis",	set_int, XPRS_KEEPBASIS,	keepbasis_desc),
@@ -2080,6 +2284,9 @@ static keyword keywds[]={
 #ifdef XPRS_MAXSLAVE
   KW("maxslaves",	set_int, XPRS_MAXSLAVE,		maxslaves_desc),
 #endif
+#ifdef XPRS_MAXSTALLTIME
+  KW("maxstalltime", set_int, XPRS_MAXSTALLTIME, maxstalltime_desc),
+#endif
   KW("maxtime",		set_int, XPRS_MAXTIME,		maxtime_desc),
   KW("minim",		set_known, set_minim,		minim_desc),
   KW("minimise",	set_known, set_minim,		minim_desc),
@@ -2087,6 +2294,14 @@ static keyword keywds[]={
   KW("mipabscutoff",	set_dbl, XPRS_MIPABSCUTOFF,	mipabscutoff_desc),
   KW("mipabsstop",	set_dbl, XPRS_MIPABSSTOP,	mipabsstop_desc),
   KW("mipaddcutoff",	set_dbl, XPRS_MIPADDCUTOFF,	mipaddcutoff_desc),
+
+#ifdef XPRS_MIPCOMPONENTS
+  KW("mipcomponents", set_int, XPRS_MIPCOMPONENTS, mipcomponents_desc),
+#endif
+#ifdef XPRS_MIPCONCURRENTNODES
+  KW("mipconcurnodes", set_int, XPRS_MIPCONCURRENTNODES, mipconcurrentnodes_desc),
+  KW("mipconcursolves", set_int, XPRS_MIPCONCURRENTSOLVES, mipconcurrentsolves_desc),
+#endif
 #ifdef XPRS_MIPDUALREDUCTIONS
   KW("mipdualreductions", set_int, XPRS_MIPDUALREDUCTIONS, mipdualreductions_desc),
 #endif
@@ -2104,6 +2319,15 @@ static keyword keywds[]={
 #endif
   KW("miprelcutoff",	set_dbl, XPRS_MIPRELCUTOFF,	miprelcutoff_desc),
   KW("miprelstop",	set_dbl, XPRS_MIPRELSTOP,	miprelstop_desc),
+#ifdef XPRS_MIPRESTART
+  KW("miprestart", set_int, XPRS_MIPRESTART, miprestart_desc),
+#endif
+#ifdef XPRS_MIPRESTARTFACTOR
+  KW("miprestartfactor", set_dbl, XPRS_MIPRESTARTFACTOR, miprestartfactor_desc),
+#endif
+#ifdef XPRS_MIPRESTARTGAPTHRESHOLD
+  KW("miprestartgaptol", set_dbl, XPRS_MIPRESTARTGAPTHRESHOLD, miprestartgapthreshold_desc),
+#endif
   KW("mipstart",	I_val, &mipstart,		"synonym for mipstartvalue"),
   KW("mipstartstatus",	I_val, &mipststat,		mipstartstatus_desc),
   KW("mipstartvalue",	I_val, &mipstart,		mipstartvalue_desc),
@@ -2121,8 +2345,14 @@ static keyword keywds[]={
 #ifdef XPRS_MIQCPALG
   KW("miqcpalg",	set_int, XPRS_MIQCPALG,		miqcpalg_desc),
 #endif
+#ifdef XPRS_NETSTALLLIMIT
+  KW("netstalllimit", set_int, XPRS_NETSTALLLIMIT, netstalllimmit_desc),
+#endif
   KW("network",		set_known, set_network,		network_desc),
   KW("nodefilebias",	set_dbl, XPRS_GLOBALFILEBIAS,	nodefilebias_desc),
+#ifdef XPRS_NODEPROBINGEFFORT
+  KW("nodeprobingeffort", set_dbl, XPRS_NODEPROBINGEFFORT, nodeprobingeffort_desc),
+#endif
   KW("nodeselection",	set_int, XPRS_NODESELECTION,	nodeselection_desc),
   KW("objno",		I_val, &nobj,			"objective number (0=none, 1=first...)"),
   KW("objrep",		I_val, &objrep,			objrep_desc),
@@ -2175,6 +2405,9 @@ static keyword keywds[]={
   KW("predomrow",	set_int, XPRS_PREDOMROW,	predomrow_desc),
 #ifdef XPRS_PREDUPROW
   KW("preduprow",	set_int, XPRS_PREDUPROW,	preduprow_desc),
+#endif
+#ifdef XPRS_PREFOLDING
+  KW("prefolding", set_int, XPRS_PREFOLDING, prefolding_desc),
 #endif
 #ifdef XPRS_PREIMPLICATIONS
   KW("preimplications",	set_int, XPRS_PREIMPLICATIONS,	preimplications_desc),
@@ -2235,6 +2468,15 @@ static keyword keywds[]={
 #ifdef XPRS_SIFTING
   KW("sifting",		set_int, XPRS_SIFTING,		sifting_desc),
 #endif
+#ifdef XPRS_SIFTPASSES
+  KW("siftpasses", set_int, XPRS_SIFTPASSES, siftpasses_desc),
+#endif
+#ifdef XPRS_SIFTPRESOLVEOPS
+  KW("siftpresolveops", set_int, XPRS_SIFTPRESOLVEOPS, siftpresolveops_desc),
+#endif
+#ifdef XPRS_SIFTSWITCH
+  KW("siftswitch", set_int, XPRS_SIFTSWITCH, siftswitch_desc),
+#endif
 #ifdef XPRS_SLEEPONTHREADWAIT
   KW("sleeponthreadwait", set_int, XPRS_SLEEPONTHREADWAIT, sleeponthreadwait_desc),
 #endif
@@ -2277,7 +2519,7 @@ static keyword keywds[]={
      };
 
 static Option_Info Oinfo = { "xpress", NULL, "xpress_options",
-		keywds,nkeywds,0,"XPRESS", 0,0,0,0,0, 20201210, 0,0,0,0,0,0,0,
+		keywds,nkeywds,0,"XPRESS", 0,0,0,0,0, 20220112, 0,0,0,0,0,0,0,
 		ASL_OI_tabexpand | ASL_OI_addnewline };
 
  static char *
@@ -3320,8 +3562,16 @@ amplin(char *stub, char *argv[], dims *d)
 
  if (!n_obj)
   nobj = 0;
- if(getopts(argv, &Oinfo))     /* Set options */
-	exit(1);
+ if (getopts(argv, &Oinfo))     /* Set options */
+ {
+	#ifdef XPRESSLIB
+	 solve_result_num = 503;
+	 asl->i.uinfo = "Error in $xpress_options.";
+	 return;
+	#endif
+	 exit(1);
+ }
+
  if (writeprob) { /* check validity */
 	if (!(s = strrchr(writeprob, '.'))) {
  badname:

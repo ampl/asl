@@ -144,6 +144,16 @@ autoperturb        whether to introduce perturbations when the simplex method
                    encounters too many degenerate pivots:
                         1 = yes (default); 0 = no
 
+autoscaling        whether the Optimizer should automatically select between
+                   different scaling algorithms:
+                       -1 = automatic (default)
+                        0 = disabled
+                        1 = cautious strategy.  Non-standard scaling will only
+                            be selected if it appears to be clearly superior
+                        2 = moderate strategy
+                        3 = aggressive strategy.  Standard scaling will only be
+                            selected if it appears to be clearly superior
+
 backtrack          choice of next node when solving MIP problems:
                         -1 = automatic choice (default)
                          1 = withdrawn; formerly choice 2 until a feasible
@@ -492,6 +502,11 @@ feaspump           whether to run the Feasibility Pump heuristic at the top
                         2 = only if other heurstics found no integer solution
 
 feastol            zero tolerance on RHS; default = 1e-6
+
+feastol_perturb    how much a feasible primal basic solution is allowed to
+                   be perturbed when performing basis changes.  The tolerance
+                   specified by "feastol" is always considered as an upper
+                   limit for the perturbations; default = 1.0E-06
 
 feastol_target     feasibility tolerance on constraints for solution refiner
                    (see refineops):  if feastol_target > 0 is specified, it is
@@ -1162,6 +1177,14 @@ refineops          whether refine equalities -- to reduce infeasibilities
                         16 ==> refine non-global solutions
                         32 ==> refine all solutions
                         64 ==> use higher precision during iterative refinement
+                       128 ==> use the primal simplex algorithm for refining
+                       256 ==> use the dual simplex algorithm for refining
+                       512 ==> refine MIP solutions such that rounding them
+                                keeps the problem feasible when reoptimized
+                      1024 ==> attempt to refine MIP solutions such that
+                                rounding them keeps the problem feasible when
+                                reoptimized, but accept integers solutions
+                                even if refinement fails.
                    default = 1 + 2 + 16 = 19.
 
 relax              [no assignment] ignore integrality
@@ -1311,14 +1334,6 @@ treeoutlev         how much to report about branch-and-bound trees
                         2 = report tree compression and output to nodefile
                    default = 3
 
-treepresolve       how much presolving to apply to nodes of the MIP
-                   branch-and-bound tree:
-                        -1 = automatic choice (default)
-                         0 = none
-                         1 = cautious
-                         2 = moderate
-                         3 = aggressive
-
 tunerdir           directory for tuner results; specifying tunerdir causes
                    the XPRESS tuner to solve the problem several times
                    to find good settings for solving similar problems.
@@ -1414,6 +1429,7 @@ associated with the above keywords.
         algaftercrossover       XPRS_ALGAFTERCROSSOVER
         algafternetwork         XPRS_ALGAFTERNETWORK
         autoperturb             XPRS_AUTOPERTURB
+        autoscaling             XPRS_AUTOSCALING
         backtrack               XPRS_BACKTRACK
         backtracktie            XPRS_BACKTRACKTIE
         baralg                  XPRS_BARALG
@@ -1463,7 +1479,7 @@ associated with the above keywords.
         cutselect               XPRS_CUTSELECT
         cutstrategy             XPRS_CUTSTRATEGY
         defaultalg              XPRS_DEFAULTALG
-        degradefactor           XPRS_DEGRADEFACTOR
+        degradefactor           XPRS_DEGRADEFACTOR (withdrawn)
         densecollimit           XPRS_DENSECOLLIMIT
         deterministic           XPRS_DETERMINISTIC
         dualgradient            XPRS_DUALGRADIENT
@@ -1478,6 +1494,7 @@ associated with the above keywords.
         etatol                  XPRS_ETATOL
         feaspump                XPRS_FEASIBILITYPUMP
         feastol                 XPRS_FEASTOL
+        feastol_perturb         XPRS_FEASTOLPERTURB
         feastol_target          XPRS_FEASTOLTARGET
         globalfilemax           XPRS_MAXGLOBALFILESIZE
         globalloginterval       XPRS_GLOBALFILELOGINTERVAL
@@ -1525,7 +1542,7 @@ associated with the above keywords.
         maxmiptasks             XPRS_MAXMIPTASKS
         maxnode                 XPRS_MAXNODE
         maxpagelines            XPRS_MAXPAGELINES
-        maxslaves               XPRS_MAXSLAVE
+        maxslaves               XPRS_MAXSLAVE (withdrawn)
         maxtime                 XPRS_MAXTIME
         mipabscutoff            XPRS_MIPABSCUTOFF
         mipabsstop              XPRS_MIPABSSTOP
@@ -1540,7 +1557,7 @@ associated with the above keywords.
         miprelcutoff            XPRS_MIPRELCUTOFF
         miprelstop              XPRS_MIPRELSTOP
         mipstop                 XPRS_MIPTERMINATIONMETHOD
-        miptarget               XPRS_MIPTARGET
+        miptarget               XPRS_MIPTARGET (withdrawn)
         mipthreads              XPRS_MIPTHREADS
         miptol                  XPRS_MIPTOL
         miptoltarget            XPRS_MIPTOLTARGET
@@ -1603,7 +1620,7 @@ associated with the above keywords.
         sleeponthreadwait       XPRS_SLEEPONTHREADWAIT
         sosreftol               XPRS_SOSREFTOL
         symmetry                XPRS_SYMMETRY
-        tempbounds              XPRS_TEMPBOUNDS
+        tempbounds              XPRS_TEMPBOUNDS (withdrawn)
         threads                 XPRS_THREADS
         trace                   XPRS_TRACE
         treecompress            XPRS_TREECOMPRESSION
@@ -1613,7 +1630,7 @@ associated with the above keywords.
         treememlimit            XPRS_TREEMEMORYLIMIT
         treememtarget           XPRS_TREEMEMORYSAVINGTARGET
         treeoutlev              XPRS_TREEDIAGNOSTICS
-        treepresolve            XPRS_TREEPRESOLVE
+        treepresolve            XPRS_TREEPRESOLVE (withdrawn)
         tunerhistory            XPRS_TUNERHISTORY
         tunermaxtime            XPRS_TUNERMAXTIME
         tunermethod             XPRS_TUNERMETHOD
@@ -1638,4 +1655,4 @@ please contact:
      David M. Gay
      dmg@ampl.com
 
-Last updated 20 February 2019.
+Last updated 2 August 2021.
