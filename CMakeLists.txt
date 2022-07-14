@@ -305,9 +305,11 @@ macro(createSingleASL name sourcedir sources)
   endif()
   if(MSVC)
     if(${name} MATCHES "dynrt")
-        target_compile_options(${name} PUBLIC /MD$<$<CONFIG:Debug>:d>)
+	set_property(TARGET ${name} PROPERTY
+	    MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
     else()
-        target_compile_options(${name} PUBLIC /MT$<$<CONFIG:Debug>:d>)
+	set_property(TARGET ${name} PROPERTY
+	    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
     target_compile_options(${name} PRIVATE 
       /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
