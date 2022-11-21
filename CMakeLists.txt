@@ -306,7 +306,7 @@ macro(createSingleASL name sourcedir sources)
   if(MSVC)
     if(${name} MATCHES "dynrt")
 	set_property(TARGET ${name} PROPERTY
-	    MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     else()
 	set_property(TARGET ${name} PROPERTY
 	    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
