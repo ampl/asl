@@ -35,7 +35,6 @@ hv_fwd(int *o, real *w, int *oend)	/* for determining sparsity */
 	plterm **pp;
 	real dO, *rp;
 	tfinfo **ptfi, *tfi;
-	void **v;
 
 	for(;;) {
 		o0 = o;
@@ -437,7 +436,6 @@ hv_back1(int *o, real *w, int *oend)
 	Minmaxptrs *mmp, *mmp1;
 	int k, *o1, *oe, *opg1;
 	real adO, t1, t2;
-	void **v;
 
  top:
 	for(;;) {
