@@ -124,7 +124,7 @@ target_include_directories(f2c PUBLIC "${GENERATED_INCLUDE_DIR}")
 
 if(MSVC)
   target_compile_definitions(f2c PRIVATE USE_CLOCK MSDOS NO_ONEXIT NO_My_ctype NO_ISATTY)
-  target_compile_options(f2c PRIVATE /MT$<$<CONFIG:Debug>:d>)
+  target_compile_options(f2c PRIVATE /MT$<$<CONFIG:Debug>:d> /wd4244 /wd4996 /wd4554 /wd4267 /wd4244)
 elseif (MINGW)
   add_definitions(f2c PRIVATE USE_CLOCK MSDOS NO_My_ctype)
 elseif (LINUX)
