@@ -15,3 +15,6 @@ set(SOURCES 	d1mach.c
 
 	add_library(cport ${SOURCES})
 	target_link_libraries(cport PUBLIC f2c)
+	if(MSVC)
+		target_compile_options(cport PUBLIC /wd4554)
+	endif()

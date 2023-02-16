@@ -829,7 +829,7 @@ dsort(Static *S, term *T, ograd **q, cgrad **cgp, ograd **ogp, int arrays)
 	cgrad *cg;
 	ograd *og, *og1;
 	double t, t1, rv, *x;
-	dyad *Q;
+	dyad *Q, **pQ;
 
 	x = s_x;
 
@@ -850,7 +850,8 @@ dsort(Static *S, term *T, ograd **q, cgrad **cgp, ograd **ogp, int arrays)
 	for(; og; og = og->next)
 		x[og->varno] += og->coef;
 
-	for(Q = T->Q; Q; Q = Q->next) {
+	pQ = &T->Q;
+	while((Q = *pQ)) {
 		og = Q->Lq;
 		og1 = Q->Rq;
 		t = t1 = 0;
@@ -869,8 +870,13 @@ dsort(Static *S, term *T, ograd **q, cgrad **cgp, ograd **ogp, int arrays)
 		if (t1)
 			for(og1 = og; og1; og1 = og1->next)
 				x[og1->varno] += t1*og1->coef;
-		Q->Lq = sortq(og, q);
-		Q->Rq = og == Q->Rq ? Q->Lq : sortq(Q->Rq, q);
+		if ((Q->Lq = sortq(og, q))
+		 && (Q->Rq = og == Q->Rq ? Q->Lq : sortq(Q->Rq, q)))
+			pQ = &Q->next;
+		else {
+			*pQ = Q->next;
+			free_dyad(S, Q);
+			}
 		}
 	if (arrays) {
 		if (ogp)

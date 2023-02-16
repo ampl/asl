@@ -305,9 +305,11 @@ macro(createSingleASL name sourcedir sources)
   endif()
   if(MSVC)
     if(${name} MATCHES "dynrt")
-        target_compile_options(${name} PUBLIC /MD$<$<CONFIG:Debug>:d>)
+	set_property(TARGET ${name} PROPERTY
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     else()
-        target_compile_options(${name} PUBLIC /MT$<$<CONFIG:Debug>:d>)
+	set_property(TARGET ${name} PROPERTY
+	    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
     target_compile_options(${name} PRIVATE 
       /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
@@ -412,21 +414,23 @@ endif()
   add_subdirectory(${SRCDIR}/examples)
 endif()
 
-install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd
-              ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
-              DESTINATION include/asl  COMPONENT asl) 
-install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd
-              ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
-              DESTINATION include/asl2  COMPONENT asl)
-install(TARGETS asl asl2 EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
-if(BUILD_MT_LIBS)
-  install(TARGETS asl-mt asl2-mt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
+if(NOT ASL_SKIP_INSTALL)
+  install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd
+                ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
+                DESTINATION include/asl  COMPONENT asl) 
+  install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd
+                ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
+                DESTINATION include/asl2  COMPONENT asl)
+  install(TARGETS asl asl2 EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
+  if(BUILD_MT_LIBS)
+    install(TARGETS asl-mt asl2-mt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
+  endif()
+  if(MSVC AND BUILD_DYNRT_LIBS)
+    install(TARGETS asl-dynrt asl2-dynrt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
+  endif()
+  if(TARGET aslcpp)
+      install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp  COMPONENT asl) 
+      install(TARGETS aslcpp EXPORT ampl-asl-config DESTINATION lib  COMPONENT asl)
+  endif()
+  install(EXPORT ampl-asl-config DESTINATION share/ampl-asl COMPONENT asl)
 endif()
-if(MSVC AND BUILD_DYNRT_LIBS)
-  install(TARGETS asl-dynrt asl2-dynrt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
-endif()
-if(TARGET aslcpp)
-    install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp  COMPONENT asl) 
-    install(TARGETS aslcpp EXPORT ampl-asl-config DESTINATION lib  COMPONENT asl)
-endif()
-install(EXPORT ampl-asl-config DESTINATION share/ampl-asl COMPONENT asl)

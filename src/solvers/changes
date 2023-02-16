@@ -3300,8 +3300,22 @@ binary .sol files and no constraints.
 
 20211109
   func_add.c in both solvers.tgz and solvers2.tgz:  quietly ignore
-inappropriate funcadd calls unless compiled with
+inappropriate addfunc_ASL calls unless compiled with
 -DCOMPLAIN_AT_BAD_FTYPE.  This allows AMPL and solvers to use a .dll
 that includes some functions that can only be used in an AMPL session
 -- the solvers quietly ignore them.
+
+20220520
+  Quietly reduce absurdly large precisions in printf formats.  For
+example, "%.410g" faulted.  Now it works and "%.500g" is quietly
+reduced to "%.415g".
+  Fix a small performance bug in misc.c -- only need to invoke
+zerograd_chk once.
+
+20221103
+  mqpcheckv.c, nqpcheck.c in both solvers.tgz and solvers2.tgz:  fix a
+fault that arose under when there are rare cancellations.  Example:
+
+	var x >= 1; var u; var w;
+	minimize o: (w + (1 - w))*(x - u) + u;	# really just x
 

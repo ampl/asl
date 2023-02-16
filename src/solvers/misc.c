@@ -1211,8 +1211,8 @@ prob_adj_ASL(ASL *asl)
 					cg->goff = k++;
 			}
 		}
-	if (n_obj)
-		zerograd_chk(asl);
+	if (n_obj)	/* mistakenly commented out 20220520; restored 20221115 */
+		zerograd_chk(asl);/* mistakenly commented out 20220520; restored 20221115 */
 #ifndef NO_BOUNDSFILE_OPTION /*{*/
 	if ((bf = asl->i.boundsfile)) {
 		if (!(f = fopen(bf, "rb")))

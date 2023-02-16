@@ -393,7 +393,7 @@ x_sprintf(char *obe, Putfunc fput, Finfo *f, const char *fmt, va_list ap)
 {
 	char *digits, *ob0, *outbuf, *s, *se;
 	Const char *fmt0;
-	char buf[32], sbuf[400];
+	char buf[32], sbuf[416];
 	double x;
 	int alt, base, c, decpt, dot, conv, i1, k, lead0, left,
 		len, prec, prec1, psign, rv, sgn, sign, width;
@@ -743,6 +743,8 @@ x_sprintf(char *obe, Putfunc fput, Finfo *f, const char *fmt, va_list ap)
 					prec = 6;
 				x = va_arg(ap, double);
  infnan:
+				if (prec > sizeof(sbuf))
+					prec = sizeof(sbuf) - 1;
 				s = dtoa_r(x, 3, prec, &decpt, &sgn, &se, sbuf, sizeof(sbuf));
 				if (decpt == 9999) {
  fmt9999:
@@ -824,6 +826,8 @@ x_sprintf(char *obe, Putfunc fput, Finfo *f, const char *fmt, va_list ap)
 				x = va_arg(ap, double);
 				if (prec < 0)
 					prec = 0;
+				else if (prec >= sizeof(sbuf))
+					prec = sizeof(sbuf) - 1;
 				s = dtoa_r(x, prec ? 2 : 0, prec, &decpt,
 					   &sgn, &se, sbuf, sizeof(sbuf));
 				if (decpt == 9999)
@@ -856,6 +860,8 @@ x_sprintf(char *obe, Putfunc fput, Finfo *f, const char *fmt, va_list ap)
 				x = va_arg(ap, double);
 				if (prec < 0)
 					prec = 0;
+				else if (prec > sizeof(sbuf))
+					prec = sizeof(sbuf) - 1;
 				s = dtoa_r(x, 2, prec+1, &decpt,
 					   &sgn, &se, sbuf, sizeof(sbuf));
 				if (decpt == 9999)
