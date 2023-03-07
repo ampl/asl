@@ -126,11 +126,14 @@ mint_values {
 	set_lazy	= 19,
 	set_multiobj	= 20,
 	set_round	= 21,
-	set_kappa = 22
+	set_kappa = 22,
+	set_concurrentwinmethod = 23,
+	set_maxvio = 24,
+	set_work = 25
 	};
 
  static mint_values
-mint_val[23] = {
+mint_val[26] = {
 	/* set_iis */		{0, 1, 0},
 	/* set_relax */		{0, 1, 0},
 	/* set_mipstval */	{0, 1, 1},
@@ -157,7 +160,10 @@ mint_val[23] = {
 	/* set_lazy */		{0, 1, 1},
 	/* set_multiobj */	{0, 1, 0},
 	/* set_round */		{0, 7, 7},
-	/* set_kappa */   {0, 3, 0}
+	/* set_kappa */   {0, 3, 0},
+	/* set_concurrentwinmethod */ {0, 1, 0},
+	/* set_maxvio */ {0, 1, 0},
+	/* set_work */ {0, 1, 0}
 	};
 
 #define want_iis	mint_val[0].val
@@ -184,6 +190,9 @@ mint_val[23] = {
 #define multiobj	mint_val[20].val
 #define Round		mint_val[21].val
 #define kappa		mint_val[22].val
+#define want_concurrentwinmethod mint_val[23].val
+#define want_maxvio mint_val[24].val
+#define want_work mint_val[25].val
 
  static int fixedmethod = -12345;
  static real round_reptol = 1e-9;
@@ -223,6 +232,10 @@ ReplayBlock {
  static double Times[5];
  static int breaking;
  static jmp_buf Jb;
+#ifdef GRB_STR_PAR_CLOUDHOST
+ static char *cloudhost;
+ static char cloudhost_desc[] = "Host for Gurobi Instant Cloud.";
+#endif
 
 #ifdef ALLOW_GUROBI_SERVER /*{*/
 #if GRB_VERSION_MAJOR >= 7
@@ -247,7 +260,11 @@ ReplayBlock {
  static int server_insecure;
 #endif
  static int server_priority = DEFAULT_CS_PRIORITY;
+#if GRB_VERSION_MAJOR > 9 || (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR >= 5)
+ static int server_timeout = -1;
+#else
  static double server_timeout = -1.;
+#endif
  static char
 	server_desc[] = "Comma-separated list of Gurobi compute servers, specified\n\
 		either by name or by IP address.  Default: run Gurobi locally\n\
@@ -255,7 +272,7 @@ ReplayBlock {
 
 #if GRB_VERSION_MAJOR >= 8
 	server_group_desc[] = "Name of Compute Server Group",
-	server_insecure_desc[] = "Whether to user \"insecure mode\" with the Gurobi Compute\n\
+	server_insecure_desc[] = "Whether to use \"insecure mode\" with the Gurobi Compute\n\
 		Server.  Should be left at default value (0) unless an\n\
 		administrator specifies another value.",
 #else
@@ -346,8 +363,8 @@ server_licread(ASL *asl)
 	char buf[4096], *s;
 
 	static keyword lrkeywds[] = {
-	{ "computeserver", C_val, &server, "synonym for \"server\"" },
-	{ "password", C_val, &server_passwd, "synonym for \"server_password\"" },
+	{ "computeserver", C_val, &server, "Synonym for server." },
+	{ "password", C_val, &server_passwd, "Synonym for server_password." },
 	{ "server", C_val, &server, server_desc },
 #if GRB_VERSION_MAJOR >= 8
 	{ "server_group", C_val, &server_group, server_group_desc },
@@ -360,8 +377,12 @@ server_licread(ASL *asl)
 #if GRB_VERSION_MAJOR >= 8
 	{ "server_router", C_val, &server_router, server_router_desc },
 #endif
+#if GRB_VERSION_MAJOR > 9 || (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR >= 5)
+	{ "server_timeout", I_val, &server_timeout, server_timeout_desc },
+#else
 	{ "server_timeout", D_val, &server_timeout, server_timeout_desc },
-	{ "servers",  C_val, &server, "synonym for \"server\"" } };
+#endif
+	{ "servers",  C_val, &server, "Synonym for server." } };
 	static Option_Info lrinfo = { 0,0,0, lrkeywds,
 		(int)(sizeof(lrkeywds)/sizeof(keyword)), ASL_OI_never_echo };
 
@@ -389,7 +410,7 @@ server_licread(ASL *asl)
 
 #if GRB_VERSION_MAJOR >= 3
  static double ams_eps, ams_epsabs;
- static int ams_limit, ams_modeseen;
+ static int ams_limit, ams_mode, ams_modeseen;
  static char *ams_stub;
 #endif
 
@@ -858,6 +879,7 @@ sf_iparlog(Option_Info *oi, keyword *kw, char *v)
 Im_val(Option_Info *oi, keyword *kw, char *v)
 {
 	char *rv = sf_ipar(oi, kw, v);
+	GRBgetintparam((GRBenv*)oi->uinfo, "PoolSearchMode", &ams_mode);
 	ams_modeseen = 1;
 	return rv;
 	}
@@ -1110,7 +1132,10 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			  ams_epsabs gives an absolute tolerance on how much\n\
 				worse the objectives can be.\n\
 			The number of alternative MIP solution files written is\n\
-			returned in suffix npool on the objective and problem.";
+			returned in suffix npool on the objective and problem.\n\
+			Suffix poolignore can be used to keep only one solution\n\
+			with the best objective value among solutions that\n\
+			differ only in variables where the suffix is 1.";
 
  static char barconvtol_desc[] = "Tolerance on the relative difference between the\n\
 			primal and dual objectives for stopping the barrier\n\
@@ -1199,6 +1224,15 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 		evenly as possible among the concurrent solves.  Default = 1.";
 #endif
 
+#ifdef GRB_INT_ATTR_CONCURRENTWINMETHOD
+ static char concurrentwinmethod_desc[] =
+		"Whether to return the winning method after a continuous\n\
+		problem has been solved with concurrent optimization:\n\
+			0 = do not return (default)\n\
+			1 = return as problem suffix \"concurrentwinmethod\".\n\
+		See option \"method\" for a description of the returned values.";
+#endif
+
 #if GRB_VERSION_MAJOR >= 3 /*{*/
  static char crossover_desc[] = "How to transform a barrier solution to a basic one:\n\
 			-1 = automatic choice (default)\n\
@@ -1222,9 +1256,9 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 		during cut generation (-1 = default = no limit);\n\
 		overrides \"cuts\".";
 
- static char cutoff_desc[] = "If the optimal objective value is no better than cutoff,\n\
+ static char cutoff_desc[] = "If the optimal objective value is worse than cutoff,\n\
 		report \"objective cutoff\" and do not return a solution.\n\
-		Default: -Infinity for minimizing, +Infinity for maximizing.";
+		Default: +Infinity for minimizing, -Infinity for maximizing.";
 
 #if (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) || GRB_VERSION_MAJOR >= 5 /*{*/
  static char cutpasses_desc[] = "Maximum number of cutting-plane passes to do\n\
@@ -1297,10 +1331,18 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 
  static char heurfrac_desc[] = "Fraction of time to spend in MIP heuristics (default 0.05)";
 
- static char iisfind_desc[] = "Whether to return an IIS (via suffix .iis) when\n\
-		the problem is infeasible:\n\
+ static char iisfind_desc[] = "Whether to return an IIS (irreducible infeasible set of\n\
+		constraints and variable bounds, via suffix .iis on\n\
+		constraints and variables) when the problem is infeasible:\n\
 			0 = no (default)\n\
-			1 ==> yes.";
+			1 ==> yes.\n\
+		When iisfind=1 and the problem is infeasible, suffixes\n\
+		iisforce, iisforcelb, and iisforceub can be used to influence\n\
+		the IIS found, either forcing an entity to be in or not in the\n\
+		IIS or letting the algorithm decide:\n\
+			0 = algorithm decides (default)\n\
+			1 = force to be excluded from the IIS\n\
+			2 = force to be included in the IIS.";
 
 #if GRB_VERSION_MAJOR > 1 /*{*/
  static char iismethod_desc[] = "Which method to use when finding an IIS (irreducible\n\
@@ -1318,7 +1360,7 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			 2 = aggressive cut generation.";
 #endif
 #ifdef GRB_INT_PAR_INTEGRALITYFOCUS
- static char integrality_desc[] = "Setting this parameter to 1 requests the solver to work\n\
+ static char integralityfocus_desc[] = "Setting this parameter to 1 requests the solver to work\n\
 		harder at finding solutions that are still (nearly) feasible\n\
 		when all integer variables are rounded to exact integral\n\
 		values:\n\
@@ -1380,16 +1422,41 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			      is violated by the current solution;\n\
 			3 ==> the constraint will henceforth be enforced.";
 #endif
-
+#ifdef GRB_INT_PAR_LIFTPROJECTCUTS
+ static char liftprojectcuts_desc[] = "Whether to generate lift-and-project cuts:\n\
+			-1 = automatic choice (default)\n\
+			 0 = no\n\
+			 1 = moderate cut generation\n\
+			 2 = aggressive cut generation.";
+#endif
  static char logfile_desc[] = "Name of file to receive log lines (default: none)"
 		GRB_MAJ2(";\n\t\t\timplies outlev = 1.")
 		;
 
  static char logfreq_desc[] = "Interval in seconds between log lines (default 5).";
-
+#ifdef GRB_INT_PAR_LPWARMSTART
+ static char lpwarmstart_desc[] = "Controls how gurobi uses warm-start in LP optimization:\n\
+			0 = ignore information\n\
+			1 = use information to solve the original problem\n\
+			2 = use the (crushed) information to solve the\n\
+			    presolved problem.\n\
+		Note that if presolve is disabled, 1 prioritizes basis\n\
+		statuses, 2 prioritizes start vectors.  Default = 1.";
+#endif
  static char maxmipsub_desc[] = "Maximum number of nodes for RIMS heuristic to explore\n\
 		on MIP problems (default 500).";
 
+#ifdef GRB_DBL_ATTR_MAX_VIO
+ static char maxvio_desc[] = "Whether to return the maximum of all (unscaled) violations to\n\
+		the current problem:\n\
+			0 = do not return (default)\n\
+			1 = return in the problem suffix \"maxvio\".";
+#endif
+
+#ifdef GRB_DBL_PAR_MEMLIMIT
+ static char memlimit_desc[] = "Maximum amount of memory available to Gurobi (in GB, default\n\
+		no limit). The solution will fail if more memory is needed.";
+#endif
 #if (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) || GRB_VERSION_MAJOR >= 5 /*{*/
  static char minrelnodes_desc[] = "Number of nodes for the Minimum Relaxation heuristic to\n\
 		explore at the MIP root node when a feasible solution has not\n\
@@ -1458,6 +1525,13 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			 2 = aggressive presolve, which may degrade lower-\n\
 				priority objectives.";
 #endif /*}*/
+
+#ifdef GRB_INT_PAR_NLPHEUR /* 9.5 */
+ static char nlpheur_desc[] = "Controls the NLP heuristic, affecting non-convex quadratic\n\
+		problems:\n\
+			 0 = Do not apply heuristic\n\
+			 1 = Apply heuristic (default).";
+#endif
 
 #if GRB_VERSION_MAJOR >= 4 /*{*/
  static char nodemethod_desc[] = "Algorithm used to solve relaxed MIP node problems:\n\
@@ -1552,7 +1626,7 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 
  static char predeprow_desc[] = "Whether Gurobi's presolve should remove linearly\n\
 		dependent constraint-matrix rows:\n\
-			-1 = only for continuous models\n\
+			-1 = only for continuous models (default)\n\
 			 0 = never\n\
 			 1 = for all models.";
 
@@ -1608,6 +1682,22 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 		Large values (e.g., 1e8) may cause numeric trouble.";
 #endif
 
+#ifdef GRB_INT_PAR_PRESOS1ENCODING
+ static char
+	 presos1enc_desc[] = "Encoding used for SOS1 reformulation:\n\
+			-1 = automatic choice (default)\n\
+			 0 = multiple choice model, produces an LP relaxation\n\
+			     that is easy to solve\n\
+			 1 = incremental model, reduces the amount of branching\n\
+			 2 = formulation whose LP relaxation is easier to solve\n\
+			 3 = formulation with better branching behavior,\n\
+			     requires sum of the variables == 1.\n\
+		Options 0 and 1 produce reformulations that are linear in\n\
+		size; options 2 and 3 use reformulation logarithmic in size.\n\
+		Option 2 and 3 apply only when all the variables are >=0.",
+	 presos2enc_desc[] = "Encoding used for SOS2 reformulation, see presos1enc.";
+#endif
+
 #ifdef GRB_STR_ATTR_SERVER /*{*/
  static char
 #if GRB_VERSION_MAJOR >= 6
@@ -1632,7 +1722,7 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 #endif /*}*/
 
  static char presolve_desc[] = "Whether to use Gurobi's presolve:\n\
-			-1 (default) = automatic choice\n\
+			-1 = automatic choice (default)\n\
 			 0 = no\n\
 			 1 = conservative presolve\n\
 			 2 = aggressive presolve.";
@@ -1817,11 +1907,22 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 				.sensubhi = greatest variable upper bound\n\
 			suffixes for constraints are\n\
 				.sensrhslo = smallest right-hand side value\n\
-				.sensrhshi = greatest right-hand side value."
+				.sensrhshi = greatest right-hand side value.\n\
+		For range constraints Lconst <= expr <= Uconst or equivalently\n\
+		Uconst >= expr >= Lconst (where both Lconst and Uconst are\n\
+		constants and expr is an expression involving variables,\n\
+		.sensrhslo and .sensrhshi apply to Lconst and\n\
+				.sensrhslo2 = smallest Uconst\n\
+				.sensrhslo2 = greatest Uconst.\n\
+		Note that AMPL converts constraints with a single relational\n\
+		operator into the form expr relop Const.  If you write\n\
+		Const relop expr, AMPL converts it to -(expr) relop -(Const).\n\
+		You need to take this into account when examining the\n\
+		.sensrhslo and .sensrhshi values."
 #if GRB_VERSION_MAJOR >= 5
 			"\n\
 		For problems with integer variables and quadratic constraints,\n\
-		solnsens = 0 is assumed quietly."
+		solnsens = 0 is quietly assumed."
 #endif
 ;
 
@@ -1856,7 +1957,7 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			"or solving MIP problems; default 0 ==> automatic choice.";
 
  static char timing_desc[] = "Whether to report timing:\n\
-			0 (default) = no\n\
+			0 = no (default)\n\
 			1 = report times on stdout\n\
 			2 = report times on stderr.";
 
@@ -1901,7 +2002,10 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 
  static char version_desc[] = "Report version details before solving the problem.  This is a\n\
 		single-word \"phrase\" that does not accept a value assignment.";
-
+ static char work_desc[] = "Whether to report the amount of (deterministic) work spent on\n\
+		the latest optimization:\n\
+			0 = do not report (default)\n\
+			1 = report in the problem suffix \"work\".";
  static char writeprob_desc[] = "Name of a GUROBI-format file to be written (for debugging);\n\
 		must end in one of \".bas\", \".lp\", \".mps\", \".prm\", \".rew\",\n\
 		\".rlp\", \".sol\", or for the \"fixed\" model used to recover a\n\
@@ -1955,7 +2059,7 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
  static char preqlinearize_desc[] = "How Gurobi's presolve should treat quadratic problems:\n\
 			-1 = automatic choice (default)\n\
 			 0 = do not modify the quadratic part(s)\n"
-#if GRB_VERSION_MAJOR < 8 || GRB_VERSION_MINOR < 1
+#if GRB_VERSION_MAJOR < 8 || (GRB_VERSION_MAJOR == 8 && GRB_VERSION_MINOR < 1)
 			"\t\t\t 1 = try to linearize quadratic parts";
 #else
 			"\t\t\t 1 or 2 = try to linearize quadratic parts:\n\
@@ -2033,8 +2137,18 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 		1, 3, and 4.  For continuous problems, warmstart values >= 2\n\
 		are treated as 1."
 #endif
+#ifdef GRB_INT_PAR_LPWARMSTART
+	 "\n\t\tNormally an incoming solution vector disables Gurobi's\n\
+		LP presolve; to enable it set lpwarmstart to 2."
+#endif
 		;
 #endif /*}*/
+
+#ifdef GRB_DBL_PAR_WORKLIMIT
+ static char worklimit_desc[] =
+	 "Maximum amount of work expended (in work units); in contrast\n\
+		to timelim, work limits are deterministic (default no limit).\n";
+#endif
 
 #ifdef GRB_INT_PAR_ZEROOBJNODES
  static char zeroobjnodes_desc[] =
@@ -2093,6 +2207,9 @@ keywds[] = {	/* must be in alphabetical order */
 	{ "branchdir", sf_ipar, "BranchDir", branchdir_desc },
 #endif /*}*/
 	{ "cliquecuts", sf_ipar, "CliqueCuts", overrides_cuts },
+#ifdef GRB_STR_PAR_CLOUDHOST
+	{ "cloudhost", C_val, &cloudhost, cloudhost_desc },
+#endif
 #if GRB_VERSION_MAJOR >= 7 && defined(ALLOW_GUROBI_SERVER) /*{*/
 	{ "cloudid", C_val, &cloudid, cloudid_desc },
 	{ "cloudkey", C_val, &cloudkey, cloudkey_desc },
@@ -2103,6 +2220,9 @@ keywds[] = {	/* must be in alphabetical order */
 #endif /*}*/
 #ifdef GRB_INT_PAR_CONCURRENTMIP
 	{ "concurrentmip", sf_ipar, GRB_INT_PAR_CONCURRENTMIP, concurrentmip_desc },
+#endif
+#ifdef GRB_INT_ATTR_CONCURRENTWINMETHOD
+	{ "concurrentwin", sf_mint, VP set_concurrentwinmethod, concurrentwinmethod_desc},
 #endif
 	{ "covercuts", sf_ipar, "CoverCuts", overrides_cuts },
 #if GRB_VERSION_MAJOR >= 3 /*{*/
@@ -2155,7 +2275,7 @@ keywds[] = {	/* must be in alphabetical order */
 	{ "infproofcuts", sf_ipar, GRB_INT_PAR_INFPROOFCUTS, infproofcuts_desc },
 #endif
 #ifdef GRB_INT_PAR_INTEGRALITYFOCUS
-	{ "integrality", sf_ipar, GRB_INT_PAR_INTEGRALITYFOCUS, integrality_desc },
+	{ "integrality", sf_ipar, GRB_INT_PAR_INTEGRALITYFOCUS, integralityfocus_desc },
 #endif
 	{ "intfeastol", sf_dpar, "IntFeasTol", intfeastol_desc },
 	{ "intstart", sf_mint, VP set_intstart, intstart_desc },
@@ -2169,10 +2289,22 @@ keywds[] = {	/* must be in alphabetical order */
 #if GRB_VERSION_MAJOR >= 5
 	{ "lbpen", D_val, &lbpen, "See feasrelax." },
 #endif
+#ifdef GRB_INT_PAR_LIFTPROJECTCUTS
+	{ "liftprojectcuts", sf_ipar, GRB_INT_PAR_LIFTPROJECTCUTS, liftprojectcuts_desc },
+#endif
 	{ "logfile", C_val, &logfile, logfile_desc },
 	{ "logfreq", sf_iparlog, "DisplayInterval", logfreq_desc },
-	{ "lpmethod", sf_ipar, Method, "synonym for \"method\"" },
+	{ "lpmethod", sf_ipar, Method, "Synonym for method." },
+#ifdef GRB_INT_PAR_LPWARMSTART
+	{ "lpwarmstart", sf_ipar, GRB_INT_PAR_LPWARMSTART, lpwarmstart_desc },
+#endif
 	{ "maxmipsub", sf_ipar, "SubMIPNodes", maxmipsub_desc },
+#ifdef GRB_DBL_ATTR_MAX_VIO
+	{ "maxvio", sf_mint, VP set_maxvio, maxvio_desc},
+#endif
+#ifdef GRB_DBL_PAR_MEMLIMIT
+	{ "memlimit", sf_dpar, GRB_DBL_PAR_MEMLIMIT, memlimit_desc},
+#endif
 	{ "method", sf_ipar, Method, simplex_desc },
 #if (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) || GRB_VERSION_MAJOR >= 5 /*{*/
 	{ "minrelnodes", sf_ipar, "MinRelNodes", minrelnodes_desc },
@@ -2203,6 +2335,9 @@ keywds[] = {	/* must be in alphabetical order */
 #if GRB_VERSION_MAJOR >= 3
 	{ "networkcuts", sf_ipar, "NetworkCuts", "Network cuts:  " Overrides_cuts },
 #endif
+#ifdef GRB_INT_PAR_NLPHEUR
+	{ "nlpheur", sf_ipar, GRB_INT_PAR_NLPHEUR, nlpheur_desc },
+#endif
 	{"nodefiledir", sf_spar, "NodefileDir", nodefiledir_desc},
 	{"nodefilestart", sf_dpar, "NodefileStart", nodefilestart_desc},
 #endif /*}*/
@@ -2218,7 +2353,7 @@ keywds[] = {	/* must be in alphabetical order */
 	{"norelheurwork",  sf_dpar, GRB_DBL_PAR_NORELHEURWORK, norelheurwork_desc },
 #endif
 #if GRB_VERSION_MAJOR > 1 /*{*/
-	{ "normadjust", sf_ipar, "NormAdjust", "synonym for \"multprice_norm\"" },
+	{ "normadjust", sf_ipar, "NormAdjust", "Synonym for multprice_norm." },
 #endif /*}*/
 #ifdef GRB_INT_PAR_NUMERICFOCUS
 	{ "numericfocus", sf_ipar, GRB_INT_PAR_NUMERICFOCUS, numericfocus_desc },
@@ -2257,17 +2392,17 @@ keywds[] = {	/* must be in alphabetical order */
 	{ "pool_tunejobs", sf_ipar, GRB_INT_PAR_TUNEJOBS, pool_tunejobs_desc },
 #endif /*}*/
 #if GRB_VERSION_MAJOR >= 3
-	{ "poolgap", D_val, &ams_eps, "synonym for ams_eps" },
-	{ "poolgapabs", D_val, &ams_epsabs, "synonym for ams_epsabs" },
+	{ "poolgap", D_val, &ams_eps, "Synonym for ams_eps." },
+	{ "poolgapabs", D_val, &ams_epsabs, "Synonym for ams_epsabs." },
 #endif
 #ifdef GRB_INT_PAR_POOLSEARCHMODE
-	{ "poolsearchmode", sf_ipar, "PoolSearchMode", "synonym for ams_mode" },
+	{ "poolsearchmode", sf_ipar, "PoolSearchMode", "Synonym for ams_mode." },
 #endif
 #ifdef GRB_INT_PAR_POOLSOLUTIONS
-	{ "poolsolutions", I_val, &ams_limit, "synonym for ams_limit" },
+	{ "poolsolutions", I_val, &ams_limit, "Synonym for ams_limit." },
 #endif
 #if GRB_VERSION_MAJOR >= 3
-	{ "poolstub", C_val, &ams_stub, "synonym for ams_stub" },
+	{ "poolstub", C_val, &ams_stub, "Synonym for ams_stub." },
 	{ "predeprow", sf_ipar, "PreDepRow", predeprow_desc },
 	{ "predual", sf_ipar, "PreDual", predual_desc },
 #ifdef GRB_INT_PAR_PREMIQCPFORM
@@ -2286,6 +2421,10 @@ keywds[] = {	/* must be in alphabetical order */
 #ifdef GRB_DBL_PAR_PRESOS1BIGM
 	{ "presos1bigm", sf_dpar, GRB_DBL_PAR_PRESOS1BIGM, presos1bigm_desc },
 	{ "presos2bigm", sf_dpar, GRB_DBL_PAR_PRESOS2BIGM, presos2bigm_desc },
+#endif
+#ifdef GRB_INT_PAR_PRESOS1ENCODING /* new in 9.5 */
+	{ "presos1enc", sf_ipar, GRB_INT_PAR_PRESOS1ENCODING, presos1enc_desc },
+	{ "presos2enc", sf_ipar, GRB_INT_PAR_PRESOS2ENCODING, presos2enc_desc },
 #endif
 #ifdef GRB_INT_PAR_PRESPARSIFY /* new in 4.6 */
 	{ "presparsify", sf_ipar, GRB_INT_PAR_PRESPARSIFY, presparsify_desc },
@@ -2345,15 +2484,19 @@ keywds[] = {	/* must be in alphabetical order */
 	{ "server_port", I_val, &server_port, server_port_desc },
 #endif
 	{ "server_priority", I_val, &server_priority, server_priority_desc },
+#if GRB_VERSION_MAJOR > 9 || (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR >= 5)
+	{ "server_timeout", I_val, &server_timeout, server_timeout_desc },
+#else
 	{ "server_timeout", D_val, &server_timeout, server_timeout_desc },
+#endif
 	{ "serverlic", C_val, &serverlic, serverlic_desc },
-	{ "servers",  C_val, &server, "synonym for \"server\"" },
+	{ "servers",  C_val, &server, "Synonym for server." },
 #endif
 #ifdef GRB_INT_PAR_SIFTING /* new in 4.6 */
 	{ "sifting", sf_ipar, GRB_INT_PAR_SIFTING, sifting_desc },
 	{ "siftmethod", sf_ipar, GRB_INT_PAR_SIFTMETHOD, siftmethod_desc },
 #endif
-	{ "simplex", sf_ipar, Method, "synonym for \"method\"" },
+	{ "simplex", sf_ipar, Method, "Synonym for method." },
 	{ "solnlimit", sf_ipar, "SolutionLimit", "maximum MIP solutions to find (default 2e9)" },
 	{ "solnsens", sf_mint, VP set_solnsens, solnsens_desc },
 	{ "sos", sf_mint, VP set_sos, sos_desc },
@@ -2387,6 +2530,12 @@ keywds[] = {	/* must be in alphabetical order */
 #if GRB_VERSION_MAJOR >= 5
 	{ "warmstart", sf_mint, VP set_warmstart, warmstart_desc },
 #endif
+#ifdef GRB_DBL_ATTR_WORK
+	{ "work", sf_mint, VP set_work, work_desc},
+#endif
+#ifdef GRB_DBL_PAR_WORKLIMIT
+	{ "worklimit", sf_dpar,GRB_DBL_PAR_WORKLIMIT, worklimit_desc },
+#endif
 	{ "writeprob", sf_wfile, 0, writeprob_desc }
 #if GRB_VERSION_MAJOR > 1 /*{*/
 	,{"zerohalfcuts", sf_ipar, "ZeroHalfCuts", "zero-half cuts:  " Overrides_cuts }
@@ -2404,7 +2553,7 @@ keywds[] = {	/* must be in alphabetical order */
 
  static Option_Info
 Oinfo = { "gurobi", verbuf, "gurobi_options", keywds, nkeywds, ASL_OI_keep_underscores, verbuf,
-	  0, MOkwf,0,0,0, 20201130, 0,0,0,0,0,0,0, ASL_OI_tabexpand | ASL_OI_addnewline };
+	  0, MOkwf,0,0,0, 20220422, 0,0,0,0,0,0,0, ASL_OI_tabexpand | ASL_OI_addnewline };
 
  static void
 enamefailed(GRBenv *env, const char *what, const char *name)
@@ -2412,6 +2561,13 @@ enamefailed(GRBenv *env, const char *what, const char *name)
 	fprintf(Stderr, "%s(\"%s\") failed:\n\t%s.\n", what, name, GRBgeterrormsg(env));
 	++Oinfo.n_badopts;
 	}
+
+#if 0
+ static char iisforce_table[] = "\n\
+0	auto (default)\n\
+1	force out\n\
+2	force in\n";
+#endif
 
  static char iis_table[] = "\n\
 0	non	not in the iis\n\
@@ -2430,14 +2586,23 @@ suftab[] = {
 	{ "absmipgap", 0, ASL_Sufkind_prob  | ASL_Sufkind_outonly },
 	{ "bestbound", 0, ASL_Sufkind_obj   | ASL_Sufkind_outonly },
 	{ "bestbound", 0, ASL_Sufkind_prob  | ASL_Sufkind_outonly },
-#if (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) || GRB_VERSION_MAJOR >= 5 /*{*/
+#ifdef GRB_INT_ATTR_CONCURRENTWINMETHOD
+	{ "concurrentwinmethod", 0, ASL_Sufkind_prob | ASL_Sufkind_outonly },
+#endif
+#if (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) || GRB_VERSION_MAJOR >= 5
 	{ "dunbdd", 0, ASL_Sufkind_con | ASL_Sufkind_outonly },
-#endif /*}*/
+#endif
 #ifdef GRB_INT_ATTR_VARHINTPRI
 	{ "hintpri", 0, ASL_Sufkind_var },
 #endif
 	{ "iis", iis_table, ASL_Sufkind_var | ASL_Sufkind_outonly },
 	{ "iis", 0, ASL_Sufkind_con | ASL_Sufkind_outonly },
+
+#ifdef GRB_INT_ATTR_IIS_LBFORCE
+	{ "iisforce", 0, ASL_Sufkind_con | ASL_Sufkind_input},
+	{ "iisforcelb", 0, ASL_Sufkind_var | ASL_Sufkind_input},
+	{ "iisforceub", 0, ASL_Sufkind_var | ASL_Sufkind_input},
+#endif
 #if GRB_VERSION_MAJOR >= 8
 	{ "kappa", 0, ASL_Sufkind_obj | ASL_Sufkind_outonly | ASL_Sufkind_real},
 	{ "kappa", 0, ASL_Sufkind_prob | ASL_Sufkind_outonly | ASL_Sufkind_real},
@@ -2448,9 +2613,15 @@ suftab[] = {
 #if GRB_VERSION_MAJOR >= 5
 	{ "lbpen", 0, ASL_Sufkind_var | ASL_Sufkind_real },
 #endif
+#ifdef GRB_DBL_ATTR_MAX_VIO
+	{ "maxvio", 0, ASL_Sufkind_prob | ASL_Sufkind_outonly },
+#endif
 #if GRB_VERSION_MAJOR >= 3
 	{ "npool", 0, ASL_Sufkind_obj   | ASL_Sufkind_outonly },
 	{ "npool", 0, ASL_Sufkind_prob  | ASL_Sufkind_outonly },
+#endif
+#ifdef GRB_INT_PAR_POOLSEARCHMODE
+	{"poolignore", 0, ASL_Sufkind_var | ASL_Sufkind_input},
 #endif
 #if GRB_VERSION_MAJOR >= 7
 	{ "objabstol", 0, ASL_Sufkind_obj | ASL_Sufkind_real },
@@ -2475,7 +2646,9 @@ suftab[] = {
 	{ "sensobjhi", 0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
 	{ "sensobjlo", 0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
 	{ "sensrhshi", 0, ASL_Sufkind_con | ASL_Sufkind_real | ASL_Sufkind_outonly },
+	{ "sensrhshi2", 0, ASL_Sufkind_con | ASL_Sufkind_real | ASL_Sufkind_outonly },
 	{ "sensrhslo", 0, ASL_Sufkind_con | ASL_Sufkind_real | ASL_Sufkind_outonly },
+	{ "sensrhslo2", 0, ASL_Sufkind_con | ASL_Sufkind_real | ASL_Sufkind_outonly },
 	{ "sensubhi",  0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
 	{ "sensublo",  0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
 	{ "sos", 0, ASL_Sufkind_var },
@@ -2489,7 +2662,10 @@ suftab[] = {
 #endif
 #if (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) || GRB_VERSION_MAJOR >= 5 /*{*/
 	,{ "unbdd", 0, ASL_Sufkind_var | ASL_Sufkind_outonly }
-#endif /*}*/
+#endif
+#ifdef GRB_DBL_ATTR_WORK
+	,{ "work", 0, ASL_Sufkind_prob | ASL_Sufkind_outonly }
+#endif
 	};
 
 #ifdef GRB_INT_ATTR_BRANCHPRIORITY
@@ -2503,6 +2679,40 @@ add_priorities(ASL *asl, GRBenv *env, GRBmodel *mdl)
 	 && (p = dp->u.i)
 	 && GRBsetintattrarray(mdl, GRB_INT_ATTR_BRANCHPRIORITY, 0, n_var, p))
 		failed(env, "GRBsetintattrarray(\"BranchPriority\")");
+	}
+#endif
+
+#ifdef GRB_INT_ATTR_IIS_LBFORCE
+ static void
+force_iis(ASL* asl, GRBenv* env, GRBmodel* mdl)
+{
+	int i, j, *z;
+	int map[3] = { -1, 0, 1 };
+	SufDesc* dp;
+	int m, n, nq;
+
+	n = n_var;
+	m = n_con;
+	if((dp = suf_get("iisforce", ASL_Sufkind_con)) && (z = dp->u.i)) {
+		for (i = 0; i < m; i++)
+			z[i] = map[(j = z[i]) >= 0 && j <= 2 ? j : 0];
+		nq = nlc;
+		if (nq)
+			GRBsetintattrarray(mdl, GRB_INT_ATTR_IIS_QCONSTRFORCE, 0, nq, z);
+		if (m - nq)
+			GRBsetintattrarray(mdl, GRB_INT_ATTR_IIS_CONSTRFORCE, 0, m - nq, z + nq);
+		}
+	if ((dp = suf_get("iisforcelb", ASL_Sufkind_var)) && (z = dp->u.i)) {
+		for (i = 0; i < n; i++)
+			z[i] = map[(j = z[i]) >= 0 && j <= 2 ? j : 0];
+		GRBsetintattrarray(mdl, GRB_INT_ATTR_IIS_LBFORCE, 0, n, dp->u.i);
+		}
+	if ((dp = suf_get("iisforceub", ASL_Sufkind_var)) && (z = dp->u.i)) {
+		z = dp->u.i;
+		for (i = 0; i < n; i++)
+			z[i] = map[(j = z[i]) >= 0 && j <= 2 ? j : 0];
+		GRBsetintattrarray(mdl, GRB_INT_ATTR_IIS_UBFORCE, 0, n, dp->u.i);
+		}
 	}
 #endif
 
@@ -3010,7 +3220,7 @@ statmsg(ASL *asl, GRBenv *env, GRBmodel *mdl, int i, Dims *d, int *wantobj)
 	  case GRB_INF_OR_UNBD:
 		objwant = 0;
 		nc = nv = 0;
-#if GRB_VERSION_MAJOR >= 4 && GRB_VERSION_MINOR >= 5 /*{*/
+#if GRB_VERSION_MAJOR > 4 || (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) /*{*/
 		srd = srp = 0;
 		if (rays & 1)
 			srp = send_ray(asl, d, env, mdl);
@@ -3194,43 +3404,118 @@ stat_map(ASL *asl, int *stat, int n, int *map, int mx, const char *what, what_na
 	return bad;
 	}
 
- static int
-get_input_statuses(ASL *asl, GRBenv *env, GRBmodel *mdl, Dims *d)
-{
-	SufDesc *sd;
-	int bad, i, m, n, nvr, *rs, *rsta;
-	real *lu;
-	static int vmap[] = {-3, 0, -3, -1, -2, -3, -3};
-	static int cmap[] = {-1, 0, -1, -1, -1, -1, -1};
+#ifdef DO_BASIS_CHECK
+#define Basis_check(x) x
+#else
+#define Basis_check(x)
+#endif
 
-	sd = d->csd;
+ static int
+get_input_statuses(ASL *asl, GRBenv *env, GRBmodel *mdl, Dims *d, real *resid)
+{
+	int bad, *cs, i, m, n, nvr, *rs, *rsta;
+#ifdef DO_BASIS_CHECK
+	int nb;
+#endif
+	real *lu;
+#ifdef OLD_CMAP_IN
+	static int cmap[] = {-1, 0, -1, -1, -1, -1, -1};
+#else
+	static int cmap[] = {0, 0, -1, -1, -1, -1, -1};
+#endif
+	static int vmap[] = {-3, 0, -3, -1, -2, -3, -3};
+
+	if (!(d->csd->kind & ASL_Sufkind_input) && !(d->rsd->kind & ASL_Sufkind_input))
+		return 0;
 	n = n_var;
-	if (!(sd->kind & ASL_Sufkind_input))
-		return 0;
-	sd = d->rsd;
 	m = n_con;
-	if (!(sd->kind & ASL_Sufkind_input))
-		return 0;
-	bad = stat_map(asl, d->cstat, n, vmap, 6, "_svar", var_name_ASL);
-	bad += stat_map(asl, d->rstat, m, cmap, 6, "_scon", con_name_ASL);
-	if (bad)
-		return 0;
+	cs = d->cstat;
+	rs = d->rstat;
 	nvr = n + nranges;
+	Basis_check(nb = 0;)	/* number of basic entities */
 	if (nvr > n) {
-		rs = d->rstat;
-		rsta = d->cstat + n;
+		rsta = cs + n;
 		lu = LUrhs;
 		for(i = 0; i < m; ++i, lu += 2) {
 			if (lu[0] > negInfinity && lu[0] < lu[1] && lu[1] < Infinity) {
-				if (rs[i] == 0)
-					*rsta = -1;
+				/* a range constraint */
+				if ((resid ? (resid[i] >= lu[1] || resid[i] <= lu[0])
+					   : (0. >= lu[1] || 0. <= lu[0]))) {
+					rs[i] = 1;
+					*rsta = 0;
+					Basis_check(++nb;) /* basic range constraint */
+					}
+				else {
+					rs[i] = 0;
+					*rsta = 1;
+					}
 				++rsta;
+				}
+#ifdef DO_BASIS_CHECK
+			else if (rs[i] == 1)
+				++nb;
+#endif
+			}
+		}
+#ifdef DO_BASIS_CHECK
+	else {
+		for(i = 0; i < m; ++i) {
+			if (rs[i] == 1)
+				++nb;
+		}	}
+	for(i = 0; i < n; ++i) {
+		if (cs[i] == 1)
+			++nb;
+		}
+	if (nb > m) {
+		/* too big a basis */
+		for(i = 0; i < m; ++i) { /* consider constraints first */
+			if (rs[i] == 1) {
+				rs[i] = 0;
+				if (--nb <= m)
+					goto have_basis;
+				}
+			}
+		for(i = 1; i < n; ++i) { /* now try variables */
+			if (cs[i] == 1) {
+				cs[i] = 0;
+				if (--nb <= m)
+					goto have_basis;
 				}
 			}
 		}
-	if (GRBsetintattrarray(mdl, GRB_INT_ATTR_VBASIS, 0, nvr, d->cstat))
+	else if (nb && nb < m) { /* too small a basis; nb should be > 0 */
+		for(i = 0; i < m; ++i) { /* first try to make new constraints basic */
+			if (rs[i] == 0) {
+				rs[i] = 1;
+				if (++nb >= m)
+					goto have_basis;
+				}
+			}
+		for(i = 0; i < m; ++i) {
+			if (rs[i] != 1) {
+				rs[i] = 1;
+				if (++nb >= m)
+					goto have_basis;
+				}
+			}
+		for(i = 0; i < n; ++i) {
+			if (cs[i] != 1) {
+				cs[i] = 1;
+				if (++nb >= m)
+					goto have_basis;
+				}
+			}
+		}
+ have_basis:
+#endif
+	bad = stat_map(asl, cs, n, vmap, 6, "_svar", var_name_ASL);
+	bad += stat_map(asl, rs, m, cmap, 6, "_scon", con_name_ASL);
+	if (bad)
+		return 0;
+	if (GRBsetintattrarray(mdl, GRB_INT_ATTR_VBASIS, 0, nvr, cs))
 		failed(env, "GRBsetintattrarray(\"VBasis\")");
-	if (GRBsetintattrarray(mdl, GRB_INT_ATTR_CBASIS, 0, m, d->rstat))
+	if (GRBsetintattrarray(mdl, GRB_INT_ATTR_CBASIS, 0, m, rs))
 		failed(env, "GRBsetintattrarray(\"CBasis\")");
 	return 1;
 	}
@@ -3286,9 +3571,7 @@ fixed_model(ASL *asl, GRBmodel *mdl0, Dims *d)
 		else
 			fixedmethod = k;
 		}
-	if (fixedmethod != k)
-		GRBsetintparam(env, Method, k);
-	if (!GRBgetintparam(env, Method, &k) && k != fixedmethod)
+	if (k != fixedmethod)
 		GRBsetintparam(env, Method, fixedmethod);
 	if ((fn = Wflist[2])) {
 		GRBupdatemodel(mdl);
@@ -3345,6 +3628,11 @@ fixed_model(ASL *asl, GRBmodel *mdl0, Dims *d)
 get_output_statuses(ASL *asl, GRBmodel *mdl, Dims *d)
 {
 	int i, j, m, n, nr, rv, *s;
+#ifndef OLD_CMAP_OUT
+	int k, *rsta;
+	real *lu;
+	static int cmap[6] = {2, 1, 2, 4, 3, 1};
+#endif
 	static int vmap[4] = {2, 4, 3, 1};
 
 	m = n_con;
@@ -3368,13 +3656,35 @@ get_output_statuses(ASL *asl, GRBmodel *mdl, Dims *d)
 			goto ret;
 			}
 		}
+#ifndef OLD_CMAP_OUT
+	rsta = s + n;
+	lu = LUrhs;
+#endif
 	s = d->rstat;
-	for(i = 0; i < m; ++i) {
-		j = ++s[i];
+	for(i = 0; i < m; ++i
+#ifndef OLD_CMAP_OUT
+			      , lu += 2
+#endif
+					) {
+		j = s[i] + 1;
 		if (j < 0 || j > 1) {
 			badretfmt(505, "Surprise CBasis[%d] = %d.", i, j-1);
 			goto ret;
 			}
+#ifdef OLD_CMAP_OUT
+		s[i] = j;
+#else
+		if (lu[0] > negInfinity && lu[0] < lu[1] && lu[1] < Infinity) {
+			if ((k = *rsta + 5) < 2 || k > 5) {
+				badretfmt(504, "Surprise VBasis[%d] = %d.", rsta - d->cstat, k-5);
+				goto ret;
+				}
+			++rsta;
+			if (j != 1)
+				j = k;
+			}
+		s[i] = cmap[j];
+#endif
 		}
  ret:
 	if (rv)
@@ -3417,27 +3727,53 @@ Sensname {
 put_sens(ASL *asl, GRBmodel *mdl)
 {
 	Sensname *sn, *sne;
-	int len[2], nc, nv;
-	real *a;
+	int i, len[3], nc, nr, nv, nvr;
+	real *a, *a0, *lu, *rlo2, *rhi2, *ubhi, *ublo;
+	size_t L;
 	static Sensname Snames[] = {
-		{ "senslbhi",  "SALBUp", 0 },
-		{ "senslblo",  "SALBLow", 0 },
-		{ "sensobjhi", "SAObjUp", 0 },
 		{ "sensobjlo", "SAObjLow", 0 },
-		{ "sensrhshi", "SARHSUp", 1 },
+		{ "sensobjhi", "SAObjUp", 0 },
 		{ "sensrhslo", "SARHSLow", 1 },
-		{ "sensubhi",  "SAUBUp", 0 },
-		{ "sensublo",  "SAUBLow", 0 }};
+		{ "sensrhshi", "SARHSUp", 1 },
+		{ "senslblo",  "SALBLow", 2 },
+		{ "senslbhi",  "SALBUp", 2 },
+		{ "sensublo",  "SAUBLow", 2 },
+		{ "sensubhi",  "SAUBUp", 2 }};
 	static int ak[2] = {ASL_Sufkind_var, ASL_Sufkind_con};
 
+	nr = nranges;
 	len[0] = nv = n_var;
 	len[1] = nc = n_con;
-	a = (real*)M1alloc((6*nv + 2*nc)*sizeof(real));
+	len[2] = nvr = nv + nr;
+	L = (6*nv + 2*nc)*sizeof(real);
+	if (nr)
+		L += (2*nc + 4*nr)*sizeof(real);
+	a0 = a = (real*)M1alloc(L);
 	for(sn = Snames, sne = sn + sizeof(Snames)/sizeof(Sensname); sn < sne; ++sn) {
 		if (GRBgetdblattrarray(mdl, sn->gname, 0, len[sn->iscon], a))
   	  		namefailed("GRBgetdblattrarray", sn->gname);
-		suf_rput(sn->aname, ak[sn->iscon], a);
 		a += len[sn->iscon];
+		}
+	if (nr) {
+		memset(rlo2 = a, 0, 2*nc*sizeof(real));
+		rhi2 = rlo2 + nc;
+		lu = LUrhs;
+		ublo = a0 + 3*nv + 2*(nc+nvr);
+		ubhi = ublo + nvr;
+		for(i = 0; i < nc; ++i, lu += 2) {
+			if (lu[0] > negInfinity && lu[1] < Infinity && lu[0] < lu[1]) {
+				rlo2[i] = ublo[i] + lu[0];
+				rhi2[i] = ubhi[i] + lu[0];
+				}
+			}
+		}
+	for(a = a0, sn = Snames; sn < sne; ++sn) {
+		suf_rput(sn->aname, ak[sn->iscon & 1], a);
+		a += len[sn->iscon];
+		}
+	if (nr) {
+		suf_rput("sensrhslo2", ASL_Sufkind_con, rlo2);
+		suf_rput("sensrhshi2", ASL_Sufkind_con, rhi2);
 		}
 	}
 
@@ -3604,6 +3940,31 @@ setSuffixKappa(ASL* asl, GRBmodel* mdl, double kvalue)
 	suf_rput("kappa", ASL_Sufkind_obj, buffer);
 	suf_rput("kappa", ASL_Sufkind_prob, buffer);
 }
+
+ static double
+reportDblProblemSuffix(ASL* asl, GRBmodel* mdl,
+	 const char* grbAttr, const char* suffixName)
+{
+	double val;
+	int error;
+	error = GRBgetdblattr(mdl, grbAttr, &val);
+	if(error)
+		 failed(env0, "GRBgetdblattr");
+	suf_rput(suffixName, ASL_Sufkind_prob, &val);
+	return val;
+ 	}
+
+ static int
+reportIntProblemSuffix(ASL* asl, GRBmodel* mdl,
+	 const char* grbAttr, const char* suffixName)
+{
+	int val, error;
+	error = GRBgetintattr(mdl, grbAttr, &val);
+	if (error)
+		 failed(env0, "GRBgetintattr");
+	suf_iput(suffixName, ASL_Sufkind_prob, &val);
+	return val;
+	}
 
  int
 main(int argc, char **argv)
@@ -3776,13 +4137,28 @@ main(int argc, char **argv)
 		if (!(router = server_router))
 			router = "";
 #endif
+#if GRB_VERSION_MAJOR > 9 || (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR >= 5)
+		if (server_timeout < 1)
+			server_timeout = 2000000000;
+		if ((i = GRBemptyenv(&env0)) || (i = GRBstartenv(env0))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_LOGFILE, logfile))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_COMPUTESERVER, server))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_CSROUTER, router))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_SERVERPASSWORD, server_passwd))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_CSGROUP, group))
+		 || (i = GRBsetintparam(env0, GRB_INT_PAR_CSTLSINSECURE, server_insecure))
+		 || (i = GRBsetintparam(env0, GRB_INT_PAR_CSPRIORITY, server_priority))
+		 || (i = GRBsetintparam(env0, GRB_INT_PAR_SERVERTIMEOUT, server_timeout)))
+#else
 		if ((i = GRBloadclientenv(&env0, logfile, server,
 #if GRB_VERSION_MAJOR < 8
 				server_port, server_passwd,
 #else
 				router, server_passwd, group, server_insecure,
 #endif
-				server_priority, server_timeout))) {
+				server_priority, server_timeout)))
+#endif
+		{
 			switch(i) {
 			 case GRB_ERROR_NETWORK:
 				solmsg = "Could not talk to Gurobi Compute Server.";
@@ -3818,11 +4194,23 @@ main(int argc, char **argv)
 			GRBfreeenv(env0);
 			env0 = 0;
 			}
+#if GRB_VERSION_MAJOR > 9 || (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR >= 5)
+		if ((i = GRBemptyenv(&env0))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_CLOUDHOST, cloudhost))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_CLOUDACCESSID, cloudid))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_CLOUDSECRETKEY, cloudkey))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_CLOUDPOOL, cloudpool))
+		 || (i = GRBsetintparam(env0, GRB_INT_PAR_CSPRIORITY, server_priority))
+		 || (i = GRBstartenv(env0))
+		 || (i = GRBsetstrparam(env0, GRB_STR_PAR_LOGFILE, logfile)))
+#else
 		if ((i = GRBloadcloudenv(&env0, logfile, cloudid, cloudkey, cloudpool
 #if GRB_VERSION_MAJOR >= 8
 				, cloudpriority
 #endif
-			))) {
+			)))
+#endif
+			{
 			switch(i) {
 			 case GRB_ERROR_NETWORK:
 				solmsg = "Could not talk to Gurobi Instant Cloud.";
@@ -4240,6 +4628,7 @@ main(int argc, char **argv)
 			}
 		asl->i.cmap = cmsave;
 		free(a1);
+		GRBupdatemodel(mdl);
 		}
 	else
 #endif /*}*/
@@ -4306,7 +4695,7 @@ main(int argc, char **argv)
 		lz = lazyd->u.i + nqc;
 		for(i = 0; i < i1; ++i) {
 
-#if((GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR == 1) || GRB_VERSION_MAJOR >= 9) /*{{*/
+#if((GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR == 1) || GRB_VERSION_MAJOR > 9) /*{{*/
 			if ((i2 = lz[i]) >= -1) {
 #if (GRB_VERSION_MAJOR == 9 && GRB_VERSION_MINOR == 1) /*{{{*/
 				if (i2 == -1)
@@ -4358,25 +4747,36 @@ main(int argc, char **argv)
 		free(sostypes);
   	  	}
 #if GRB_VERSION_MAJOR >= 7 /*{*/
-	if (nlogc && (i = indicator_constrs_ASL(asl, mdl, add_indic, errinfo))) {
-		solmsg = "indicator_constrs_ASL";
-		switch(i) {
-		  case 1:
-			badretfmt(563,"logical constraint %s is not an indicator constraint.\n",
-				lcon_name(errinfo[0]));
-			break;
-		  case 2:
-			badretfmt(563,"logical constraint %s is not an indicator constraint\n\
-	due to bad comparison with %s.\n", lcon_name(errinfo[0]), var_name(errinfo[1]));
-			break;
-		  case 3:
-			solmsg = "GRBaddgenconstrIndicator";
-			/* no break; */
-		  default:
-			badretfmt(565, "%s failed; error code %d.", solmsg, i);
-		  }
-		rc = 1;
-		goto bailout;
+	if (nlogc) {
+		if ((i = indicator_constrs_ASL(asl, mdl, add_indic, errinfo))) {
+			solmsg = "indicator_constrs_ASL";
+			switch(i) {
+			  case 1:
+				badretfmt(563,
+					"logical constraint %s is not an indicator constraint.\n",
+					lcon_name(errinfo[0]));
+				break;
+			  case 2:
+				badretfmt(563,
+					"logical constraint %s is not an indicator constraint\n\
+		due to bad comparison with %s.\n", lcon_name(errinfo[0]), var_name(errinfo[1]));
+				break;
+			  case 3:
+				solmsg = "GRBaddgenconstrIndicator";
+				/* no break; */
+			  default:
+				badretfmt(565, "%s failed; error code %d.", solmsg, i);
+			  }
+			rc = 1;
+			goto bailout;
+			}
+		if (cnames) {
+			nlogc >>= 1;
+			GRBupdatemodel(mdl);
+			for(i = 0; i < nlogc; ++i)
+				GRBsetstrattrelement(mdl, GRB_STR_ATTR_GENCONSTRNAME,
+					i, lcon_name_ASL(asl, i));
+			}
 		}
 	operm = 0;
 	if (no > 1 && multiobj && objno1 >= 0) {
@@ -4503,14 +4903,22 @@ main(int argc, char **argv)
 		}
 #endif /*}*/
 #if GRB_VERSION_MAJOR >= 3 /*{*/
-	if (mip && ams_stub && !ams_modeseen)
-		GRBsetintparam(env, "PoolSearchMode", 2);
+	if (mip && ams_stub && (!ams_modeseen || ams_mode == 1 || ams_mode == 2))
+	{
+		if(!ams_modeseen)
+			GRBsetintparam(env, "PoolSearchMode", 2);
+#ifdef GRB_INT_ATTR_POOLIGNORE
+		if ((lazyd = suf_get("poolignore", ASL_Sufkind_var | ASL_Sufkind_input))
+		 && GRBsetintattrarray(mdl, GRB_INT_ATTR_POOLIGNORE, 0, nv, lazyd->u.i))
+			failed(env, "GRBsetintattrarray(GRB_INT_ATTR_POOLIGNORE)");
+#endif
+	}
 #endif /*}*/
 #if GRB_VERSION_MAJOR >= 5 /*{{*/
 	if (warmstart && x) {
 		if (basis & 1) {
 			basis &= ~1;
-			if (get_input_statuses(asl, env, mdl, &dims) && warmstart <= 2)
+			if (get_input_statuses(asl, env, mdl, &dims, resid) && warmstart <= 2)
 				warmstart = 0;
 			}
 		if (warmstart) {
@@ -4546,7 +4954,7 @@ main(int argc, char **argv)
 		}
 #else /*}{*/
 	if (basis & 1)
-		get_input_statuses(asl, env, mdl, &dims);
+		get_input_statuses(asl, env, mdl, &dims, resid);
 #endif /*}}*/
 	free(A);
 	if (x && GRBsetdblattrarray(mdl, GRB_DBL_ATTR_START, 0, nv, x))
@@ -4578,6 +4986,10 @@ main(int argc, char **argv)
 	if (rays)
 		GRBsetintparam(env, "InfUnbdInfo", 1);
 #endif /*}*/
+#ifdef GRB_INT_ATTR_IIS_LBFORCE
+	if (want_iis)
+		force_iis(asl, env, mdl);
+#endif
 #ifdef GRB_INT_ATTR_BRANCHPRIORITY
 	if (mip && priorities)
 		add_priorities(asl, env, mdl);
@@ -4668,6 +5080,7 @@ main(int argc, char **argv)
 			suf_rput("bestbound", ASL_Sufkind_prob, bb);
 			}
 		}
+
 #if GRB_VERSION_MAJOR >= 8
 	if (kappa && !solve_result_num)
 	{
@@ -4746,6 +5159,24 @@ main(int argc, char **argv)
 			" maxerr = %g", k, sc, Round & 1 ? "" : "would be ", sc, t);
 			}
 		}
+#ifdef GRB_DBL_ATTR_MAX_VIO
+	if (want_maxvio) {
+		t = reportDblProblemSuffix(asl, mdl, GRB_DBL_ATTR_MAX_VIO, "maxvio");
+		dpf(&dims, "\nmax violation = %g\n", t);
+		}
+#endif
+#ifdef GRB_INT_ATTR_CONCURRENTWINMETHOD
+	if (want_concurrentwinmethod) {
+		i = reportIntProblemSuffix(asl, mdl, GRB_INT_ATTR_CONCURRENTWINMETHOD, "concurrentwinmethod");
+		dpf(&dims, "\nconcurrent winner = %d", i);
+		}
+#endif
+#ifdef GRB_DBL_ATTR_WORK
+	if (want_work) {
+		t = reportDblProblemSuffix(asl, mdl, GRB_DBL_ATTR_WORK, "work");
+		dpf(&dims, "\nwork = %g\n", t);
+		}
+#endif
 	write_sol(mbuf, dims.x, dims.y, &Oinfo);
 	for(fn = Wflist[1]; fn; fn = fn->next)
 		if (GRBwrite(mdl, fn->name))
