@@ -1126,3 +1126,19 @@ new, unwanted output (described in the entry for 20200205 above).
   cplex.c:  add possible values 3-7 for (mipstart =) mipstartvalue.
 These values are probably rarely helpful, but a user reported having
 an instance where mipstart=4 was much faster than the default.
+
+20210206
+  cplex.c:  Update to CPLEX 20.1, which includes algorithmic
+improvements, a new possible value for mipemphasis and new keywords
+benders_worker and nodecuts.  See the -= output for details.
+
+20210215
+  cplex.c:  Tweak that saves trivial storage with older versions of
+CPLEX.
+
+20210726
+  cplex.c: Added options presos1reformulations, presos2reformulations 
+and prereformulations that control various aspects of reformulations.
+Renamed submipstart to submipstartalg.
+Added parameter finalmipalg to control the algorithm used in the solution
+of the final LP after solving a MIP problem

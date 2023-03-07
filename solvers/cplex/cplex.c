@@ -38,9 +38,9 @@ of or in connection with the use or performance of this software.
 #include "limits.h"
 
 #if CPX_APIMODEL == CPX_APIMODEL_LARGE
-#include "cplexx.h"
+#include "ilcplex/cplexx.h"
 #endif
-#include "cplex.h"
+#include "ilcplex/cplex.h"
 
 #if CPX_VERSION < 12060200
 #define OBJ_ADJ
@@ -206,7 +206,8 @@ mdbl_values {
 	set_incompat	= 27,
 	set_objrep	= 28,
 	set_qcdual	= 29,
-	set_multiobj	= 30
+	set_multiobj	= 30,
+	set_finalmipalg = 31
 	};
 #ifdef CPX_PARAM_FEASOPTMODE /* >= 9.2b */
 #define Uselazy
@@ -218,7 +219,7 @@ mdbl_values {
 	};
 
  static mint_values
-mint_val[31] = {
+mint_val[32] = {
 	/* set_crossover */	{0, 2, 1},
 	/* set_dualthresh */	{-0x7fffffff, 0x7fffffff, 0},
 	/* set_netopt */	{0, 3, 1},
@@ -253,7 +254,8 @@ mint_val[31] = {
 	/* set_incompat */	{0, 2, 1},
 	/* set_objrep */	{0, 3, 2},
 	/* set_qcdual */	{0, 1, 1},
-	/* set_multiobj */	{0, 1, 0}
+	/* set_multiobj */	{0, 1, 0},
+	/* set_finalmipalg */	{0, 6, 0}
 	};
 
  static mdbl_values
@@ -293,6 +295,7 @@ mdbl_val[] = {
 #define objrep		mint_val[28].val
 #define want_qcdual	mint_val[29].val
 #define multiobj	mint_val[30].val
+#define finalmipalg_val mint_val[31].val
 #define dual_ratio	mdbl_val[0].val
 #define droptol		mdbl_val[1].val
 
@@ -308,7 +311,7 @@ mdbl_val[] = {
 #else
  static CPXFILEptr Logf;
 #endif
- static char cplex_version[] = "AMPL/CPLEX with bad license\0\nAMPL/CPLEX Driver Version 20210215\n";
+ static char cplex_version[] = "AMPL/CPLEX with bad license\0\nAMPL/CPLEX Driver Version 20210726\n";
  static char *baralgname, *endbas, *endsol, *endtree, *endvec, *logfname;
  static char *paramfile, *poolstub, *pretunefile, *pretunefileprm;
  static char *startbas, *startsol, *starttree, *startvec, *tunefile, *tunefileprm;
@@ -486,7 +489,6 @@ badretfmt(int rc, const char *fmt, ...)
  static void
 badret(const char *what, int i, int rc)
 {
-	
 	char buf[4096];
 	if (!CPXgeterrorstring(Env, i, buf))
 		badretfmt(rc, "%s failed; error code %d.", what, i);
@@ -2099,6 +2101,16 @@ cutsfactor_desc[] =
 	endtree_desc[] = "File for writing final branch & bound search tree.\n\
 		Withdrawn from CPLEX 10.",
 #endif
+	finalmipalg_desc[] = "Specify the algorithm to solve the final LP\n\
+		obtained by fixing all integer variables at\n\
+		their integer values:\n\
+		   0 = automatic (default)\n\
+		   1 = primal simplex\n\
+		   2 = dual simplex\n\
+		   3 = network simplex\n\
+		   4 = barrier\n\
+		   5 = sifting (not applicable to QP)\n\
+		   6 = concurrent optimizer.",
 	flowcuts_desc[] = "Whether to use flow cuts in solving MIPs:\n\
 		   -1 = never\n\
 		   0 = automatic choice (default)\n\
@@ -2697,10 +2709,9 @@ cutsfactor_desc[] =
 	subalg_desc[] = "Synonym for \"mipalg\".",
 	subalgorithm_desc[] = "Synonym for \"mipalg\".",
 #ifdef CPX_PARAM_SUBMIPSUBALG
-	submipalg_desc[] = "Rarely used choice of algorithm for the initial\n\
-		relaxation of a subMIP: not a subproblem, but an\n\
-		auxiliary MIP that CPLEX sometimes forms and solves,\n\
-		e.g., when\n\
+	submipalg_desc[] = "Choice of algorithm used to solve the subproblems\n\
+		of a subMIP: not a subproblem, but an auxiliary MIP\n\
+		that CPLEX sometimes forms and solves, e.g., when\n\
 			* dealing with a partial MIP start\n\
 			* repairing an infeasible MIP start\n\
 			* using the RINS heuristic\n\
@@ -2729,7 +2740,7 @@ cutsfactor_desc[] =
 			 1 = more aggressive scaling.",
 #endif
 #ifdef CPX_PARAM_SUBMIPSTARTALG
-	submipstart_desc[] = "Rarely used choice of algorithm for the initial\n\
+	submipstartalg_desc[] = "Rarely used choice of algorithm for the initial\n\
 		relaxation of a subMIP (described with \"submipalg\"):\n\
 			0 = automatic choice (default)\n\
 			1 = primal simplex\n\
@@ -3254,12 +3265,35 @@ cutsfactor_desc[] =
 		   1 = only primal\n\
 		   2 = only dual\n\
 		   3 = both primal and dual (default).",
+#ifdef CPXPARAM_Preprocessing_Reformulations
+	prereformulations_desc[] = "Reformulations applied during CPLEX presolve:\n\
+		   0 = none\n\
+		   1 = allow reformulations that interphere with\n\
+		       crushing forms\n\
+		   2 = allow reformulations that interphere with\n\
+		       uncrushing forms\n\
+		   3 = all reformulations (default).",
+#endif
 	presolve_desc[] = "0 or 1 (default 1): Whether to run CPLEX's presolve\n\
 		algorithm.",
 	presolvedual_desc[] = "Synonym for \"predual\".",
 	presolvenode_desc[] = "-1, 0, or 1 (default 0): Whether to run CPLEX's\n\
 		presolve at each node of the MIP branch-and-bound\n\
 		tree: -1 = no; 1 = yes; 0 = automatic choice.",
+#ifdef CPXPARAM_Preprocessing_SOS1Reform
+	presos1reformulations_desc[] = "Control the reformulation of SOS of type 1:\n\
+		  -1 = no reformulation\n\
+		   0 = automatic (default)\n\
+		   1 = reformulate as linear constraints, with a\n\
+		       reformulation which is logarithmic in the\n\
+		       size of the SOSs.",
+	presos2reformulations_desc[] = "Control the reformulation of SOS of type 2:\n\
+		  -1 = no reformulation\n\
+		   0 = automatic (default)\n\
+		   1 = reformulate as linear constraints, with a\n\
+		       reformulation which is logarithmic in the\n\
+		       size of the SOSs.",
+#endif
 	prestats_desc[] = "0 or 1 (default 0):  Whether to include summary\n\
 		statistics (if nonzero) for CPLEX's \"aggregate\" and\n\
 		\"presolve\" algorithms in the solve_message.",
@@ -3685,7 +3719,9 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 #ifdef CPX_PARAM_FINALFACTOR
 	{ "finalfactor", sf_int,	VP CPX_PARAM_FINALFACTOR, finalfactor_desc },
 #endif
+
 #ifdef CPLEX_MIP
+	{ "finalmipalg", sf_mint, VP set_finalmipalg, finalmipalg_desc },
 	{ "flowcuts",	sf_int,		VP CPX_PARAM_FLOWCOVERS, flowcuts_desc },
 	{ "flowpathcuts", sf_int,	VP CPX_PARAM_FLOWPATHS, flowpathcuts_desc },
 #ifdef CPX_PARAM_FPHEUR
@@ -3891,6 +3927,9 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 	{ "prepass",	sf_int,		VP CPX_PARAM_PREPASS, prepass_desc },
 #endif
 	{ "prereduce",	sf_int,		VP CPX_PARAM_REDUCE, prereduce_desc },
+#ifdef CPXPARAM_Preprocessing_Reformulations
+	{ "prereformulations",	sf_int,		VP CPXPARAM_Preprocessing_Reformulations, prereformulations_desc },
+#endif
 #ifdef CPLEX_MIP
 	{ "prerelax",	sf_int1,	VP CPX_PARAM_RELAXPREIND, prerelax_desc },
 #endif
@@ -3898,6 +3937,10 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 	{ "presolvedual", sf_int,	VP CPX_PARAM_PREDUAL, presolvedual_desc },
 #ifdef CPLEX_MIP
 	{ "presolvenode", sf_int,	VP CPX_PARAM_PRESLVND, presolvenode_desc },
+#endif
+#ifdef CPXPARAM_Preprocessing_SOS1Reform
+	 { "presos1reform", sf_int, VP CPXPARAM_Preprocessing_SOS1Reform, presos1reformulations_desc },
+	 { "presos2reform", sf_int, VP CPXPARAM_Preprocessing_SOS1Reform, presos2reformulations_desc },
 #endif
 	{ "prestats",	sf_mint,	VP set_prestats, prestats_desc },
 #ifdef CPX_TUNE_TILIM
@@ -4014,7 +4057,7 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 	{ "starttree",	sf_char,	VP set_starttree, starttree_desc },
 #endif
 #if defined(BARRIER) && !defined(NO_DEPRECATED)
-	{ "startvector",	sf_char,	VP set_startvector, "synonym for readvector" },
+	{ "startvector",	sf_char,	VP set_startvector, "Synonym for \"readvector\"." },
 #endif
 	{ "strongcand",	sf_int,		VP CPX_PARAM_STRONGCANDLIM, strongcand_desc },
 	{ "strongit",	sf_int,		VP CPX_PARAM_STRONGITLIM, strongit_desc },
@@ -4033,7 +4076,7 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 	{ "submipscale", sf_int,	VP CPX_PARAM_SUBMIPSCAIND, submipscale_desc },
 #endif
 #ifdef CPX_PARAM_SUBMIPSTARTALG
-	{ "submipstart", sf_int,	VP CPX_PARAM_SUBMIPSTARTALG, submipstart_desc },
+	{ "submipstartalg", sf_int,	VP CPX_PARAM_SUBMIPSTARTALG, submipstartalg_desc },
 #endif
 #ifdef CPX_PARAM_SYMMETRY
 	{ "symmetry",	sf_int,		VP CPX_PARAM_SYMMETRY, symmetry_desc },
@@ -4101,7 +4144,7 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 
  static Option_Info Oinfo = { "cplex", 0, "cplex_options", keywds, nkeywds,
 				ASL_OI_keep_underscores, cplex_version, 0,
-				MOkwf,0,0,0, 20210215, 0,0,0,0,0,0,0,
+				MOkwf,0,0,0, 20210726, 0,0,0,0,0,0,0,
 				ASL_OI_tabexpand | ASL_OI_addnewline };
 
  static void
@@ -7720,8 +7763,8 @@ amplout(ASL *asl, cpxlp **pcpx, dims *d, int status, int nelqf, int nint1, int *
 	char buf[32], hbuf[4096];
 	const char *wb, *what;
 	cpxlp *cpx, *cpx1;
-	int bitc, i, ii, itc, itci, j, m, mipstat, n, needsol, nint;
-	int nodecnt, nodelim, nos, npt, nround, opt, stat, stat0, stat1, stat10;
+	int bitc, finalMIPParam, i, ii, itc, itci, j, m, mipstat, n, needsol, nint;
+	int nodecnt, nodelim, nos, npt, nround, opt, savedAlg, stat, stat0, stat1, stat10;
 	real *bb, *bn, *l, *le, *u, w[4], *x, *x2, *y, *z, *z1;
 	real absmipgap, bbound, bcond, bobj, bobj0, feastol, inttol;
 	real relmipgap, obj, t;
@@ -8032,8 +8075,8 @@ QualityInfo {
 				}
 			if (mipbasis) {
 				opt = CPXgetprobtype(Env, cpx);
-				Contopt = CPXprimopt;
-				what = "CPXprimopt";
+				Contopt = CPXlpopt;
+				what = "CPXlpopt";
 #ifdef CPXPROB_MIQCP
 				npt = CPXPROB_FIXEDMILP;
 				switch(opt) {
@@ -8047,7 +8090,11 @@ QualityInfo {
  use_qpopt:
 					Contopt = CPXqpopt;
 					what = "CPXqpopt";
+					if (finalmipalg_val == 5) {
+						Bpf(&B, "Sifting cannot be applied to QP problems.\nSetting finalmipalg to automatic.\n");
+						finalmipalg_val = 0;
 					}
+				}
 #else
 				npt = nelqf ? 8 : 3;
 #endif
@@ -8068,8 +8115,18 @@ QualityInfo {
 				 && !CPXgetdblparam(Env,CPX_PARAM_EPINT,&inttol)
 				 && inttol > feastol))
 					CPXsetdblparam(Env, CPX_PARAM_EPRHS, inttol);
+				if (Contopt == CPXqpopt)
+					finalMIPParam = CPXPARAM_QPMethod;
+				else
+					finalMIPParam = CPXPARAM_LPMethod;
+				/*Set algorithm for the final LP*/
+				CPXgetintparam(Env, finalMIPParam, &savedAlg);
+				CPXsetintparam(Env, finalMIPParam, finalmipalg_val);
+				/*Solve final LP/QP*/
 				status = Contopt(Env, cpx);
 				stat1 = CPXgetstat(Env, cpx);
+
+				CPXsetintparam(Env, finalMIPParam, savedAlg); /*restore original*/
 				if (i)	/*restore "feasibility" tolerance*/
 					CPXsetdblparam(Env, CPX_PARAM_EPRHS, feastol);
 				if (status) {
@@ -8944,8 +9001,3 @@ main(int argc, char **argv)
  void
 mainexit_ASL(int rc)
 { longjmp(Jb, rc+1); }
-
-
-#ifdef CPLEXDRVLIB
-#include "cplex_lib.c"
-#endif
