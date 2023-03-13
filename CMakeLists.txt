@@ -20,6 +20,8 @@ endif()
 if (${CMAKE_VERSION} VERSION_GREATER "3.15.0")
   cmake_policy(SET CMP0091 NEW)
 endif()
+cmake_policy(SET CMP0069 NEW) 
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 project(ASL)
 
 cmake_minimum_required(VERSION 3.0)
@@ -46,6 +48,15 @@ endif()
 # Base directory
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(GENERATED_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
+
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT isSupported)
+if(isSupported)
+message("SUPPORTED")
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
 
 # Test if I have a parent project, in which case put generated targets 
 # in the asl folder on supported generators

@@ -1109,6 +1109,7 @@ static char
 			-1 = automatic choice (default)\n\
 			 0 = never\n\
 			 n > 0 ==> every n nodes",
+#ifdef XPRS_HEURSTRATEGY
 	heurstrategy_desc[] =
 #ifdef XPRS_HEUREMPHASIS
 	"deprecated, use heuremphasis:\n\t\t"
@@ -1119,6 +1120,7 @@ static char
 			 1 = basic heuristics\n\
 			 2 = enhanced heuristics\n\
 			 3 = extensive heuristics",
+#endif
 	heurthreads_desc[]	= "number of threads for the root node of\n\
 		branch-and-bound:\n\
 			-1 = determined from \"threads\" keyword\n\
@@ -1507,11 +1509,15 @@ static char
 	permuteseed_desc[]	= "seed for the random-number generator used by prepermute;\n\
 		default = 1",
 #endif
+#ifdef XPRS_PERTURB
 	perturb_desc[]		= "perturbation factor if autoperturb is set to 1;\n\
 		0 = default = automatic choice."
 #if XPVERSION >= 33
+
 		"\nDeprecated; overridden by primalperturb and dualperturb,\n"
 		"which should be used instead of perturb.",
+#endif
+#endif
 	primalperturb_desc[]	=
 		"Factor by which to possibly perturb the problem in the\n"
 		"dual primal algorithm.  If >= 0, overrides \"perturb\".\n"
@@ -1519,9 +1525,9 @@ static char
 	dualperturb_desc[]	=
 		"Factor by which to possibly perturb the problem in the\n"
 		"dual simplex algorithm.  If >= 0, overrides \"perturb\".\n"
-		"Default -1 ==> automatic choice; 0 ==> no perturbatation."
+
 #endif
-		,
+		,		"Default -1 ==> automatic choice; 0 ==> no perturbatation."
 	pivottol_desc[]		= "zero tolerance for pivots; default = 1e-9",
 #ifdef XPRS_MSP_SOLPRB_OBJ /*{*/
 /*		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"	*/
@@ -2230,7 +2236,9 @@ static keyword keywds[]={
   KW("heurrootcutfreq",	set_int, XPRS_HEURSEARCHROOTCUTFREQ, heurrootcutfreq_desc),
 #endif
   KW("heursearch",	set_int, XPRS_HEURSEARCHFREQ,	heursearch_desc),
+#ifdef XPRS_HEURSTRATEGY
   KW("heurstrategy",	set_int, XPRS_HEURSTRATEGY,	heurstrategy_desc),
+#endif
   KW("heurthreads",	set_int, XPRS_HEURTHREADS,	heurthreads_desc),
   KW("heurtree",	set_int, XPRS_HEURSEARCHTREESELECT, heurtree_desc),
   KW("iis",		set_known, set_iis,		iis_desc),
@@ -2349,7 +2357,9 @@ static keyword keywds[]={
   KW("netstalllimit", set_int, XPRS_NETSTALLLIMIT, netstalllimmit_desc),
 #endif
   KW("network",		set_known, set_network,		network_desc),
+#ifdef XPRS_GLOBALFILEBIAS
   KW("nodefilebias",	set_dbl, XPRS_GLOBALFILEBIAS,	nodefilebias_desc),
+#endif
 #ifdef XPRS_NODEPROBINGEFFORT
   KW("nodeprobingeffort", set_dbl, XPRS_NODEPROBINGEFFORT, nodeprobingeffort_desc),
 #endif
@@ -2370,7 +2380,9 @@ static keyword keywds[]={
 #ifdef XPRS_PREPERMUTESEED
   KW("permuteseed",	set_int, XPRS_PREPERMUTESEED,	permuteseed_desc),
 #endif
+#ifdef XPRS_PERTURB
   KW("perturb",		set_dbl, XPRS_PERTURB,		perturb_desc),
+#endif
   KW("pivottol",	set_dbl, XPRS_PIVOTTOL,		pivottol_desc),
 #ifdef XPRS_MSP_SOLPRB_OBJ /*{*/
   KW("pooldualred",	I_val, &dualred,		pooldualred_desc),
@@ -3908,7 +3920,7 @@ amplin(char *stub, char *argv[], dims *d)
 			Optimise = MSEsolve;
 			XPRS_mse_create(&mse);
 			}
-		XPRSsetintcontrol(prob, XPRS_HEURSTRATEGY, 0);
+		XPRSsetintcontrol(prob, XPRS_HEUREMPHASIS, 0);
 		if (dualred != 2 || dupcol != 2) {
 			j = XPRSgetintcontrol(prob, XPRS_PRESOLVEOPS, &i);
 			j = k = 0;

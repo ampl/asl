@@ -678,7 +678,7 @@ nowzero:
 #endif /*}*/
 
  static void
-badretfmt(int rc, char *fmt, ...)
+badretfmt(int rc, const char *fmt, ...)
 {
 	ASL *asl = cur_ASL;
 	va_list ap;
@@ -1457,6 +1457,13 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
  static char memlimit_desc[] = "Maximum amount of memory available to Gurobi (in GB, default\n\
 		no limit). The solution will fail if more memory is needed.";
 #endif
+
+#ifdef GRB_DBL_PAR_SOFTMEMLIMIT
+ static char softmemlimit_desc[] = "Maximum amount of memory available to Gurobi (in GB; default\n\
+		= no limit). The solution is returned even if more memory\n\
+		could be used.";
+#endif
+
 #if (GRB_VERSION_MAJOR == 4 && GRB_VERSION_MINOR >= 5) || GRB_VERSION_MAJOR >= 5 /*{*/
  static char minrelnodes_desc[] = "Number of nodes for the Minimum Relaxation heuristic to\n\
 		explore at the MIP root node when a feasible solution has not\n\
@@ -1526,6 +1533,14 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 				priority objectives.";
 #endif /*}*/
 
+#ifdef GRB_INT_PAR_NETWORKALG /* 10.0 */
+ static char networkalg_desc[] = "Controls whether to use network simplex, if an LP is a\n\
+		network problem:\n\
+			-1 = automatic choice (default)\n\
+			 0 = do not use network simplex\n\
+			 1 = use network sinmplex.";
+#endif
+
 #ifdef GRB_INT_PAR_NLPHEUR /* 9.5 */
  static char nlpheur_desc[] = "Controls the NLP heuristic, affecting non-convex quadratic\n\
 		problems:\n\
@@ -1568,6 +1583,14 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			1-3 = increasing focus on more stable computations.";
 #endif
 
+#ifdef GRB_INT_PAR_OBBT
+ static char obbt_desc[] = "Controls aggressiveness of Optimality-Based Bound Tightening:\n\
+			-1 = automatic choice (default)\n\
+			 0 = do not use OBBT\n\
+			 1 = low aggressiveness\n\
+			 2 = moderate  aggressiveness\n\
+			 3 = high aggressiveness.";
+#endif
 
  static char objno_desc[] = "Objective to optimize:\n\
 			0 = none\n\
@@ -2332,6 +2355,9 @@ keywds[] = {	/* must be in alphabetical order */
 #endif
 #if GRB_VERSION_MAJOR > 1 /*{*/
 	{"multprice_norm", sf_ipar, "NormAdjust", multprice_norm_desc},
+#ifdef GRB_INT_PAR_NETWORKALG
+	{ "networkalg", sf_ipar, GRB_INT_PAR_NETWORKALG, networkalg_desc},
+#endif
 #if GRB_VERSION_MAJOR >= 3
 	{ "networkcuts", sf_ipar, "NetworkCuts", "Network cuts:  " Overrides_cuts },
 #endif
@@ -2357,6 +2383,9 @@ keywds[] = {	/* must be in alphabetical order */
 #endif /*}*/
 #ifdef GRB_INT_PAR_NUMERICFOCUS
 	{ "numericfocus", sf_ipar, GRB_INT_PAR_NUMERICFOCUS, numericfocus_desc },
+#endif
+#ifdef GRB_INT_PAR_OBBT
+	{ "obbt", sf_ipar, GRB_INT_PAR_OBBT, obbt_desc },
 #endif
 	{ "objno", sf_mint, VP set_objno, objno_desc },
 #if GRB_VERSION_MAJOR >= 4
@@ -2497,6 +2526,9 @@ keywds[] = {	/* must be in alphabetical order */
 	{ "siftmethod", sf_ipar, GRB_INT_PAR_SIFTMETHOD, siftmethod_desc },
 #endif
 	{ "simplex", sf_ipar, Method, "Synonym for method." },
+#ifdef GRB_DBL_PAR_SOFTMEMLIMIT
+	{ "softmemlimit", sf_dpar, GRB_DBL_PAR_SOFTMEMLIMIT, softmemlimit_desc },
+#endif
 	{ "solnlimit", sf_ipar, "SolutionLimit", "maximum MIP solutions to find (default 2e9)" },
 	{ "solnsens", sf_mint, VP set_solnsens, solnsens_desc },
 	{ "sos", sf_mint, VP set_sos, sos_desc },
@@ -2553,7 +2585,7 @@ keywds[] = {	/* must be in alphabetical order */
 
  static Option_Info
 Oinfo = { "gurobi", verbuf, "gurobi_options", keywds, nkeywds, ASL_OI_keep_underscores, verbuf,
-	  0, MOkwf,0,0,0, 20220422, 0,0,0,0,0,0,0, ASL_OI_tabexpand | ASL_OI_addnewline };
+	  0, MOkwf,0,0,0, 20230310, 0,0,0,0,0,0,0, ASL_OI_tabexpand | ASL_OI_addnewline };
 
  static void
 enamefailed(GRBenv *env, const char *what, const char *name)
@@ -4374,6 +4406,7 @@ main(int argc, char **argv)
 		if ((nsos = suf_sos(i, &nsosnz, &sostype, 0, 0,
 				&sosbeg, &sosind, &sosref))) {
 			nv = n_var;
+			nrange = nranges;
 			nvr = nv + nrange;
 			nc = n_con;
 			nz = nzc;

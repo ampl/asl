@@ -98,8 +98,8 @@ sorry_CLP(EdRead *R, const char *what)
 #define memadj(x) (((x) + (sizeof(long)-1)) & ~(sizeof(long)-1))
 #endif
 
+ extern char* f_OPHOL;
  extern efunc f_OPPLTERM, f_OPVARVAL, f_OPFUNCALL;
- extern char *f_OPHOL(expr *e A_ASL);
  extern sfunc f_OPIFSYM;
 
  static void
@@ -281,7 +281,7 @@ eread(EdRead *R, int deriv)
 			k = ks = symargs = numargs = 0;
 			while(args < argse) {
 				arg = *args++ = eread(R, deriv);
-				if ((op = arg->op) == (efunc *)f_OPHOL)
+				if ((op = arg->op) == (efunc*)f_OPHOL)
 					symargs++;
 				else if (op == (efunc*)f_OPIFSYM)
 					ks++;
@@ -340,7 +340,7 @@ eread(EdRead *R, int deriv)
 			nn = nn0 = (int *)b;
 			for(args = rvf->args; args < argse; at++) {
 				arg = *args++;
-				if ((op = arg->op) == (efunc *)f_OPHOL) {
+				if ((op = arg->op) == (efunc*)f_OPHOL) {
 					*at = --symargs;
 					*sa++ = ((expr_h *)arg)->sym;
 					}
@@ -1349,7 +1349,7 @@ aholread(EdRead *R)
 		*s1++ = k;
 		}
 	*s1 = 0;
-	rvh->op = (efunc *)f_OPHOL;
+	rvh->op = (efunc*)f_OPHOL;
 	rvh->a = nv1;
 	return (expr *)rvh;
 	}
@@ -1368,7 +1368,7 @@ bholread(EdRead *R)
 	if (fread(s, i, 1, R->nl) != 1)
 		badline(R);
 	s[i] = 0;
-	rvh->op = (efunc *)f_OPHOL;
+	rvh->op = (efunc*)f_OPHOL;
 	rvh->a = nv1;
 	for(;;) switch(*s++) {
 			case 0: goto break2; /* so we return at end of fcn */

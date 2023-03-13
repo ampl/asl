@@ -9,7 +9,7 @@ arithchk.c	63b0185	6532
 asl.h	1fe3527a	42925
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	ec969e88	29
+asldate.c	b7805f9	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -41,7 +41,7 @@ errchk.h	f88aec0	1695
 f_read.c	12b32457	1227
 fg_read.c	f77acdfc	36818
 fg_write.c	198882e0	17423
-fgh_read.c	105019e	34404
+fgh_read.c	ed246ea7	34450
 float.h0	11d95cda	1822
 fpecatch.c	e1d8a914	1574
 fpinit.c	e816f8aa	5665
@@ -132,7 +132,7 @@ stderr.c	fc99b4f4	2096
 stdio1.h0	b6acbbe	3058
 strerror.c	1c5c813a	1362
 studchk0.c	d87e575	1388
-suf_sos.c	136739bf	12384
+suf_sos.c	e92f2e7b	12493
 value.c	6854152	5847
 writesol.c	e783bfe9	12157
 wrtsol_.c	15a9faa4	2431

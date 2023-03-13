@@ -460,3 +460,7 @@ New input suffixes (influencing Gurobi's behavior):  iisforce,
 iisforcelb, iisforceub, poolignore.  New output suffixes (returned by
 Gurobi on request):  concurrentwinmethod, maxvio, sensrhshi2,
 sensrhslo2, work.
+
+20230310
+  gurobi.c:  adjust to account for the fact that suf_sos() may change
+nranges (the number of range constraints).

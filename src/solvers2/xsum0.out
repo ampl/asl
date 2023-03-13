@@ -8,7 +8,7 @@ arithchk.c	63b0185	6532
 asl.h	13a346a3	48776
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	eff6521	29
+asldate.c	b7805f9	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -69,7 +69,7 @@ mainexit.c	e4761b9b	1713
 makefile.u	eebe0c4c	10337
 makefile.vc	fb30055d	7266
 mip_pri.c	f1dd1d47	7887
-misc.c	f08e6590	31431
+misc.c	fcd7702a	31506
 mpec_adj.c	8e59ceb	9172
 mpec_adj0.c	efb8be74	70
 mqpcheckv.c	eb808a2e	28794
@@ -115,7 +115,7 @@ stderr.c	fc99b4f4	2096
 stdio1.h0	b6acbbe	3058
 strerror.c	1c5c813a	1362
 studchk0.c	d87e575	1388
-suf_sos.c	f0af09b4	12349
+suf_sos.c	f3798487	12458
 value.c	6854152	5847
 writesol.c	e783bfe9	12157
 wrtsol_.c	15a9faa4	2431

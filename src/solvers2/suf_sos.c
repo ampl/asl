@@ -167,8 +167,8 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 	char *s0, *sostype;
 	int *c, *cm, *col1, *cz, *ja, *ja1, *jae, *p, *pri, *rn, *rt;
 	int *sospri, *sosbeg, *sosind, *v, *v0, *ve, *vm, *vz, *zc, *zg, *zv, *zv0, *zz;
-	int f, i, j, j0, jz, k, m, ms1, n, ndc, ndv, ng, np, ns1;
-	int nsos, nsos1, nsos2, nsosnz, nsosnz1;
+	int f, i, j, j0, jz, k, m, ms1, n, ndc, ndv, ng, np, nra;
+	int ns1, nsos, nsos1, nsos2, nsosnz, nsosnz1;
 	ograd *og, **ogp;
 	real *a, *g, *g0, *ge, *gn, *gnos, *sosref, *sufref, t, t1;
 	size_t fs, is, js, ks, L, *jZa, *jZa1, *jZae;
@@ -213,10 +213,16 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 		for(i = j; i < n; ++i)
 			if (v[i] & 2)
 				++ndv;
-		if (c)
-			for(i = 0; i < m; ++i)
-				if (c[i] & 2)
+		if (c) {
+			for(nra = i = 0; i < m; ++i)
+				if (c[i] & 2) {
 					++ndc;
+					if (c[i] & 1)
+						++nra;
+					}
+			if (nra && nranges >= nra)
+				nranges -= nra;
+			}
 		if (ndv + ndc) {
 			np = ndc + ndv;
 			if (ndc)

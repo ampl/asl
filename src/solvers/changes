@@ -3319,3 +3319,11 @@ fault that arose under when there are rare cancellations.  Example:
 	var x >= 1; var u; var w;
 	minimize o: (w + (1 - w))*(x - u) + u;	# really just x
 
+20221115
+  misc.c in both solvers.tgz and solvers2.tgz:  recant change of
+20220520, which had removed a sometimes needed call.
+
+20230310
+  fgh_read.c: a tweak that only matters to pedants.
+  suf_sos.c: adjust nranges (= asl->i.nranges_) when SOS2 constraints
+are handled.
