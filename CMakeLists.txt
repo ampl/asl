@@ -53,7 +53,7 @@ set(GENERATED_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT isSupported)
 if(isSupported)
-message("SUPPORTED")
+  message("INTERPROCEDURAL OPTIMIZATION is supported, enabled by default")
   set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
