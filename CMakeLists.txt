@@ -36,6 +36,7 @@ option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime 
 option(BUILD_MT_LIBS "Build the multithreaded library" OFF)
 option(BUILD_CPP "Build the cpp interface" OFF)
 option(BUILD_F2C "Build the f2c library" OFF)
+option(USE_LTO "Use link time optimization" ON)
 
 if(NOT BUILD_EXAMPLES)
   option(BUILD_EXAMPLES "Build the examples" OFF)
@@ -49,14 +50,14 @@ endif()
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(GENERATED_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
 
-
-include(CheckIPOSupported)
-check_ipo_supported(RESULT isSupported)
-if(isSupported)
-  message("INTERPROCEDURAL OPTIMIZATION is supported, enabled by default")
-  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+if(USE_LTO)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT isSupported)
+  if(isSupported)
+    message("INTERPROCEDURAL OPTIMIZATION is supported, enabled by default")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+  endif()
 endif()
-
 
 # Test if I have a parent project, in which case put generated targets 
 # in the asl folder on supported generators
