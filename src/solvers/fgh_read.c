@@ -98,7 +98,7 @@ sorry_CLP(EdRead *R, const char *what)
 #define memadj(x) (((x) + (sizeof(long)-1)) & ~(sizeof(long)-1))
 #endif
 
- extern char* f_OPHOL;
+ extern char* f_OPHOL(expr* e A_ASL);
  extern efunc f_OPPLTERM, f_OPVARVAL, f_OPFUNCALL;
  extern sfunc f_OPIFSYM;
 
