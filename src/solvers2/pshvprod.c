@@ -769,6 +769,8 @@ hv_back(int *o, real *w, real aO0, real adO0)
 			break;
 
 		  case OPVARREF:
+		  case OP_PLTERM0align:
+		  case OP_PLTERM1align:
 			break;
 
 		  default:/*DEBUG*/

@@ -8,7 +8,7 @@ arithchk.c	63b0185	6532
 asl.h	13a346a3	48776
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	b7805f9	29
+asldate.c	158d058e	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -56,7 +56,7 @@ getstub.c	e7c9ed06	13191
 getstub.h	f626e91d	7079
 htcl.c	f7623114	2070
 indic_cons.c	20213d	21941
-jac0dim.c	f6e08e00	6698
+jac0dim.c	56d3270	6907
 jac2dim.c	c2d8eba	1694
 jac2dim.h	81b97e7	1982
 jacdim.c	e2ace738	1794
@@ -92,9 +92,9 @@ opcode.hd	12bc8de3	1348
 opno.hd	f8e46748	2123
 opno2.h	f82baf62	4720
 opnos.hd	1be96111	120
-pfghread.c	1f5ae8ec	131808
+pfghread.c	bd6e8d1	131808
 printf.c	147de217	24293
-pshvprod.c	f2bd828a	49783
+pshvprod.c	feeb6324	49835
 psinfo.h	5a305c1	12657
 punknown.c	fa46cf10	1704
 qpcheck.c	1712f297	1588

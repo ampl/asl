@@ -39,6 +39,7 @@ extern void fpinit_ASL(VOID);
 #ifdef IEEE_8087
 #define Want_bswap
 #endif
+jmp_buf Jb;
 #ifdef Want_bswap
 
  void
@@ -67,6 +68,8 @@ bswap_ASL(void *x, size_t L)
  static void
 badfmt(EdRead *R)
 {
+	if (R->return_nofile & 2)
+		longjmp(Jb, 1);
 	badread(R);
 	fprintf(Stderr, "Unrecognized binary format.\n");
 	exit(1);
@@ -75,6 +78,8 @@ badfmt(EdRead *R)
  static void
 badints(EdRead *R, int got, int wanted)
 {
+	if (R->return_nofile & 2)
+		longjmp(Jb, 1);
 	badread(R);
 	fprintf(Stderr, "got only %d integers; wanted %d\n", got, wanted);
 	exit(1);
@@ -123,12 +128,16 @@ jac0dim_ASL(ASL *asl, const char *stub, ftnlen stub_len)
 		nl = fopen(filename, "rb");
 		}
 	if (!nl) {
-		if (return_nofile)
+		if (return_nofile & 1)
 			return 0;
 		fflush(stdout);
 		what_prog();
 		fprintf(Stderr, "can't open %s\n", filename);
 		exit(1);
+		}
+	if (return_nofile & 2) {
+		if (setjmp(Jb))
+			return 0;
 		}
 	R = EdReadInit_ASL(&ER, asl, nl, 0);
 	R->Line = 0;
@@ -145,6 +154,8 @@ jac0dim_ASL(ASL *asl, const char *stub, ftnlen stub_len)
 				badints(R, k, 5);
 			if (ncsi) {
 				if (ncsi != 6) {
+					if (return_file & 2)
+						return 0;
 					badread(R);
 					fprintf(Stderr,
 					 "expected 6th integer to be 0 or 6, not %d\n",

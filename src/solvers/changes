@@ -3327,3 +3327,15 @@ fault that arose under when there are rare cancellations.  Example:
   fgh_read.c: a tweak that only matters to pedants.
   suf_sos.c: adjust nranges (= asl->i.nranges_) when SOS2 constraints
 are handled.
+
+20230328
+  pfghread.c in solvers2.tgz:  fix a bug in computing derivatives of
+piecewise-linear terms.
+  pshvprod.c in solvers2.tgz:  fix a bug in computing Hessians
+involving piecewise-linear terms.
+
+20230329
+  jac0dim.c:  change return_nofile (= asl->i.return_nofile_) so
+return_nofile = 0 or 1 work as before and (return_nofile & 2) causes
+a quiet return of 0 when the given file does not have a valid .nl
+header (the first 10 lines).  The default return_nofile is still 0.

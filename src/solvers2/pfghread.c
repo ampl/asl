@@ -3982,7 +3982,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			if (!(ka = atop))
 				ka = new_a(S);
 			*deriv = ka;
-			new_derp(S, ia, ka, rv+1);
+			new_derp(S, ia, ka, rv+4);
 			op = nextopp(S, 5 + sizeof(void*)/sizeof(int));
 			if (needalign(op,4)) {
 				k = OP_PLTERM1align;
