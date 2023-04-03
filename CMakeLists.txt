@@ -30,6 +30,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${AMPL_CMAKE_MODULE_DIR})
 
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_MCMODELLARGE "Build the library linked with mcmodel=large flag, used for compiling lgo" OFF)
 option(BUILD_LICCHECK_PRINT "Build libraries with licence check flag" OFF)
 option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime (windows only)" OFF)
@@ -295,7 +296,14 @@ endif()
 
 macro(createSingleASL name sourcedir sources)
   cmake_parse_arguments(PAR "" "" "DEFINITIONS;INCLUDE;OPTIONS" ${ARGN})
-  add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
+  if (BUILD_SHARED_LIBS)
+    add_library(${name} SHARED ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
+    message("-- Building shared ${name} library")
+    set_target_properties(${name} PROPERTIES POSITION_INDEPENDENT_CODE ${BUILD_SHARED_LIBS})
+  else()
+    add_library(${name} STATIC ${${sources}} ${GENERATED_INCLUDE_DIR}/arith.h)
+    message("-- Building static ${name} library")
+  endif()
 
   
   if(PAR_DEFINITIONS)
