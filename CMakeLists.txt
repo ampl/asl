@@ -9,6 +9,7 @@
 # constants to the machine in which is run.
 # The following options (default off) control what is built:
 # BUILD_CPP to build the cpp wrapper to the ASL library
+# BUILD_SHARED_LIBS to build dynamic libraries instead of static
 # BUILD_DYNRT_LIBS to build the libraries linked against the dynamic runtime
 # BUILD_MT_LIBS to build the multithreaded libraries 
 # BUILD_F2C to build the fortran to c converter (https://www.netlib.org/f2c/f2c.pdf)
