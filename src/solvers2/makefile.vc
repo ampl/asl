@@ -89,7 +89,6 @@ a = \
 	htcl.obj \
 	indic_cons.obj \
 	jac0dim.obj \
-	jac2dim.obj \
 	jacdim.obj \
 	jacinc.obj \
 	jacinc1.obj \
@@ -145,7 +144,7 @@ avltree.obj: avltree.h
 bscanf.obj conscale.obj degree.obj derprop.obj duthes.obj dynlink.obj eval1.obj eval2.obj \
 	ewalloc1.obj ewalloc2.obj fg_write.obj fpinitmt.obj fullhes.obj funcadd0.obj \
 	func_add.obj g_fmt.obj genrowno.obj getstub.obj htcl.obj indic_cons.obj \
-	jac0dim.obj jac2dim.obj jacdim.obj jacinc1.obj jacinc.obj mip_pri.obj misc.obj \
+	jac0dim.obj jacdim.obj jacinc1.obj jacinc.obj mip_pri.obj misc.obj \
 	mpec_adj0.obj mqpcheckv.obj names.obj nl_obj.obj nqpcheck.obj obj_adj.obj \
 	obj_adj0.obj obj_prec.obj objval_.obj objconst.obj pfghread.obj pshvprod.obj \
 	repwhere.obj sigcatch.obj sjac0dim.obj sos_add.obj sphes.obj studchk0.obj \

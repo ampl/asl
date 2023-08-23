@@ -108,7 +108,6 @@ a = \
 	htcl.c \
 	indic_cons.c \
 	jac0dim.c \
-	jac2dim.c \
 	jacdim.c \
 	jacinc.c \
 	jacinc1.c \
@@ -171,7 +170,7 @@ avltree.o: avltree.h
 bscanf.o conscale.o degree.o derprop.o duthes.o dynlink.o eval1.o eval2.o \
 	ewalloc1.o ewalloc2.o fg_write.o fpinitmt.o fullhes.o funcadd0.o \
 	func_add.o g_fmt.o genrowno.o getstub.o htcl.o indic_cons.o \
-	jac0dim.o jac2dim.o jacdim.o jacinc1.o jacinc.o mip_pri.o misc.o \
+	jac0dim.o jacdim.o jacinc1.o jacinc.o mip_pri.o misc.o \
 	mpec_adj0.o mqpcheckv.o names.o nl_obj.o nqpcheck.o obj_adj.o \
 	obj_adj0.o obj_prec.o objval_.o objconst.o pfghread.o pshvprod.o \
 	repwhere.o sigcatch.o sjac0dim.o sos_add.o sphes.o studchk0.o \
@@ -334,7 +333,6 @@ xs0 = \
 	htcl.c \
 	indic_cons.c \
 	jac0dim.c \
-	jac2dim.c \
 	jac2dim.h \
 	jacdim.c \
 	jacinc.c \

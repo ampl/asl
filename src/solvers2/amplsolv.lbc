@@ -31,7 +31,6 @@ getstub.obj
 htcl.obj
 indic_cons.obj
 jac0dim.obj
-jac2dim.obj
 jacdim.obj
 jacinc.obj
 jacinc1.obj

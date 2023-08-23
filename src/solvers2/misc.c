@@ -790,7 +790,7 @@ badasl_ASL(ASL *a, int n, const char *who)
 			who, n);
 	else
 		fprintf(Stderr,
-		 "\n*** %s called before ASL_alloc, jacdim, jac2dim, or jacpdim\n", who);
+		 "\n*** %s called before ASL_alloc, jacdim, or jacpdim\n", who);
 	exit(1);
 	}
 

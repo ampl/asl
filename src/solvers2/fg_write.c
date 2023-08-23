@@ -851,8 +851,7 @@ eput(Staticfgw *S, expr *e)
 		(*pf)(nl, "v%d\n", (int)v->varno);
 		break;
 	 default:
-		fprintf(Stderr, "fg_write: unexpected type %d in eput.\n",
-			optype[nop]);
+		fprintf(Stderr, "fg_write: unexpected type %d in eput.\n", i);
 		longjmp(S->wjb, 1);
 	 }
 	}

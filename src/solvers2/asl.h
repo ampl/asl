@@ -923,7 +923,6 @@ TMInfo {
 #define myralloc	myralloc_ASL
 #define obj_prec	obj_prec_ASL
 #define optype		op_type_ASL
-#define optypeb		op_typeb_ASL
 #define pr_unknown	pr_unknown_ASL
 #define read_line	read_line_ASL
 #define report_where	report_where_ASL
@@ -1179,8 +1178,6 @@ QPinfo {
  extern FILE *jac0dim_ASL(ASL*, const char *stub, ftnlen stub_len);
  extern int  jac1dim_ASL(ASL*, const char *stub, fint *M, fint *N, fint *NO,
 			fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
- extern int  jac2dim_ASL (ASL*, const char *stub, fint *M, fint *N, fint *NO,
-		fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
  extern FILE *jac_dim_ASL(ASL*, const char *stub, fint *M, fint *N, fint *NO,
 			fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
  extern int  jacdim_(const char *stub, fint *M, fint *N, fint *NO, fint *NZ,
@@ -1221,7 +1218,7 @@ QPinfo {
  extern real objconst_ASL(ASL*,int);
  extern void objgrd_(fint *N, real *X, fint *NOBJ, real *G, fint *nerror);
  extern real objval_(fint *N, real *X, fint *NOBJ, fint *nerror);
- extern char optype[], optypeb[];
+ extern char optype[];
  extern int pfg_read_ASL(ASL*, FILE*, int flags);
  extern int pfgh_read_ASL(ASL*, FILE*, int flags);
  extern char *pr_unknown(FILE*, char*);
@@ -1306,7 +1303,6 @@ extern void set_max_dtoa_threads(unsigned int);
 #define int_catch(f,v) intcatch_ASL((ASL*)asl,f,v)
 #define jac0dim(stub,len) jac0dim_ASL((ASL*)asl,stub,len)
 #define jac1dim(s,m,n,no,nz,mxr,mxc,L) jac1dim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
-#define jac2dim(s,m,n,no,nz,mxr,mxc,L) jac2dim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
 #define jacdim(stub,M,N,NO,NZ,MXR,MXC,len) jac_dim_ASL((ASL*)asl,stub,M,N,NO,NZ,MXR,MXC,len)
 #define jacdim0(stub,len) jac0dim_ASL((ASL*)asl,stub,len)
 #define jacpdim(s,m,n,no,nz,mxr,mxc,L) jacpdim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
