@@ -49,7 +49,8 @@ int isatty_ASL; /* for use with "sw" under NT */
 #undef WIN32
 #define WIN32
 #else
-#include "fenv.h"
+#define _GNU_SOURCE
+#include <fenv.h>
 #endif
 
 #ifdef WIN32
