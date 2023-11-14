@@ -3334,8 +3334,18 @@ piecewise-linear terms.
   pshvprod.c in solvers2.tgz:  fix a bug in computing Hessians
 involving piecewise-linear terms.
 
-20230329
+20230330
   jac0dim.c:  change return_nofile (= asl->i.return_nofile_) so
-return_nofile = 0 or 1 work as before and (return_nofile & 2) causes
+(return_nofile & 1) works as before and (return_nofile & 2) causes
 a quiet return of 0 when the given file does not have a valid .nl
 header (the first 10 lines).  The default return_nofile is still 0.
+
+20230818
+  solvers2.tgz:  fix an error-message glitch in fg_write.c; omit
+source file jac2dim.c.
+
+20231111
+  solvers.tgz:  minor tweaks that should not affect results.
+  solvers2.tgz: minor tweaks as in solvers.tgz, plus a bug fix to
+pfghread.c that affected Hessians of imported functions having
+several arguments involving variables.

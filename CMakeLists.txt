@@ -247,6 +247,7 @@ add_prefix(ASL2_SOURCES  ${ASL2_SOURCE_DIR}/
   degree.c        derprop.c       dtoa1.c         duthes.c
   dynlink.c       eval1.c         eval2.c         ewalloc1.c
   ewalloc2.c      f_read.c        fg_read.c       fg_write.c
+  fgh_read.c      pfg_read.c
   fpecatch.c      fpinit.c        fullhes.c       func_add.c
   funcadd1.c      g_fmt.c         genrowno.c      getenv.c
   getstub.c       htcl.c          indic_cons.c    jac0dim.c

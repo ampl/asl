@@ -9,7 +9,7 @@ arithchk.c	63b0185	6532
 asl.h	1fe3527a	42925
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	158d058e	29
+asldate.c	f734fb13	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -32,7 +32,7 @@ conval.c	f1e4dc7d	4569
 degree.c	3eafa26	4337
 derprop.c	e75c750f	1361
 details.c0	fa7ec7b3	182
-dtoa.c	fd6feb77	158408
+dtoa.c	576045b	158447
 dtoa1.c	1928cdca	3352
 duthes.c	e13b176c	3874
 dvalue.hd	9606f1	1125
@@ -103,7 +103,7 @@ op_type.hd	f803bc0b	1287
 op_typeb.hd	1c1e0c07	1287
 opcode.hd	12bc8de3	1348
 opnos.hd	1a7c2f8d	78
-pfg_read.c	10bf2455	98287
+pfg_read.c	1dca51d4	98321
 pfghread.c	b815512	1107
 printf.c	147de217	24293
 pshvprod.c	1dcadea7	32089
@@ -125,7 +125,7 @@ rops2.c	25c9f1	20459
 sigcatch.c	fe35ba8b	2374
 sjac0dim.c	ff686adb	1546
 sos_add.c	fb5da0e8	23060
-sphes.c	e4e0bfbe	27806
+sphes.c	f70a4208	27795
 sprintf.c	e6ce1d45	3050
 sscanf.c	f5a6f021	3327
 stderr.c	fc99b4f4	2096

@@ -3182,7 +3182,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				i1 = opg3[2*i+1];
 				for(j = 0; j < k; ++j) {
 					j1 = opg3[2*j+1];
-					*fh++ = i1 <= j1 ? (i1*(i1+1)>>1) + j1
+					*fh++ = i1 >= j1 ? (i1*(i1+1)>>1) + j1
 							 : (j1*(j1+1)>>1) + i1;
 					}
 				}

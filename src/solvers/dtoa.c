@@ -1869,7 +1869,7 @@ mult(Bigint *a, Bigint *b MTd)
 #else
 #ifdef Pack_32
 	for(; xb < xbe; xb++, xc0++) {
-		if (y = *xb & 0xffff) {
+		if ((y = *xb & 0xffff)) {
 			x = xa;
 			xc = xc0;
 			carry = 0;
@@ -1883,7 +1883,7 @@ mult(Bigint *a, Bigint *b MTd)
 				while(x < xae);
 			*xc = carry;
 			}
-		if (y = *xb >> 16) {
+		if ((y = *xb >> 16)) {
 			x = xa;
 			xc = xc0;
 			carry = 0;
@@ -5235,9 +5235,11 @@ dtoa_r(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve, char
 #ifndef SET_INEXACT
 #ifdef Check_FLT_ROUNDS
 	try_quick = Rounding == 1;
+#else
+	try_quick = 1;
 #endif
 #endif /*SET_INEXACT*/
-#endif
+#endif /*USE_BF96*/
 
 	if (mode > 5) {
 		mode -= 4;

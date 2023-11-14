@@ -1578,7 +1578,6 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 				}
 			}
 		*rtodo++ = 0;	/* reset */
-		V[i].dO = 1.;
 		while((uhw = uhwi)) {
 			uhwi = uhwi->next;
 			r = uhw->r;
@@ -1623,7 +1622,6 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 				*utodoj = uhw;
 				}
 			}
-		V[i].dO = 0.;
 
 		hop1 = *otodoi;
 		*otodoi++ = 0;

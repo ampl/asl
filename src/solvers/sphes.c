@@ -1219,7 +1219,6 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 		*rtodo++ = 0;	/* reset */
 		while((uhw = uhwi)) {
 			uhwi = uhwi->next;
-			si = s;
 			ogp = uhw->ogp;
 			r = uhw->r;
 			ogpe = ogp + r->n;
