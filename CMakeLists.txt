@@ -40,11 +40,11 @@ option(BUILD_CPP "Build the cpp interface" OFF)
 option(BUILD_F2C "Build the f2c library" OFF)
 option(USE_LTO "Use link time optimization" ON)
 
-if(NOT BUILD_EXAMPLES)
-  option(BUILD_EXAMPLES "Build the examples" OFF)
+if(NOT BUILD_ASL_EXAMPLES)
+  option(BUILD_ASL_EXAMPLES "Build the examples" OFF)
 else()
   option(BUILD_F2C "Build the f2c library" ON)
-  option(BUILD_EXAMPLES "Build the examples" ON)
+  option(BUILD_ASL_EXAMPLES "Build the examples" ON)
   set(BUILD_F2C ON)
 endif()
 
@@ -200,6 +200,20 @@ endif()
 # http://www.cmake.org/pipermail/cmake/2008-October/024492.html
 add_custom_target(arith-h DEPENDS ${GENERATED_INCLUDE_DIR}/arith.h)
 addToASLFolder(support arith-h arithchk)
+
+# Extract version information from the content of asldate.c
+file(READ ${SRCDIR}/solvers/asldate.c ASL_VER)
+string(REGEX MATCH "= ([0-9]*)" _ ${ASL_VER})
+# Check if the version information was found
+if(CMAKE_MATCH_1)
+    set(ASL_VERSION ${CMAKE_MATCH_1})
+    if(hasParent)
+    set(ASL_VERSION ${CMAKE_MATCH_1} PARENT_SCOPE)
+    endif()
+    message(STATUS "Found ASL version: ${ASL_VERSION}")
+else()
+    message(WARNING "Failed to extract ASL version from asldate.c")
+endif()
 
 # ASL 1 sources
 set(ASL_SOURCE_DIR ${SRCDIR}/solvers)
@@ -434,7 +448,7 @@ if(BUILD_F2C)
   add_subdirectory(${SRCDIR}/f2c)
   addToASLFolder(support f2c)
 endif()
- if(BUILD_EXAMPLES)
+ if(BUILD_ASL_EXAMPLES)
   add_subdirectory(${SRCDIR}/examples)
 endif()
 
