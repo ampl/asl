@@ -2873,10 +2873,8 @@ getgroup(Static *S, real scale, expr *e, PSfind *p)
 	g->pi.b = b;
 	g->pi.be = be;
 	del_Elemtemp(S, p1.b);
-	if (!b && !nzc1) {
-		--p->ng;
+	if (!b && !nzc1)
 		return 1;
-		}
 	for(; b < be; b++) {
 		if (!(U = b->U))
 			continue;
