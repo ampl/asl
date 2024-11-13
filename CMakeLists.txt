@@ -356,6 +356,8 @@ macro(createSingleASL name sourcedir sources)
 	set_property(TARGET ${name} PROPERTY
 	    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
+  endif()
+  if(MSVC)
     target_compile_options(${name} PRIVATE 
       /wd4013 /wd4018 /wd4101 /wd4244 /wd4273 /wd4267 /wd4996)
   else()
