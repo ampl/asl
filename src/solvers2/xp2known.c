@@ -424,11 +424,12 @@ hvpinit_nc_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y)
 		phvi->ihi = asl->P.ihi1;
 		tp1 = phvi->tpv1;
 		phvi->r = 0;
+		Thparshv2* tpi;
 #ifdef ALLOW_OPENMP
 #pragma omp parallel num_threads(m)
  {
 		int it, jt;
-		Thparshv2 *tpi;
+		
 
 		it = omp_get_thread_num();
 		tpi = tp1 + it;
