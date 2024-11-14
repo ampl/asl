@@ -372,14 +372,20 @@ set(ASL2_SOURCES ${ASL2_SOURCES} ${ASL2_HEADERS})
 
 # Create ASL 1 
 createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
+
 # Create ASL 2
-createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+set(ADDITIONALDEFS "")
+if(WIN32)
+   set(ADDITIONALDEFS NO_MBLK_LOCK NO_PTHREADS)
+endif()
+createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                    DEFINITIONS ${ADDITIONALDEFS})
 
 if(BUILD_LICCHECK_PRINT)
   createSingleASL(asl-lc ${ASL_SOURCE_DIR} ASL_SOURCES 
                         DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
   createSingleASL(asl2-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                        DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+                        DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
 endif()
 
 # Create libs with support for multiple threads
@@ -414,22 +420,24 @@ if(MSVC AND BUILD_DYNRT_LIBS)
   # createSingleASL adds the appropriate public flags if the library name
   # matches "dynrt"
   createSingleASL(asl-dynrt ${ASL_SOURCE_DIR} ASL_SOURCES)
-  createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+  createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                            DEFINITIONS ${ADDITIONALDEFS})
   if(BUILD_LICCHECK_PRINT)
     createSingleASL(asl-dynrt-lc ${ASL_SOURCE_DIR} ASL_SOURCES
                                 DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
     createSingleASL(asl2-dynrt-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                                DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+                                DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
   endif()
 endif()
 if(BUILD_MCMODELLARGE)
- createSingleASL(asl2-large ${ASL2_SOURCE_DIR} ASL2_SOURCES)
+ createSingleASL(asl2-large ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                               DEFINITIONS ${ADDITIONALDEFS})
  if(${ARCH} EQUAL 64)
  target_compile_options(asl2-large PUBLIC "-mcmodel=large")
  endif()
  if(BUILD_LICCHECK_PRINT)
  createSingleASL(asl2-large-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                               DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+                               DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
  if(${ARCH} EQUAL 64)
   target_compile_options(asl2-large-lc PUBLIC "-mcmodel=large")
  endif()
