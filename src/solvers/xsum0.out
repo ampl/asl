@@ -4,12 +4,12 @@ amplsolv.lbc	e92fe2c2	1075
 amplsolv.sy	5451119	1343
 arith.ibm	f398be2b	1391
 arith.h0	e206209c	2309
-arith.h1	12e5e42c	1871
+arith.h1	f053bd25	177
 arithchk.c	63b0185	6532
 asl.h	1fe3527a	42925
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	f734fb13	29
+asldate.c	8721c18	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -32,7 +32,7 @@ conval.c	f1e4dc7d	4569
 degree.c	3eafa26	4337
 derprop.c	e75c750f	1361
 details.c0	fa7ec7b3	182
-dtoa.c	576045b	158447
+dtoa.c	f84c88f9	159375
 dtoa1.c	1928cdca	3352
 duthes.c	e13b176c	3874
 dvalue.hd	9606f1	1125
@@ -44,7 +44,7 @@ fg_write.c	198882e0	17423
 fgh_read.c	ed246ea7	34450
 float.h0	11d95cda	1822
 fpecatch.c	e1d8a914	1574
-fpinit.c	e816f8aa	5665
+fpinit.c	66e5c26	5685
 fpinitmt.c	f58d6f11	4947
 fpsetprec.s	1d0b2972	535
 fpsetprec64.s	987339e	488
@@ -59,12 +59,12 @@ funcaddr.c	fc16b89a	1197
 g_fmt.c	642f235	3141
 genrowno.c	1a8171dc	1805
 getenv.c	e86c81a2	1466
-getstub.c	e05acb35	13344
+getstub.c	e8e3042d	13362
 getstub.h	f626e91d	7079
 htcl.c	6522bee	2279
 indic_cons.c	f1f99a7c	13970
 jac0dim.c	7d6131d	7033
-jac2dim.c	c2d8eba	1694
+jac2dim.c	1408b79e	1694
 jac2dim.h	81b97e7	1982
 jacdim.c	e2ace738	1794
 jacinc.c	ef90060e	2276
@@ -80,7 +80,7 @@ makefile.vc	1bb69704	7500
 makefile.wat	c465856	5860
 mip_pri.c	f1dd1d47	7887
 misc.c	e6adc1b5	31635
-mpec_adj.c	f15f4697	9223
+mpec_adj.c	e13eb74e	9834
 mpec_adj0.c	efb8be74	70
 mqpcheckv.c	e60e70cf	19903
 mypow.c	f6f74614	2464
@@ -91,7 +91,7 @@ nlp2.h	fcdcbc2a	7126
 nqpcheck.c	1e266369	18358
 nqpcheckZ.c	ea215f98	1188
 obj2val.c	e939c11	4492
-obj_adj.c	1c990cd0	17623
+obj_adj.c	f419c232	18138
 obj_adj.h	eed794cf	2218
 obj_adj0.c	ffe042be	67
 obj_prec.c	fd065560	1440
@@ -107,7 +107,7 @@ pfg_read.c	1dca51d4	98321
 pfghread.c	b815512	1107
 printf.c	147de217	24293
 pshvprod.c	1dcadea7	32089
-psinfo.h	f251dd4	10201
+psinfo.h	1641cefc	10710
 punknown.c	fa46cf10	1704
 qp_read.c	eb2d7246	3986
 qpcheck.c	1712f297	1588

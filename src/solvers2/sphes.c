@@ -24,6 +24,24 @@ of or in connection with the use or performance of this software.
 #else
 #define alignarg(x) /*nothing*/
 #endif
+#ifdef ALLOW_OPENMP
+/* asl.h has #defined MULTIPLE_THREADS */
+#include <omp.h>
+#define NO_PTHREADS
+#elif !defined(NO_PTHREADS)
+#include <pthread.h>
+#ifndef MULTIPLE_THREADS
+#define MULTIPLE_THREADS
+#endif
+#define PTHREADS(x) x
+#endif
+#ifdef NO_PTHREADS
+#define pthread_mutex_lock(t) /*nothing*/
+#define pthread_mutex_unlock(t) /*nothing*/
+#define PTHREADS(x) /*nothing*/
+#endif
+#undef exit
+extern void wk_init_ASL(real*, int*, real);
 
  static void
 hv_fwd(int *o, real *w, int *oend)	/* for determining sparsity */
@@ -886,7 +904,7 @@ new_uhw(EvalWorkspace *ew, range *r)
 	uHeswork *rv = ew->uhw_free;
 	ew->uhw_free = (uHeswork*)&rv->ogp[r->n];
 	if (ew->uhw_free > ew->uhw_free_end) {
-		/*DEBUG*/ fprintf(Stderr, "\n**** hop_free botch in new_Hesoprod!\n");
+		/*DEBUG*/ fprintf(Stderr, "\n**** botch in new_uhw!\n");
 		exit(1);
 		}
 	return rv;
@@ -1055,6 +1073,433 @@ upper_to_lower(EvalWorkspace *ew, SputInfo *spi, size_t nz)
 	Del_mblk_ASL((ASL*)asl, rs);
 	}
 
+#ifdef MULTIPLE_THREADS
+ typedef struct RangeInfo RangeInfo;
+ struct
+RangeInfo {
+	range *r;
+	real *hsave;	/* for results of pshv_prod */
+	uHeswork *uhw;
+	int i1;		/* 0 <= i1 < r->n indicates r->lap[i1] */
+	};
+
+ typedef struct {
+	ASL_pfgh *asl;
+	RangeInfo *ri, *ri0, *ria, *rie;
+	PTHREADS(pthread_mutex_t mutex;)
+	EvalWorkspace *ew;	/* original workspace */
+	SputInfo *spi;
+	uHeswork *uhw, **utodo;
+	int *rperm;
+	int i, iow, ir, iy, nobj, nr, nzc, start;
+	int *tdone;
+	linarg **lap, **lape;
+	real *ow, *y;
+	} Thpars;
+
+ typedef struct {
+	int tno;		/* thread number */
+	int i;			/* currently working on x[i] */
+	int i1;			/* currently working on ri->r->lap[i1] */
+	Thpars *tp;
+	EvalWorkspace *ew;	/* thread workspace and ASL pointer */
+	RangeInfo *ri;		/* current */
+	uHeswork *uhw;		/* current (n >= nv) */
+	} Thpars1;
+
+ static int
+ttodo(Thpars *tp, Thpars1 *tp1)
+{
+	RangeInfo *ri;
+	linarg **lap;
+	range *r;
+	uHeswork *uhw;
+
+	if (tp->start) {
+		tp->start = 0;
+		tp->ri = tp->ri0;
+		goto starting;
+		}
+	if ((lap = tp->lap) && lap < tp->lape) {
+		ri = tp1->ri = tp->ri;
+		tp1->uhw = 0;
+		tp1->i = tp->i;
+		tp1->i1 = lap - ri->r->lap;
+		tp->lap = lap + 1;
+		goto ret;
+		}
+	tp->ri++;
+ starting:
+	if (tp->ri >= tp->rie) {
+		tp1->ri = 0;
+		return 0;
+		}
+	tp1->ri = ri = tp->ri;
+	tp1->i = tp->i;
+	r = ri->r;
+	if ((uhw = ri->uhw) /*r->n >= r->nv*/) {
+		tp1->uhw = uhw;
+		tp->lap = 0;
+		tp1->i1 = ri->i1++;
+		}
+	else {
+		tp1->uhw = 0;
+		tp->lap = r->lap + 1;
+		tp->lape = r->lap + r->n;
+		tp1->i1 = 0;
+		}
+ ret:
+	return 1;
+	}
+
+ static void*
+tstart1(void *arg)
+{
+	ASL_pfgh *asl;
+	EvalWorkspace *ew;
+	Ogptrs *q, *qe;
+	RangeInfo *ri;
+	Thpars *tp;
+	Thpars1 *tp1;
+	Varval *V, *v;
+	int i, i1, j, n, nobj, ow, *ui, *uie, y;
+	linarg *la, **lap, **lape;
+	range *r;
+	real *hs, *s, *si, *w;
+	uHeswork *uhw;
+
+	tp1 = arg;
+	tp = tp1->tp;
+	ow = tp->iow;
+	y = tp->iy;
+	nobj = tp->nobj;
+	ew = tp1->ew;
+	asl = (ASL_pfgh*)ew->asl;
+	w = ew->w;
+	V = (Varval*)w;
+	s = w + asl->P.dOscratch;
+ top:
+	i = tp1->i;
+	ri = tp1->ri;
+	r = ri->r;
+	lap = r->lap;
+	lape = lap + (n = r->n);
+	ui = r->ui;
+	uie = ui + r->nv;
+	while(ui < uie) {
+		v = V + *ui++;
+		v->aO = v->dO = v->adO = 0.;
+		}
+	hs = ri->hsave;
+	if ((uhw = tp1->uhw)) {
+		q = uhw->ogp;
+		qe = q + r->n;
+		si = s;
+		do {
+			if (q->ov < q->ove && *q->ov == i)
+				*si = 1;
+			si++;
+			} while(++q < qe);
+		pshv_prod1(ew, r, nobj, ow, y);
+		q = uhw->ogp;
+		si = s;
+		do {
+			if (q->ov < q->ove && *q->ov == i) {
+				*si = 0;
+				++q->ov;
+				++q->oc;
+				}
+			si++;
+			} while(++q < qe);
+		}
+	else {
+		i1 = tp1->i1;
+		si = s + i1;
+		*si = 1;
+		pshv_prod1(ew, r, nobj, ow, y);
+		*si = 0;
+		lap += i1;
+		hs += i1*n - i1*(i1-1)/2;
+		}
+	do {
+		la = *lap++;
+		*hs++ =  V[la->u.v].aO;
+		}
+		while(lap < lape);
+	pthread_mutex_lock(&tp->mutex);
+#ifdef ALLOW_OPENMP
+#pragma omp critical
+ {
+#endif
+	j = ttodo(tp,tp1);
+	pthread_mutex_unlock(&tp->mutex);
+#ifdef ALLOW_OPENMP
+ }
+#endif
+	if (j)
+		goto top;
+	return 0;
+	}
+
+ static void*
+tstart2(void *arg)
+{
+	ASL_pfgh *asl;
+	EvalWorkspace *ew;
+	Ogptrs *q, *qe;
+	RangeInfo *ri;
+	Thpars *tp;
+	Thpars1 *tp1;
+	Varval *V, *v;
+	int i, i1, j, n, nobj, *ui, *uie;
+	linarg *la, **lap, **lape;
+	range *r;
+	real *hs, *ow, *s, *si, *w, *y;
+	uHeswork *uhw;
+
+	tp1 = arg;
+	tp = tp1->tp;
+	ow = tp->ow;
+	y = tp->y;
+	nobj = tp->nobj;
+	ew = tp1->ew;
+	asl = (ASL_pfgh*)ew->asl;
+	w = ew->w;
+	V = (Varval*)w;
+	s = w + asl->P.dOscratch;
+ top:
+	i = tp1->i;
+	ri = tp1->ri;
+	r = ri->r;
+	n = r->n;
+	si = s;
+	lap = r->lap;
+	lape = lap + n;
+	ui = r->ui;
+	uie = ui + r->nv;
+	while(ui < uie) {
+		v = V + *ui++;
+		v->aO = v->dO = v->adO = 0.;
+		}
+	hs = ri->hsave;
+	if ((uhw = tp1->uhw)) {
+		q = uhw->ogp;
+		qe = q + n;
+		do {
+			if (q->ov < q->ove && *q->ov == i)
+				*si = *q->oc;
+			si++;
+			} while(++q < qe);
+		pshv_prod_ASL(ew, r, nobj, ow, y);
+		q = uhw->ogp;
+		si = s;
+		do {
+			if (q->ov < q->ove && *q->ov == i) {
+				*si = 0;
+				++q->ov;
+				++q->oc;
+				}
+			si++;
+			} while(++q < qe);
+		}
+	else {
+		if ((i1 = tp1->i1)) {
+			hs += i1*n - i1*(i1-1)/2;
+			lap += i1;
+			}
+		si = s + i1;
+		*si = 1;
+		pshv_prod_ASL(ew, r, nobj, ow, y);
+		*si = 0;
+		}
+	do {
+		la = *lap++;
+		*hs++ =  V[la->u.v].aO;
+		}
+		while(lap < lape);
+	pthread_mutex_lock(&tp->mutex);
+#ifdef ALLOW_OPENMP
+#pragma omp critical
+ {
+#endif
+	j = ttodo(tp,tp1);
+	pthread_mutex_unlock(&tp->mutex);
+#ifdef ALLOW_OPENMP
+ }
+#endif
+	if (j)
+		goto top;
+	return 0;
+	}
+
+ EvalWorkspace*
+ewalloc3_ASL(ASL_pfgh *asl, EvalWorkspace *ew, int keep)
+{
+	/* Similar to ewalloc2_ASL, but omitting H0 and returning storage from */
+	/* Malloc when keep == 0 (so we can can free the storage) rather than */
+	/* M1alloc (keep == 1). */
+
+	EvalWorkspace *rv;
+	Varval *v, *ve;
+	arglist *al;
+	char *s;
+	const char **sa;
+	func_info *fi;
+	int i, nc, nf, nlogc, nlv, no, nv, nv0, nvx;
+	real *d, *lastx, *ra, *w;
+	size_t extra, L, La, Le, Lh, Lo, Lu, Luw, Lx, Lxc, *nxc;
+	tfinfo **ptfi, *tfi;
+#ifdef NANDEBUG
+	typedef union {real r; unsigned int x[2]; } U;
+	U u0, *u, *ue;
+#endif
+
+	switch (asl->i.ASLtype) {
+	  /* case ASL_read_fgh: */
+	  /* case ASL_read_pfg: */
+	  case ASL_read_pfgh:
+		break;
+	  default:
+		fprintf(Stderr, "\nUnexpected ASLtype = %d in ewalloc3(()\n", asl->i.ASLtype);
+		fflush(Stderr);
+		exit(1);
+		}
+	nc = nclcon;
+	nlogc = n_lcon;
+	no = n_obj;
+	nf = asl->i.nfinv;
+	La = nf * sizeof(arglist);
+	Lo = (nc + no)*sizeof(real);
+	Lu = asl->I.gscrx * sizeof(real);
+	Lx = x0len;
+	Le = (sizeof(EvalWorkspace) + sizeof(real) - 1) & ~(sizeof(real)-1);
+	Lxc = ((2*(nc + no)+ nlogc)*sizeof(size_t) + sizeof(real) - 1) & ~(sizeof(real)-1);
+	Lh = ew ? 0 : (asl->I.nhop * sizeof(Hesoprod) + sizeof(real) - 1) & ~(sizeof(real)-1);
+/*	Luw = (asl->I.uhlen + sizeof(real) - 1) & ~(sizeof(real)-1); */
+	Luw = 0;
+	if ((nlv = nlvc) < nlvo)
+		nlv = nlvo;
+	L = La + Le + Lh + Lo + Lu + Luw + Lx + asl->i.derplen
+		+ asl->i.wlen + asl->i.numlen + Lxc
+		+ asl->i.ra_max*sizeof(real) + asl->i.sa_max*sizeof(char*);
+	if (L & (sizeof(real) - 1)) {
+		extra = sizeof(real) - (L & (sizeof(real) - 1));
+		L += extra;
+		}
+	rv = (EvalWorkspace*) (keep ? M1alloc(L) : Malloc(L));
+	ACQUIRE_MBLK_LOCK(&asl->i, MemLock);
+	++asl->i.n_ew0;
+	*asl->i.pewthread = rv;
+	asl->i.pewthread = &rv->ewthread;
+	FREE_MBLK_LOCK(&asl->i, MemLock);
+	s = (char*)rv + Le;
+	memset(rv, 0, Le + Lxc);
+	rv->asl = (ASL*)asl;
+	rv->nlv = nlv;
+	rv->nxval = 1;
+	rv->x0kind = ASL_first_x;
+	nxc = (size_t*)s;
+	rv->ncxval = nxc;
+	rv->ncxgval = nxc += nc;
+	rv->nlxval = nxc += nc;
+	rv->noxval = nxc += nlogc;
+	rv->noxgval = nxc += no;
+	s += Lxc;
+	if (ew)
+		rv->hop_free = rv->hop_free0 = 0;
+	else {
+		rv->hop_free0 = rv->hop_free = (Hesoprod*)s;
+		rv->hop_free_end = rv->hop_free0 + asl->I.nhop;
+		s += Lh;
+		}
+	rv->uhw_free = rv->uhw_free0 = rv->uhw_free_end = 0;
+/*	rv->uhw_free = rv->uhw_free0 =(uHeswork*)s;	*/
+/*	rv->uhw_free_end = (uHeswork*)((char*)rv->uhw_free0 + asl->I.uhlen);	*/
+/*	s += Luw;					*/
+	rv->H0 = 0;
+	lastx = (real*)s;
+	s += Lx;
+	rv->unopscr = (real*)s;
+	s += Lu;
+	rv->oyow0 = (real*)s;
+	s += Lo;
+	memcpy(s, asl->i.numvals, asl->i.numlen);
+	rv->w = w = (real*)(s += asl->i.numlen);
+#ifdef NANDEBUG
+	u0.x[0] = 0x12345678;
+	u0.x[1] = 0xfff7abcd;	/* signalling NaN */
+	u = (U*)w;
+	ue = (U*)(w + asl->P.rtodo);
+	while(u < ue)
+		*u++ = u0;
+	__fpu_control = _FPU_IEEE - _FPU_EXTENDED + _FPU_DOUBLE - _FPU_MASK_IM;
+	_FPU_SETCW(__fpu_control);
+	signal(SIGFPE, fpecatch_ASL);
+#endif
+	nv = asl->i.n_var_;
+
+	/* The following loop only matters under obscure conditions when setting */
+	/* up Hessian compuations involving defined variables having linear parts */
+	/* and used linearly in a constraint or objective. */
+	/* With default AMPL settings, this situation does not arise. */
+	v = (Varval*)w;
+	for(ve = v + nv; v < ve; ++v)
+		v->dO = v->aO = 0.;
+
+	memset(w + asl->P.rtodo, 0, asl->P.zaplen);
+	rv->Lastx = lastx;
+	nv0 = asl->i.n_var0;
+	nvx = nv0 + asl->i.nsufext[ASL_Sufkind_var];
+	rv->dv = (Varval*)w + nvx;
+	rv->dv1 = (Varval*)rv->dv + combc + como;
+	s += asl->i.wlen;
+	rv->derps = d = (real*)s;
+	if ((i = asl->i.maxvar - asl->i.defvar0) > 0)
+		memset(d + asl->i.defvar0, 0, i*sizeof(real));
+	s += asl->i.derplen;
+/*	rv->derpzap = d + nvx + combc + como + comc1 + como1; */
+	rv->wantderiv = want_derivs;
+	rv->ndhmax = asl->P.ndhmax;
+	if (asl->i.X0_) {
+		memcpy(w, asl->i.X0_, nv0*sizeof(real));
+		if (nv > nv0)
+			memset(w + nv0, 0, (nv-nv0)*sizeof(real));
+		}
+	else
+		memset(w, 0, nv*sizeof(real));
+	if (nf) {
+		ra = (real*)s;
+		sa = (const char**)(ra + asl->i.ra_max);
+		rv->al = al = (arglist*)(sa + asl->i.sa_max);
+		ptfi = (tfinfo**)asl->i.invd;
+		memset(al, 0, nf*sizeof(arglist));
+		for(i = 0; i < nf; ++i, ++al) {
+			tfi = ptfi[i];
+			al->n = al->nin = tfi->n;
+			if ((al->nr = tfi->nr))
+				al->ra = ra;
+			al->at = tfi->at;
+			al->dig = tfi->wd;
+			if ((al->nsin = tfi->n - tfi->nr))
+				al->sa = sa;
+			fi = tfi->fi;
+			al->f = (function*)fi;
+			al->funcinfo = fi->funcinfo;
+			al->AE = asl->i.ae;
+			}
+		}
+	if (asl->P.wkinit0)
+		wk_init_ASL(w, asl->P.wkinit0, 0.);
+	if (asl->P.wkinit2)
+		wk_init_ASL(w, asl->P.wkinit2, 2.);
+	if (asl->P.wkinitm1)
+		wk_init_ASL(w, asl->P.wkinitm1, -1.);
+	if (ew)
+		memcpy(rv->w, ew->w, asl->i.wlen);
+	return rv;
+	}
+#endif
+
  fint
 sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 {
@@ -1064,10 +1509,24 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 	Objrep **por;
 	Ogptrs *q, *qe;
 	SputInfo *spi, *spi1;
+#ifdef MULTIPLE_THREADS
+	RangeInfo *ri, *ri0, *rie;
+	Thpars tp;
+	Thpars1 *tp1, *tpi;
+	int m, maxit = 1, nr;
+	real *hs, *hs0;
+	size_t nrng;
+#ifndef ALLOW_OPENMP
+	pthread_t *T;
+	int it;
+	void *rc;
+#endif
+#endif
 	Varval *V, *v;
 	fint *hr, *hre, *hrownos, rv;
-	int i, j, khinfo, kz, n, n1, nhinfo, nlc0, no, noe, nov, nov1, nqslim, nzc;
-	int rfilter, robjno, *ov, *ov1, *ove, *ui, *zc, *zci;
+	int dassume, i, j, khinfo, kz;
+	int n, n1, nhinfo, nlc0, no, noe, nov, nov1, nqslim, nzc, nzc0;
+	int rfilter, robjno, *ov, *ov1, *ove, *ui, ushow, *zc, *zci;
 	linarg *la, **lap, **lap1, **lape;
 	ps_func *p, *pe;
 	psb_elem *b;
@@ -1082,6 +1541,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 	w = ew->w;
 	V = (Varval*)w;
 	j = asl->i.maxvar;
+	dassume = asl->P.sph_opts & 1;
 	for(i = asl->i.defvar0 + asl->P.ncom; i < j; ++i) {
 		v = V + i;
 		v->dO = v->aO = v->adO = 0.;
@@ -1118,6 +1578,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 		y = 1;
 	if ((n = nlvo) < nlvc)
 		n = nlvc;
+	ushow = asl->P.sph_opts & 2;
 	if ((spi = *pspi)) {
 		if (spi->ow == ow && spi->y == y && spi->nobj == nobj
 		 && spi->uptri == uptri)
@@ -1132,10 +1593,11 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 	ew->hes_setup_called = 3;
 	otodo = otodoi = (Hesoprod**)(w + asl->P.otodo);
 	rtodo = (range**)(w + asl->P.rtodo);
+	memset(rtodo, 0,  asl->P.nran*sizeof(range*));
 	utodo = utodoi = (uHeswork**)(w + asl->P.utodo);
 	s = w + asl->P.dOscratch;
 	nqslim = n >> 3;
-	kz = htcl(2*sizeof(int)*n + asl->P.nran*sizeof(range));
+	kz = htcl(2*sizeof(int)*n + asl->P.nran*sizeof(range*));
 	rnext = (range**)new_mblk_ASL(a, kz);
 	zc = (int*)(rnext + asl->P.nran);
 	zci = zc + n;
@@ -1167,8 +1629,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 			continue;
 			}
  keep:
-		i = r->lasttermno;
-		rp = rtodo + i;
+		rp = rtodo + r->lasttermno;
 		rnext[r->irange] = *rp;
 		*rp = r;
 		}
@@ -1194,11 +1655,204 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 					}
 				}
 		}
+#ifdef MULTIPLE_THREADS
+	nrng = asl->P.nran;
+	if ((m = asl->P.hessetupth) <= 0 || (asl->P.sph_opts & 5) || nrng <= 0) {
+		m = 0;
+		hs0 = 0;
+		}
+	else {
+		if (m > nrng)
+			m = nrng;
+		tp.asl = asl;
+#ifdef ALLOW_OPENMP
+		/*omp_set_num_threads(m);*/
+#else
+		pthread_mutex_init(&tp.mutex, 0);
+#endif
+		tp.nobj = nobj;
+		tp.iow = ow;
+		tp.iy = y;
+		tp.utodo = utodo;
+		hs0 = hs = (real*)new_mblk(htcl(m*(
+#ifndef ALLOW_OPENMP
+						   sizeof(pthread_t*) +
+#endif
+						   sizeof(Thpars1))
+					+ asl->P.thlen*sizeof(real)
+					+ nrng*(sizeof(RangeInfo))));
+		tp1 = (Thpars1*)(hs + asl->P.thlen);
+		tp.ew = ew;
+		tp.spi = spi;
+#ifdef ALLOW_OPENMP
+		tp.ri0 = ri0 = (RangeInfo*)(tp1 + m);
+#else
+		T = (pthread_t*)(tp1 + m);
+		T[0] = pthread_self();
+		tp.ri0 = ri0 = (RangeInfo*)(T + m);
+#endif
+		tp.rie = rie = ri0 + nrng;
+		tp1->tno = 0;
+		tp1->tp = &tp;
+		tp1->ew = ew;
+		for(i = 0; i < m; ++i) {
+			tpi = tp1 + i;
+			tpi->tno = i;
+			tpi->tp = &tp;
+			if (i)
+				tpi->ew = ewalloc3_ASL(asl,0,0);
+			}
+		}
+#endif
 	for(i = 0; i < n; i++) {
 		nzc = 0;
 		rp = rtodo;
 		uhwi = *utodoi;
 		*utodoi++ = 0;
+#ifdef MULTIPLE_THREADS /*{*/
+
+		if (m) {
+			ri = ri0;
+			hs = hs0;
+			while((r = *rp)) {
+				rp = rnext + r->irange;
+				nr = r->n;
+				if (nr >= r->nv) {
+					uhw = new_uhw(ew, r);
+					uhw->next = uhwi;
+					uhwi = uhw;
+					uhw->r = r;
+					uhw->uie = (uhw->ui = r->ui) + r->nv;
+					q = uhw->ogp;
+					lap = r->lap;
+					lape = lap + nr;
+					while(lap < lape) {
+						la = *lap++;
+						q->ove = (q->ov = la->ov) + la->nnz;
+						q->oc = la->oc;
+						++q;
+						}
+					}
+				else {
+					ri->r = r;
+					ri->uhw = 0;
+					ri->hsave = hs;
+					hs += nr*(nr+1)/2;
+					++ri;
+					}
+				}
+			tp.ria = ri;
+			while((uhw = uhwi)) {
+				uhwi = uhw->next;
+				r = ri->r = uhw->r;
+				ri->uhw = uhw;
+				ri->hsave = hs;
+				hs += r->n;
+				++ri;
+				}
+			if (tp.ri0 >= (tp.rie = ri))
+				goto uhw_done;
+			tp.i = i;
+			tp.start = 1;
+#ifdef ALLOW_OPENMP
+#pragma omp parallel num_threads(m)
+ {
+			int it, jt;
+			Thpars1 *tpi;
+
+			it = omp_get_thread_num();
+			tpi = tp1 + it;
+#pragma omp critical
+ {
+			if ((jt = ttodo(&tp,tpi)) && maxit <= it)
+				maxit = it + 1;
+ }
+			if (jt)
+				tstart1(tpi);
+ }
+#else
+			pthread_mutex_lock(&tp.mutex);
+			for(it = 1; it < m; ++it) {
+				tpi = tp1 + it;
+				tpi->ri = 0;
+				if (!ttodo(&tp,tpi))
+					break;
+				if ((j = pthread_create(&T[it], 0, &tstart1, tpi)))
+					fprintf(Stderr, "Return %d from pthread_create for tstart1.\n", j);
+				}
+			maxit = it;
+			j = ttodo(&tp,tp1);
+			pthread_mutex_unlock(&tp.mutex);
+			if (j) {
+				tp1->tp = &tp;
+				tstart1(tp1);
+				}
+			while(it > 1) {
+				if ((j = pthread_join(T[--it], &rc)))
+					fprintf(Stderr,
+						"Return %d from pthread_join for thread %d\n",
+						j, it);
+				}
+#endif
+			for(ri = ri0; ri < tp.ria; ++ri) {
+				r = ri->r;
+				lap = r->lap;
+				lape = lap + r->n;
+				hs = ri->hsave;
+				while(lap < lape) {
+					lap1 = lap++;
+					la = *lap1++;
+					ov = la->ov;
+					nov = la->nnz;
+					if ((t = *hs++))
+						new_Hesoprod(ew,nov,ov,0,nov,ov,0,t);
+					while(lap1 < lape) {
+					    la = *lap1++;
+					    if ((t = *hs++)) {
+						ov1 = la->ov;
+						nov1 = la->nnz;
+						new_Hesoprod(ew,nov,ov,0,nov1,ov1,0,t);
+						new_Hesoprod(ew,nov1,ov1,0,nov,ov,0,t);
+						}
+					    }
+					}
+				}
+			for(; ri < tp.rie; ++ri) {
+				uhw = ri->uhw;
+				r = uhw->r;
+				lap = r->lap;
+				lape = lap + r->n;
+				hs = ri->hsave;
+				kz = 0;
+				nzc0 = nzc;
+				do {
+					if (*hs++) {
+						++kz;
+						la = *lap;
+						ov = la->ov;
+						for(ove = ov + la->nnz; ov < ove; ++ov)
+							if ((j = *ov) <= i
+							 && !zc[j]++)
+								zci[nzc++] = j;
+						}
+					}
+					while(++lap < lape);
+				if (ushow) {
+					if (r->n > r->nv)
+						printf("obrange %d\t%d", r->n, r->nv);
+					else
+						printf("sqrange %d", r->n);
+					printf("\t%d\t%d\n", kz, nzc-nzc0);
+					}
+				if ((ui = ++uhw->ui) < uhw->uie) {
+					utodoj = utodo + *ui;
+					uhw->next = *utodoj;
+					*utodoj = uhw;
+					}
+				}
+			}
+		else
+#endif /*}*/
 		while((r = *rp)) {
 			rp = rnext + r->irange;
 			lap = r->lap;
@@ -1243,34 +1897,64 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 					}
 				}
 			}
-		*rtodo++ = 0;	/* reset */
+#ifdef MULTIPLE_THREADS
+		if (m)
+			goto uhw_done;
+#endif
 		while((uhw = uhwi)) {
 			uhwi = uhwi->next;
 			si = s;
 			r = uhw->r;
 			q = uhw->ogp;
 			qe = q + r->n;
-			si = s;
 			do {
 				if (q->ov < q->ove && *q->ov == i)
 					*si = 1.;
 				si++;
 				} while(++q < qe);
-			pshv_prod1(ew, r, nobj, ow, y);
-
 			lap = r->lap;
 			lape = lap + r->n;
-			do {
-				la = *lap++;
-				if (V[la->u.v].aO) {
+			if (dassume) {
+				if (ushow) {
+					if (r->n > r->nv)
+						printf("obrange %d %d\n", r->n, r->nv);
+					else
+						printf("sqrange %d\n", r->n);
+					}
+				do {
+					la = *lap++;
 					ov = la->ov;
 					for(ove = ov + la->nnz; ov < ove; ++ov)
 						if ((j = *ov) <= i
 						 && !zc[j]++)
 							zci[nzc++] = j;
 					}
+					while(lap < lape);
 				}
-				while(lap < lape);
+			else {
+				pshv_prod1(ew, r, nobj, ow, y);
+				kz = 0;
+				nzc0 = nzc;
+				do {
+					la = *lap++;
+					if (V[la->u.v].aO) {
+						++kz;
+						ov = la->ov;
+						for(ove = ov + la->nnz; ov < ove; ++ov)
+							if ((j = *ov) <= i
+							 && !zc[j]++)
+								zci[nzc++] = j;
+						}
+					}
+					while(lap < lape);
+				if (ushow) {
+					if (r->n > r->nv)
+						printf("obrange %d\t%d", r->n, r->nv);
+					else
+						printf("sqrange %d", r->n);
+					printf("\t%d\t%d\n", kz, nzc-nzc0);
+					}
+				}
 
 			q = uhw->ogp;
 			si = s;
@@ -1287,7 +1971,10 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 				*utodoj = uhw;
 				}
 			}
-
+#ifdef MULTIPLE_THREADS
+ uhw_done:
+#endif
+		*rtodo++ = 0;	/* reset */
 		hop1 = *otodoi;
 		*otodoi++ = 0;
 		while((hop = hop1)) {
@@ -1358,7 +2045,19 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 	spi->ulcopy = 0;
 	spi->uptolow = 0;
 	del_mblk(rnext);
+#ifdef MULTIPLE_THREADS
+	if (hs0)
+		del_mblk(hs0);
+#endif
  done:
+#ifdef MULTIPLE_THREADS
+	asl->P.thusedsetup = maxit;
+	if (asl->P.hessetupth > 0 && (asl->P.sph_opts & 16)) {
+		printf("threads for sph_setup = %d\n", maxit);
+		fflush(stdout);
+		}
+	asl->P.thused = 0;
+#endif
 	spi->hrownos = spi->hrn[0];
 	spi->hcolstartsZ = hcolstarts = spi->hcs[0];
 	rv = hcolstarts[n] - hcolstarts[0];
@@ -1391,6 +2090,19 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 	Ogptrs *q, *qe;
 	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
 	SputInfo*spi, *spi0;
+#ifdef MULTIPLE_THREADS
+	RangeInfo *ri, *ri0, *rie;
+	Thpars tp;
+	Thpars1 *tp1, *tpi;
+	int m, maxit = 1, nr;
+	real *hs, *hs0;
+	size_t nrng;
+#ifndef ALLOW_OPENMP
+	pthread_t *T;
+	int it;
+	void *rc;
+#endif
+#endif
 	Varval *V, *v;
 	fint *hr;
 	int i, j, k, n, no, noe, nov, nov1, *ov, *ov1, *ove, *ui, *uie, uptri;
@@ -1399,7 +2111,7 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 	psg_elem *g, *ge;
 	range *r, *r0, **rnext, **rp, **rtodo;
 	real *Hi, *H0, *H00, *cscale, *oc, *oc1, *owi, *s, *si;
-	real t, t1, *vsc0, *vsc1, *vsc, *w, *y1;
+	real t, t1, *vsc, *vsc0, *vsc1, *w, *y1;
 	size_t *hcs;
 	ssize_t *ulc, *uli;
 	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
@@ -1445,6 +2157,7 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 	spi = *pspi;
 	otodo = otodoi = (Hesoprod**)(w + asl->P.otodo);
 	rtodo = (range**)(w + asl->P.rtodo);
+	memset(rtodo, 0,  asl->P.nran*sizeof(range*));
 	utodo = utodoi = (uHeswork**)(w + asl->P.utodo);
 	s = w + asl->P.dOscratch;
 	n = ew->nlv;
@@ -1516,57 +2229,178 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 	vsc = asl->i.vscale;
 	vsc0 = vsc - Fortran;
 	vsc1 = vsc;
+	if (ew->x0kind & ASL_need_funnel)
+		funnelhes_ew_ASL(ew);
+#ifdef MULTIPLE_THREADS
+	if ((m = asl->P.hesevalth) < 1 || (asl->P.sph_opts & 8) || n <= 0) {
+		m = 0;
+		hs0 = 0;
+		}
+	else {
+		if (m > n)
+			m = n;
+		tp.asl = asl;
+#ifdef ALLOW_OPENMP
+		/*omp_set_num_threads(m);*/
+#else
+		pthread_mutex_init(&tp.mutex, 0);
+#endif
+		tp.nobj = nobj;
+		tp.ow = ow;
+		tp.y = y;
+		tp.utodo = utodo;
+		nrng = asl->P.nran;
+		if ((hs = asl->P.hesparwk) && m > asl->P.hesmaxth) {
+			free(hs);
+			*asl->P.hestofree = 0;
+			hs0 = 0;
+			goto alloc_anew;
+			}
+		if (!(hs0 = hs = asl->P.hesparwk)) {
+ alloc_anew:
+			asl->P.hesparwk =
+			hs = (real*)M1alloc(m*(
+#ifndef ALLOW_OPENMP
+						sizeof(pthread_t*) +
+#endif
+						sizeof(Thpars1))
+					+ asl->P.thlen*sizeof(real)
+					+ nrng*(sizeof(RangeInfo)));
+			asl->P.hestofree = (real**)(asl->i.Mbnext - 1); /* kludge */
+			asl->P.hesmaxth = m;
+			}
+		tp1 = (Thpars1*)(hs + asl->P.thlen);
+		tp.ew = ew;
+		tp.spi = spi;
+#ifdef ALLOW_OPENMP
+		tp.ri0 = ri0 = (RangeInfo*)(tp1 + m);
+#else
+		T = (pthread_t*)(tp1 + m);
+		T[0] = pthread_self();
+		tp.ri0 = ri0 = (RangeInfo*)(T + m);
+#endif
+		tp.rie = rie = ri0 + nrng;
+		tp1->tno = 0;
+		tp1->tp = &tp;
+		tp1->ew = ew;
+		if (!hs0) {
+			hs0 = hs;
+			for(i = 0; i < m; ++i) {
+				tpi = tp1 + i;
+				tpi->tno = i;
+				tpi->tp = &tp;
+				if (i)
+					tpi->ew = ewalloc3_ASL(asl,ew,1);
+				}
+			}
+		}
+#endif
 	for(i = 0; i < n; i++) {
 		rp = rtodo;
 		uhwi = *utodoi;
 		*utodoi++ = 0;
-		while((r = *rp)) {
-			rp = rnext + r->irange;
-			lap = r->lap;
-			lape = lap + r->n;
-			ui = r->ui;
-			uie = ui + r->nv;
-			while(ui < uie) {
-				v = V + *ui++;
-				v->aO = v->dO = v->adO = 0.;
-				}
-			if (r->n >= r->nv) {
-				uhw = new_uhw(ew, r);
-				uhw->next = uhwi;
-				uhwi = uhw;
-				uhw->r = r;
-				uhw->ui = r->ui;
-				uhw->uie = uie;
-				q = uhw->ogp;
-				while(lap < lape) {
-					la = *lap++;
-					q->ove = (q->ov = la->ov) + la->nnz;
-					q->oc = la->oc;
-					++q;
+#ifdef MULTIPLE_THREADS /*{*/
+		if (m) {
+			ri = ri0;
+			hs = hs0;
+			while((r = *rp)) {
+				rp = rnext + r->irange;
+				nr = r->n;
+				if (nr >= r->nv) {
+					uhw = new_uhw(ew, r);
+					uhw->next = uhwi;
+					uhwi = uhw;
+					uhw->r = r;
+					uhw->uie = (uhw->ui = r->ui) + r->nv;
+					q = uhw->ogp;
+					lap = r->lap;
+					lape = lap + r->n;
+					while(lap < lape) {
+						la = *lap++;
+						q->ove = (q->ov = la->ov) + la->nnz;
+						q->oc = la->oc;
+						++q;
+						}
+					}
+				else {
+					ri->r = r;
+					ri->uhw = 0;
+					ri->hsave = hs;
+					hs += nr*(nr+1)/2;
+					ri->i1 = 0;
+					++ri;
 					}
 				}
-			else {
-				si = s;
+			tp.ria = ri;
+			while((uhw = uhwi)) {
+				uhwi = uhw->next;
+				r = ri->r = uhw->r;
+				ri->uhw = uhw;
+				ri->hsave = hs;
+				hs += r->n;
+				ri->i1 = 0;
+				++ri;
+				}
+			if (tp.ri0 >= (tp.rie = ri))
+				goto uhw_done;
+			tp.i = i;
+			tp.start = 1;
+#ifdef ALLOW_OPENMP
+#pragma omp parallel num_threads(m)
+ {
+			int it, jt;
+			Thpars1 *tpi;
+
+			it = omp_get_thread_num();
+			tpi = tp1 + it;
+#pragma omp critical
+ {
+			if ((jt = ttodo(&tp,tpi)) && maxit <= it)
+				maxit = it + 1;
+ }
+			if (jt)
+				tstart2(tpi);
+ }
+#else
+			pthread_mutex_lock(&tp.mutex);
+			for(it = 1; it < m; ++it) {
+				tpi = tp1 + it;
+				tpi->ri = 0;
+				if (!ttodo(&tp,tpi))
+					break;
+				if ((j = pthread_create(&T[it], 0, &tstart2, tpi)))
+					fprintf(Stderr, "Return %d from pthread_create.\n", j);
+				}
+			maxit = it;
+			j = ttodo(&tp,tp1);
+			pthread_mutex_unlock(&tp.mutex);
+			if (j) {
+				tp1->tp = &tp;
+				tstart2(tp1);
+				}
+			while(it > 1) {
+				if ((j = pthread_join(T[--it], &rc)))
+					fprintf(Stderr,
+						"Return %d from pthread_join for thread %d\n",
+						j, it);
+				}
+#endif
+			for(ri = ri0; ri < tp.ria; ++ri) {
+				r = ri->r;
+				lap = r->lap;
+				lape = lap + r->n;
+				hs = ri->hsave;
 				while(lap < lape) {
-					la = *lap++;
-					lap1 = lap;
+					lap1 = lap++;
+					la = *lap1++;
 					ov = la->ov;
 					oc = la->oc;
 					nov = la->nnz;
-					*si = 1;
-					for(j = 0; j < nov; ++ j)
-						V[ov[j]].dO = oc[j];
-					pshv_prod_ASL(ew, r, nobj, ow, y);
-					for(j = 0; j < nov; ++ j)
-						V[ov[j]].dO = 0.;
-					*si++ = 0;
-					v = V + la->u.v;
-					if ((t = v->aO))
-						new_Hesoprod(ew, nov, ov, oc, nov, ov, oc, t);
+					if ((t = *hs++))
+						new_Hesoprod(ew,nov,ov,oc,nov,ov,oc,t);
 					while(lap1 < lape) {
 					    la = *lap1++;
-					    v = V + la->u.v;
-					    if ((t = v->aO)) {
+					    if ((t = *hs++)) {
 						ov1 = la->ov;
 						oc1 = la->oc;
 						nov1 = la->nnz;
@@ -1576,53 +2410,136 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 					    }
 					}
 				}
+			for(; ri < tp.rie; ++ri) {
+				uhw = ri->uhw;
+				r = uhw->r;
+				lap = r->lap;
+				lape = lap + r->n;
+				hs = ri->hsave;
+				do {
+					if ((t = *hs++)) {
+						la = *lap;
+						ov = la->ov;
+						oc = la->oc;
+						for(ov1 = ov + la->nnz; ov < ov1; ++ov, ++oc)
+							if ((j = *ov) <= i)
+								Hi[j] += t**oc;
+						}
+					}
+					while(++lap < lape);
+				if ((ui = ++uhw->ui) < uhw->uie) {
+					utodoj = utodo + *ui;
+					uhw->next = *utodoj;
+					*utodoj = uhw;
+					}
+				}
 			}
+		else
+#endif /*}*/
+			{
+			while((r = *rp)) {
+				rp = rnext + r->irange;
+				lap = r->lap;
+				lape = lap + r->n;
+				ui = r->ui;
+				uie = ui + r->nv;
+				while(ui < uie) {
+					v = V + *ui++;
+					v->aO = v->dO = v->adO = 0.;
+					}
+				if (r->n >= r->nv) {
+					uhw = new_uhw(ew, r);
+					uhw->next = uhwi;
+					uhwi = uhw;
+					uhw->r = r;
+					uhw->ui = r->ui;
+					uhw->uie = uie;
+					q = uhw->ogp;
+					while(lap < lape) {
+						la = *lap++;
+						q->ove = (q->ov = la->ov) + la->nnz;
+						q->oc = la->oc;
+						++q;
+						}
+					}
+				else {
+					si = s;
+					while(lap < lape) {
+						la = *lap++;
+						lap1 = lap;
+						ov = la->ov;
+						oc = la->oc;
+						nov = la->nnz;
+						*si = 1;
+						for(j = 0; j < nov; ++ j)
+							V[ov[j]].dO = oc[j];
+						pshv_prod_ASL(ew, r, nobj, ow, y);
+						for(j = 0; j < nov; ++ j)
+							V[ov[j]].dO = 0.;
+						*si++ = 0;
+						v = V + la->u.v;
+						if ((t = v->aO))
+							new_Hesoprod(ew, nov, ov, oc, nov, ov, oc, t);
+						while(lap1 < lape) {
+						    la = *lap1++;
+						    v = V + la->u.v;
+						    if ((t = v->aO)) {
+							ov1 = la->ov;
+							oc1 = la->oc;
+							nov1 = la->nnz;
+							new_Hesoprod(ew,nov,ov,oc,nov1,ov1,oc1,t);
+							new_Hesoprod(ew,nov1,ov1,oc1,nov,ov,oc,t);
+							}
+						    }
+						}
+					}
+				}
+			while((uhw = uhwi)) {
+				uhwi = uhwi->next;
+				r = uhw->r;
+				q = uhw->ogp;
+				qe = q + r->n;
+				si = s;
+				do {
+					if (q->ov < q->ove && *q->ov == i)
+						*si = *q->oc;
+					si++;
+					} while(++q < qe);
+				pshv_prod_ASL(ew, r, nobj, ow, y);
+				lap = r->lap;
+				lape = lap + r->n;
+				do {
+					la = *lap++;
+					if ((t = V[la->u.v].aO)) {
+						ov = la->ov;
+						oc = la->oc;
+						for(ov1 = ov + la->nnz; ov < ov1; ++ov, ++oc)
+							if ((j = *ov) <= i)
+								Hi[j] += t**oc;
+						}
+					}
+					while(lap < lape);
+				q = uhw->ogp;
+				si = s;
+				do {
+					if (q->ov < q->ove && *q->ov == i) {
+						*si = 0;
+						++q->ov;
+						++q->oc;
+						}
+					si++;
+					} while(++q < qe);
+				if ((ui = ++uhw->ui) < uhw->uie) {
+					utodoj = utodo + *ui;
+					uhw->next = *utodoj;
+					*utodoj = uhw;
+					}
+				}
+			}
+#ifdef MULTIPLE_THREADS
+ uhw_done:
+#endif
 		*rtodo++ = 0;	/* reset */
-		while((uhw = uhwi)) {
-			uhwi = uhwi->next;
-			r = uhw->r;
-			q = uhw->ogp;
-			qe = q + r->n;
-			si = s;
-			do {
-				if (q->ov < q->ove && *q->ov == i)
-					*si = *q->oc;
-				si++;
-				} while(++q < qe);
-
-			pshv_prod_ASL(ew, r, nobj, ow, y);
-
-			lap = r->lap;
-			lape = lap + r->n;
-			do {
-				la = *lap++;
-				if ((t = V[la->u.v].aO)) {
-					ov = la->ov;
-					oc = la->oc;
-					for(ov1 = ov + la->nnz; ov < ov1; ++ov, ++oc)
-						if ((j = *ov) <= i)
-							Hi[j] += t**oc;
-					}
-				}
-				while(lap < lape);
-
-			q = uhw->ogp;
-			si = s;
-			do {
-				if (q->ov < q->ove && *q->ov == i) {
-					*si = 0;
-					++q->ov;
-					++q->oc;
-					}
-				si++;
-				} while(++q < qe);
-			if ((ui = ++uhw->ui) < uhw->uie) {
-				utodoj = utodo + *ui;
-				uhw->next = *utodoj;
-				*utodoj = uhw;
-				}
-			}
-
 		hop1 = *otodoi;
 		*otodoi++ = 0;
 		while((hop = hop1)) {
@@ -1658,12 +2575,20 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 				H0[j] = 0;
 				}
 			}
-		else
+		else {
 			while(--k >= 0) {
 				*H++ = H0[j = (int)*hr++];
 				H0[j] = 0;
 				}
+			}
 		}
+#ifdef MULTIPLE_THREADS
+	if (asl->P.hesevalth > 0 && (asl->P.sph_opts & 32) && asl->P.thused != maxit) {
+		printf("threads for sphes = %d\n", maxit);
+		fflush(stdout);
+		}
+	asl->P.thused = maxit;
+#endif
 	H = H00;
 	if ((ulc = spi->ulcopy))
 		for(uli = spi->ulcend; ulc < uli; ulc += 2)

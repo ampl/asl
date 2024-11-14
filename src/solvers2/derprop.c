@@ -22,7 +22,7 @@ software.
  void
 derprop(derpblock *db, real *s, real *w, real f)
 {
-	derp *d, *de;	
+	derp *d, *de;
 	size_t n;
 
 	d = db->d0;

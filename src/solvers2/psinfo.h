@@ -134,6 +134,9 @@ range {
 	int	*cei;		/* common expressions: union over refs */
 	int	hest;		/* nonzero ==> internal Hessian triangle */
 				/* computed by hvpinit starts at ew->w + hest */
+	int	hsave;		/* offset of intermediate results during parallel */
+				/* Hessian-vector products; length for this range: */
+				/* min(n,nv). */
 	};
 
 #ifndef PSHVREAD
@@ -240,7 +243,7 @@ uHeswork {
 	uHeswork *next;
 	range *r;
 	int *ui, *uie;
-	Ogptrs ogp[1];		/* scratch of length r->n */
+	Ogptrs ogp[1];	/* scratch of length r->n */
 	};
 
  typedef struct Ihinfo Ihinfo;
@@ -286,6 +289,7 @@ ps_info {
 	Ihinfo *ihi;
 	Ihinfo *ihi1;	/* first with positive count */
 	size_t zaplen;	/* for zeroing memory starting at &w[asl->P.rtodo] */
+	size_t thlen;	/* total number of scratch cells for threaded Hessians */
 	int dOscratch, iOscratch, otodo, rtodo, utodo; /* subscripts in w for... */
 	int nmax;	/* max{r in ranges} r->n */
 	int ihdmax;	/* max possible ihd */
@@ -294,6 +298,9 @@ ps_info {
 	int krnmax;	/* based on rnmax (below); set in hvpinit_nc_ASL() */
 	int ndhmax;	/* Initial wh->ndhmax */
 	int pshv_g1;	/* whether pshv_prod should multiply by g1 */
+	int hesevalth;	/* number of threads for sphes_ew_ASL */
+	int hessetupth;	/* number of threads for sphes_setup_ew_ASL */
+	int hesvecth;	/* number of threads for Hessian-vector products */
 	int linmultr;	/* linear common terms used in more than one range */
 	int linhesfun;	/* linear common terms in Hessian funnels */
 	int nlmultr;	/* nonlin common terms used in more than one range */
@@ -301,9 +308,21 @@ ps_info {
 	int ncongroups;	/* # of groups in constraints */
 	int nobjgroups;	/* # of groups in objectives */
 	int rnmax;	/* max r->n for ranges r with r->n >= r->nv */
+	int rnmax1;	/* max  r->n for ranges r with r->n < r->nv */
+	int sph_opts;	/* options affecting threaded sphes and sphes_setup */
+	int thusedsetup;/* number of threads used for sphes_setup */
+	int thused;	/* number of threads most recently used for Hessian computations */
+	int thusedhv;	/* number of threads most recently used for Hessian-vector prods */
+	int nuhw;	/* number of ranges with n >= nv */
+	int nuhwmax;	/* max number of ranges with n >= nv that affect any variable */
+			/* computed by sphes if needed */
+	int rnsum;	/* sum of n values for ranges (for parallel Hessian-vector prods) */
+	int hesmaxth;	/* number of threads for which we have allocated memory */
+	int hvhslen;	/* length of storage for parallel Hessian-vector products */
 	int *zlsave;	/* for S->_zl */
 	int *wkinit0, *wkinit2, *wkinitm1;	/* For initializing components of w */
 						/* to 0, 2, -1, respectively. */
+	real *hesparwk, **hestofree;
 #endif /* PSHVREAD */
 	split_ce *Split_ce;	/* for sphes_setup */
 	} ps_info;
@@ -404,6 +423,7 @@ tfinfo {
  extern real eval2_ASL(int*, EvalWorkspace*);
  extern void fullhes_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, real*ow, real *y);
  extern void fullhese_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, real*ow, real *y, fint*);
+ extern void funnelhes_ew_ASL(EvalWorkspace*);
  extern void hvpinit_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, real *ow, real *y);
  extern void hvpinite_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, real *ow, real *y, fint*);
  extern ASL_pfgh *pscheck_ASL(ASL*, const char*);

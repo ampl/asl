@@ -63,6 +63,8 @@ FREE_DTOA_LOCK(unsigned int n)
 	if (n < 2)
 		omp_unset_lock(&Locks[n]);
 	}
+#elif defined(MULTIPLE_THREADS) /*}{*/
+#define dtoa_get_threadno pthread_self
 #endif /*}*/
 
 #ifndef MALLOC /*{{*/

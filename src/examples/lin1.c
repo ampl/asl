@@ -26,7 +26,7 @@ THIS SOFTWARE.
 
 #include "asl.h"
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	FILE *nl;
 	int i;

@@ -25,8 +25,8 @@ of or in connection with the use or performance of this software.
 #include "fpu_control.h"
 #endif
 
- static void
-wk_init(real *w, int *z, real t)
+ void
+wk_init_ASL(real *w, int *z, real t)
 {
 	int i, n;
 
@@ -60,7 +60,7 @@ ewalloc2_ASL(ASL *a)
 	  case ASL_read_pfgh:
 		break;
 	  default:
-		fprintf(Stderr, "\nUnexpected ASLtype = %d in ewalloc2_AS(()\n", a->i.ASLtype);
+		fprintf(Stderr, "\nUnexpected ASLtype = %d in ewalloc2_ASL(()\n", a->i.ASLtype);
 		fflush(Stderr);
 		exit(1);
 		}
@@ -186,10 +186,10 @@ ewalloc2_ASL(ASL *a)
 			}
 		}
 	if (asl->P.wkinit0)
-		wk_init(w, asl->P.wkinit0, 0.);
+		wk_init_ASL(w, asl->P.wkinit0, 0.);
 	if (asl->P.wkinit2)
-		wk_init(w, asl->P.wkinit2, 2.);
+		wk_init_ASL(w, asl->P.wkinit2, 2.);
 	if (asl->P.wkinitm1)
-		wk_init(w, asl->P.wkinitm1, -1.);
+		wk_init_ASL(w, asl->P.wkinitm1, -1.);
 	return rv;
 	}

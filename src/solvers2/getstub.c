@@ -610,6 +610,7 @@ badopt_ASL(Option_Info *oi)
 {
 	oi->n_badopts++;
 	oi->option_echo &= ~ASL_OI_echothis;
+	oi->asl->i.need_nl_ = 0;
 	}
 
  char *

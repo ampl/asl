@@ -36,8 +36,6 @@ MPEC_Adjust {
 	int n0;			/* original number of variables */
 	};
 
- static int ZeroExpr[2] = { 0, -1 };
-
  static void
 reverse(int *a, int *b)
 {
@@ -50,23 +48,50 @@ reverse(int *a, int *b)
 		}
 	}
 
+ static real
+rhsconst(ASL *asl, int i)
+{
+	int j, *o;
+
+	if (i < nlc)
+		goto ret0; /* constraint is nonlinear */
+	switch(asl->i.ASLtype) {
+	  case 1:
+	  case 2:
+		o = ((ASL_fg*)asl)->I.con_de_[i].o.e;
+		break;
+	  case 3:
+	  case 4:
+	  case 5:
+		o = ((ASL_fgh*)asl)->I.con2_de_[i].o.e;
+		break;
+	  default:
+		fprintf(Stderr, "Unexpected ASLtype in rhsconst\n");
+		exit(1);
+		o = 0; /* avoid bogus warning */
+	  }
+	if (o
+	&& (j = o[1]) < 0
+	&& (j += asl->i.numlen/sizeof(real)) >= 0)
+		return asl->i.numvals[j];
+ ret0:
+	return 0.;
+	}
+
  void
 mpec_adjust_ASL(ASL *asl)
 {
 	MPEC_Adjust *mpa;
-	cde *cd;
-	cde2 *cd2;
-	cgrad **Cgrd, **Cgrd1, **Cgrda, *cg, *cg1, *ncg, **pcg;
+	cgrad **Cgrd, **Cgrd1, **Cgrda, *cg, *ncg, **pcg;
 	char *hx0;
 	int *cc, *ck, *cv, *ind1, *ind2, *vm;
-	int i, incc, incv, j, k, m, m0, n, n0, n1, n2, nb, ncc, ncc0, nib, nib0;
-	int nnv, v1;
+	int i, incc, incv, j, k, m, m0, n, n0, n1, nb, ncc, ncc0, nib, nib0;
+	int nnv, v1, v2, v3, v4;
 	real *Lc, *Lc0, *Lc1, *Lv, *Lv0, *Lv1, *Uc, *Uc0, *Uc1, *Uv, *Uv0, *Uv1;
 	real a, b, *x;
 	size_t nz, nz0, nznew;
 
 	n = n0 = n_var;
-	n2 = asl->i.n_var0;
 	nib = niv + nbv;
 	n1 = n - nib;
 	nib0 = n - nib;	/* offset of first linear integer or binary variable */
@@ -136,7 +161,8 @@ mpec_adjust_ASL(ASL *asl)
 	nzc = nZc = nz;
 	n_cc = ncc;
 	nznew = nz - nz0;
-	ncg = (cgrad*)M1alloc(2*(ncc + ncc0)*sizeof(int) + nznew*sizeof(cgrad)
+	ncg = (cgrad*)M1alloc(2*(ncc + ncc0)*sizeof(int)
+			+ nznew*sizeof(cgrad)
 			+ ncc0*sizeof(cgrad*) + sizeof(MPEC_Adjust));
 	asl->i.mpa = mpa = (MPEC_Adjust*)(ncg + nznew);
 	Cgrda = mpa->Cgrda = (cgrad**)(mpa + 1);
@@ -191,10 +217,9 @@ mpec_adjust_ASL(ASL *asl)
 				j += nnv;
 			*cc++ = i;
 			pcg = &Cgrd[i];
-			cg = 0;
-			while((cg1 = *pcg))
-				pcg = &(cg = cg1)->next;
-			*Cgrda++ = cg;
+			while((cg = *pcg))
+				pcg = &cg->next;
+			*Cgrda++ = ncg;
 			Lc = Lc0 + incv*i;
 			Uc = Uc0 + incc*i;
 			Lv = Lv0 + incv*--j;
@@ -209,27 +234,29 @@ mpec_adjust_ASL(ASL *asl)
 				/* v3 - v4 = body, v3 >= 0, v4 >= 0, */
 				/* v1 complements v3, v2 complements v4 */
 
-				*Lc = *Uc = 0.;
-				*ind1++ = /*v1 =*/ n1++;
-				*ind1++ = /*v2 =*/ n1++;
-				*ind2++ = /*v3 =*/ n1++;
-				*ind2++ = /*v4 =*/ n1++;
+				*Lc = *Uc = -rhsconst(asl, i);
+				*ind1++ = v1 = n1++;
+				*ind1++ = v2 = n1++;
+				*ind2++ = v3 = n1++;
+				*ind2++ = v4 = n1++;
 				for(k = 0; k < 4; ++k) {
 					vset(Lv1, 0.);
 					vset(Uv1, Infinity);
 					}
-				ncg[1].varno = n2+3;
+				/* v3 - v4 = _con[i].body */
+				ncg[1].varno = v4;
 				ncg[1].coef = 1.;
 				ncg[1].next = 0;
-				ncg[0].varno = n2+2;
+				ncg[0].varno = v3;
 				ncg[0].coef = -1.;
 				ncg[0].next = &ncg[1];
 				*pcg = ncg;
 				ncg += 2;
-				ncg[1].varno = n2;
+				/* v1 = v - L */
+				ncg[1].varno = v1;
 				ncg[1].coef = -1.;
 				ncg[1].next = 0;
-				ncg[0].varno = j;
+				ncg[0].varno = j  /* v */;
 				ncg[0].coef = 1.;
 				ncg[0].next = &ncg[1];
 				*Lc1 = *Uc1 = *Lv;
@@ -237,10 +264,11 @@ mpec_adjust_ASL(ASL *asl)
 				Uc1 += incc;
 				*Cgrd1++ = ncg;
 				ncg += 2;
-				ncg[1].varno = n2+1;
+				/* v2 = U - v 0 */
+				ncg[1].varno = v2;
 				ncg[1].coef = 1.;
 				ncg[1].next = 0;
-				ncg[0].varno = j;
+				ncg[0].varno = j /* v */;
 				ncg[0].coef = 1.;
 				ncg[0].next = &ncg[1];
 				*Lc1 = *Uc1 = *Uv;
@@ -248,7 +276,6 @@ mpec_adjust_ASL(ASL *asl)
 				Uc1 += incc;
 				*Cgrd1++ = ncg;
 				ncg += 2;
-				n2 += 4;
 				}
 			else {
 				/*nb == 1*/
@@ -257,10 +284,9 @@ mpec_adjust_ASL(ASL *asl)
 					/* For v = _svar[j], replace */
 					/* v >= a with v1 = v - a, v1 >= 0, or */
 					/* v <= b with v1 = b - v, v1 >= 0 */
-					v1 = n1++;
 					vset(Lv1, 0.);
 					vset(Uv1, Infinity);
-					ncg[1].varno = n2++;
+					ncg[1].varno = v1 = n1++;
 					ncg[1].next = 0;
 					ncg[0].varno = j;
 					ncg[0].coef = 1.;
@@ -279,8 +305,8 @@ mpec_adjust_ASL(ASL *asl)
 					ncg += 2;
 					}
 				*ind1++ = v1;
-				*ind2++ = n1++;
-				ncg->varno = n2++;
+				*ind2++ = v2 = n1++;
+				ncg->varno = v2;
 				ncg->next = 0;
 				vset(Lv1, 0.);
 				vset(Uv1, Infinity);
@@ -296,30 +322,30 @@ mpec_adjust_ASL(ASL *asl)
 				}
 			}
 #undef vset
-	i = m0;
 	asl->i.n_con1 += k = m - m0;
-	switch(asl->i.ASLtype) {
-	  case ASL_read_pfg:
-		memset(((ASL_pfg*)asl)->P.cps + m0, 0, k*sizeof(ps_func));
-		cd = ((ASL_pfg*)asl)->I.con_de_;
-		goto have_cd;
-	  case ASL_read_f:
-	  case ASL_read_fg:
-		cd = ((ASL_fg*)asl)->I.con_de_;
- have_cd:
-		while(i < m)
-			cd[i++].o.e = ZeroExpr;
-		break;
-	  case ASL_read_fgh:
-		cd2 = ((ASL_fgh*)asl)->I.con2_de_;
-		goto have_cd2;
-	  case ASL_read_pfgh:
-		memset(((ASL_pfgh*)asl)->P.cps + m0, 0, k*sizeof(ps_func2));
-		cd2 = ((ASL_pfgh*)asl)->I.con2_de_;
- have_cd2:
-		while(i < m)
-			cd2[i++].o.e = ZeroExpr;
-	  }
+//	i = m0;
+//	switch(asl->i.ASLtype) {
+//	  case ASL_read_pfg:
+//		memset(((ASL_pfg*)asl)->P.cps + m0, 0, k*sizeof(ps_func));
+//		cd = ((ASL_pfg*)asl)->I.con_de_;
+//		goto have_cd;
+//	  case ASL_read_f:
+//	  case ASL_read_fg:
+//		cd = ((ASL_fg*)asl)->I.con_de_;
+// have_cd:
+//		while(i < m)
+//			cd[i++].o.e = ZeroExpr;
+//		break;
+//	  case ASL_read_fgh:
+//		cd2 = ((ASL_fgh*)asl)->I.con2_de_;
+//		goto have_cd2;
+//	  case ASL_read_pfgh:
+//		memset(((ASL_pfgh*)asl)->P.cps + m0, 0, k*sizeof(ps_func2));
+//		cd2 = ((ASL_pfgh*)asl)->I.con2_de_;
+// have_cd2:
+//		while(i < m)
+//			cd2[i++].o.e = ZeroExpr;
+//	  }
 	}
 
  void
@@ -351,7 +377,6 @@ mpec_auxvars_ASL(ASL *asl, real *c, real *x)
 	vmi = get_vminv_ASL(asl);
 	do {
 		t = c[i = *cc++];
-		c[i] = 0.;
 		j = cv[i] - 1;
 		for(cg = *Cga++; ; cg = cg->next) {
 			if (!cg)
@@ -359,11 +384,10 @@ mpec_auxvars_ASL(ASL *asl, real *c, real *x)
 			if (cg->varno >= n0)
 				break;
 			}
-		if (!cg)
-			continue;
 		Lc = Lc0 + i*incc;
 		if (!*ck++) {
-			if (t >= 0.)
+			c[i] = 0.;
+			if ((t -= *Lc) >= 0.)
 				x[vmi[cg->varno]] = t;
 			else {
 				cg = cg->next;
@@ -380,10 +404,12 @@ mpec_auxvars_ASL(ASL *asl, real *c, real *x)
 			}
 		else {
 			x[vmi[cg->varno]] = cg->coef*(*Lc - t);
+			/* actually (*Lc - t)/cg->coef, but cg->coef is 1 or -1 */
 			c[i] = *Lc;
 			if (Lv0[incv*j] != 0.) {
 				cg = (*Cg++)->next;
 				x[vmi[cg->varno]] = cg->coef*(*Lc1 - x[j]);
+				Lc1 += incc;
 				*ca++ = *Lc1;
 				Lc1 += incc;
 				}

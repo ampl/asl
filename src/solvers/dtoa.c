@@ -28,7 +28,8 @@
  * does this with many compilers.  Whether this or another call is
  * appropriate depends on the compiler; for this to work, it may be
  * necessary to #include "float.h" or another system-dependent header
- * file.
+ * file.  When needed, this call avoids double rounding, which can
+ * cause one bit errors, e.g., with strtod on 8.3e26 or 6.3876e-16.
  */
 
 /* strtod for IEEE-, VAX-, and IBM-arithmetic machines.
@@ -2716,13 +2717,14 @@ enum {	/* rounding values: same as FLT_ROUNDS */
 	};
 
  void
-gethex( const char **sp, U *rvp, int rounding, int sign MTd)
+gethex(const char **sp, U *rvp, int rounding, int sign MTd)
 {
 	Bigint *b;
+	char d;
 	const unsigned char *decpt, *s0, *s, *s1;
 	Long e, e1;
 	ULong L, lostbits, *x;
-	int big, denorm, esign, havedig, k, n, nbits, up, zret;
+	int big, denorm, esign, havedig, k, n, nb, nbits, nz, up, zret;
 #ifdef IBM
 	int j;
 #endif
@@ -2740,6 +2742,9 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 #endif
 #endif /*}}*/
 		};
+#ifdef IEEE_Arith
+	int check_denorm = 0;
+#endif
 #ifdef USE_LOCALE
 	int i;
 #ifdef NO_LOCALE_CACHE
@@ -2891,7 +2896,7 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 		k++;
 	b = Balloc(k MTa);
 	x = b->x;
-	n = 0;
+	havedig = n = nz = 0;
 	L = 0;
 #ifdef USE_LOCALE
 	for(i = 0; decimalpoint[i+1]; ++i);
@@ -2906,22 +2911,28 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 		if (*--s1 == '.')
 			continue;
 #endif
+		if ((d = hexdig[*s1]))
+			havedig = 1;
+		else if (!havedig) {
+			e += 4;
+			continue;
+			}
 		if (n == ULbits) {
 			*x++ = L;
 			L = 0;
 			n = 0;
 			}
-		L |= (hexdig[*s1] & 0x0f) << n;
+		L |= (d & 0x0f) << n;
 		n += 4;
 		}
 	*x++ = L;
 	b->wds = n = x - b->x;
-	n = ULbits*n - hi0bits(L);
+	nb = ULbits*n - hi0bits(L);
 	nbits = Nbits;
 	lostbits = 0;
 	x = b->x;
-	if (n > nbits) {
-		n -= nbits;
+	if (nb > nbits) {
+		n = nb - nbits;
 		if (any_on(b,n)) {
 			lostbits = 1;
 			k = n - 1;
@@ -2934,8 +2945,8 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 		rshift(b, n);
 		e += n;
 		}
-	else if (n < nbits) {
-		n = nbits - n;
+	else if (nb < nbits) {
+		n = nbits - nb;
 		b = lshift(b, n MTa);
 		e -= n;
 		x = b->x;
@@ -2990,12 +3001,49 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 			return;
 			}
 		k = n - 1;
+#ifdef IEEE_Arith
+		if (!k) {
+			switch(rounding) {
+			  case Round_near:
+				if (((b->x[0] & 3) == 3) || (lostbits && (b->x[0] & 1))) {
+					multadd(b, 1, 1 MTa);
+ emin_check:
+					if (b->x[1] == (1 << (Exp_shift + 1))) {
+						rshift(b,1);
+						e = emin;
+						goto normal;
+						}
+					}
+				break;
+			  case Round_up:
+				if (!sign && (lostbits || (b->x[0] & 1))) {
+ incr_denorm:
+					multadd(b, 1, 2 MTa);
+					check_denorm = 1;
+					lostbits = 0;
+					goto emin_check;
+					}
+				break;
+			  case Round_down:
+				if (sign && (lostbits || (b->x[0] & 1)))
+					goto incr_denorm;
+				break;
+			  }
+			}
+#endif
 		if (lostbits)
 			lostbits = 1;
 		else if (k > 0)
 			lostbits = any_on(b,k);
+#ifdef IEEE_Arith
+		else if (check_denorm)
+			goto no_lostbits;
+#endif
 		if (x[k>>kshift] & 1 << (k & kmask))
 			lostbits |= 2;
+#ifdef IEEE_Arith
+ no_lostbits:
+#endif
 		nbits -= n;
 		rshift(b,n);
 		e = emin;
@@ -3020,16 +3068,9 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 			k = b->wds;
 			b = increment(b MTa);
 			x = b->x;
-			if (denorm) {
-#if 0
-				if (nbits == Nbits - 1
-				 && x[nbits >> kshift] & 1 << (nbits & kmask))
-					denorm = 0; /* not currently used */
-#endif
-				}
-			else if (b->wds > k
+			if (!denorm && (b->wds > k
 			 || ((n = nbits & kmask) !=0
-			     && hi0bits(x[k-1]) < 32-n)) {
+			     && hi0bits(x[k-1]) < 32-n))) {
 				rshift(b,1);
 				if (++e > Emax)
 					goto ovfl;
@@ -3039,8 +3080,10 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 #ifdef IEEE_Arith
 	if (denorm)
 		word0(rvp) = b->wds > 1 ? b->x[1] & ~0x100000 : 0;
-	else
+	else {
+ normal:
 		word0(rvp) = (b->x[1] & ~0x100000) | ((e + 0x3ff + 52) << 20);
+		}
 	word1(rvp) = b->x[0];
 #endif
 #ifdef IBM
@@ -3617,10 +3660,11 @@ strtod(const char *s00, char **se)
 				c = *++s;
 			if (c > '0' && c <= '9') {
 				L = c - '0';
-				s1 = s;
-				while((c = *++s) >= '0' && c <= '9')
-					L = 10*L + c - '0';
-				if (s - s1 > 8 || L > 19999)
+				while((c = *++s) >= '0' && c <= '9') {
+					if (L <= 19999)
+						L = 10*L + c - '0';
+					}
+				if (L > 19999)
 					/* Avoid confusion from exponents
 					 * so large that e might overflow.
 					 */
@@ -5416,7 +5460,8 @@ dtoa_r(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve, char
 				&& (spec_case ? 4*res <= ulp : (2*res < ulp || dig & 1))) {
  ulp_reached:
 					if (ures < res
-					|| (ures == res && dig & 1))
+					|| (ures == res && dig & 1)
+					|| (dig == 9 && 2*ures <= ulp))
 						goto Roundup;
 					goto retc;
 					}
@@ -5662,7 +5707,7 @@ dtoa_r(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve, char
 						}
 					}
 				if (!(zb & ures) && (ures-rb) << (1 - eulp) < ulp) {
-					if ((ures + rb) << (1 - eulp) < ulp)
+					if ((ures + rb) << (2 - eulp) < ulp)
 						goto Roundup;
 					goto Fast_failed1;
 					}

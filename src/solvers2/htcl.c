@@ -45,11 +45,11 @@ new_mblk_ASL(ASL *asl, uint k)
 	if (k >= MBLK_KMAX_ASL)
 		memfailure_ASL("new_mblk", "arg too big", k);
 	mb = &asl->i.mblk_free[k];
-	ACQUIRE_MBLK_LOCK(&asl->i, mb->Lock);
+	ACQUIRE_MBLK_LOCK(&asl->i, MemLock);
 	na = ++mb->nalloc;
 	if ((a = mb->a))
 		mb->a = a->mbnext;
-	FREE_MBLK_LOCK(&asl->i, mb->Lock);
+	FREE_MBLK_LOCK(&asl->i, MemLock);
 	if (!a) {
 		mblk_mem_ASL += L = sizeof(MBhead) + (sizeof(void*)<<k);
 		a = (MBavail*)mem_ASL(asl, L);
@@ -70,8 +70,8 @@ Del_mblk_ASL(ASL *asl, void *x)
 	if ((k = a->h.klass) >= MBLK_KMAX_ASL)
 		memfailure_ASL("Del_mblk", "invalid klass", (size_t)k);
 	mb = &asl->i.mblk_free[k];
-	ACQUIRE_MBLK_LOCK(&asl->i, mb->Lock);
+	ACQUIRE_MBLK_LOCK(&asl->i, MemLock);
 	a->mbnext = mb->a;
 	mb->a = a;
-	FREE_MBLK_LOCK(&asl->i, mb->Lock);
+	FREE_MBLK_LOCK(&asl->i, MemLock);
 	}

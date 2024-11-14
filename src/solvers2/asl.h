@@ -381,17 +381,26 @@ Exitcall {
 #ifdef ALLOW_OPENMP
 #undef MULTIPLE_THREADS
 #define MULTIPLE_THREADS
-#ifdef OPENMP_MBLK_LOCK
 #include "omp.h"
 #undef MBLK_LOCK
 #define MBLK_LOCK omp_lock_t
-#define ACQUIRE_MBLK_LOCK(I,L) if (I->rd_M1z_bytes) omp_set_lock(&((I)->L))
-#define FREE_MBLK_LOCK(I,L) if (I->rd_M1z_bytes) omp_unset_lock(&((I)->L))
-#endif
-#endif
-#ifndef MBLK_LOCK
+#define ACQUIRE_MBLK_LOCK(I,L) if ((I)->rd_M1z_bytes) omp_set_lock(&((I)->L))
+#define FREE_MBLK_LOCK(I,L) if ((I)->rd_M1z_bytes) omp_unset_lock(&((I)->L))
+#else
+#ifdef NO_MBLK_LOCK
+#undef MBLK_LOCK
+#undef MULTIPLE_THREADS
 #define ACQUIRE_MBLK_LOCK(I,L) /*nothing*/
 #define FREE_MBLK_LOCK(I,L) /*nothing*/
+#else
+#include <pthread.h>
+#define MBLK_LOCK pthread_mutex_t
+#ifndef MULTIPLE_THREADS
+#define MULTIPLE_THREADS
+#endif
+#define ACQUIRE_MBLK_LOCK(I,L) pthread_mutex_lock(&((I)->L))
+#define FREE_MBLK_LOCK(I,L) pthread_mutex_unlock(&((I)->L))
+#endif
 #endif
 
  typedef struct
@@ -413,6 +422,8 @@ EvalStats {
 
  typedef struct DerivErrInfo DerivErrInfo;
  typedef struct linarg linarg;
+ typedef struct ParHvInfo ParHvInfo;
+ typedef struct ParHvInit ParHvInit;
 
  struct
 EvalWorkspace {
@@ -462,6 +473,7 @@ EvalWorkspace {
 	real	*oyow;		/* for xpsg_check */
 	real	*oyow0;		/* for xpsg_check */
 	real	*H0;		/* for sphes */
+	real	*hvscratch;	/* for parallel Hessian-vector products */
 	struct Hesoprod *hop_free, *hop_free0, *hop_free_end;
 	struct uHeswork *uhw_free, *uhw_free0, *uhw_free_end;
 	arglist	*al;
@@ -471,6 +483,8 @@ EvalWorkspace {
 	int	nlv;		/* max(nlvc, nlvo) */
 	void	*dbuginfo;
 	EvalWorkspace *ewthread;
+	ParHvInfo *parhvinfo;
+	ParHvInit *parhvinit;
 	EvalStats stats;
 	};
 
@@ -492,9 +506,6 @@ MBavail {
 MBFree {
 	uint nalloc, nfree;
 	MBavail *a;
-#ifdef MBLK_LOCK
-	MBLK_LOCK Lock;
-#endif
 	} MBFree;
 
  typedef struct
@@ -506,9 +517,6 @@ Edaginfo {
 	int nlmode;
 	func_info **funcs_, *funcsfirst_, *funcslast_;
 	int (*xscanf_)(EdRead*, const char*, ...);
-#ifdef MBLK_LOCK
-	MBLK_LOCK MemLock, Mem1Lock;
-#endif
 	func_info *fhash_[NFHASH];
 
 	real	*LUrhs_,	/* constraint lower (and, if Urhsx == 0, */
@@ -768,6 +776,9 @@ Edaginfo {
 	size_t ew_bytes;	/* bytes allocated for one EvalWorkspace */
 	size_t n_ew0;		/* number of EvalWorkspace structures allocated */
 
+#ifdef MBLK_LOCK
+	MBLK_LOCK MemLock, Mem1Lock;
+#endif
 	} Edaginfo;
 
  struct

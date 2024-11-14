@@ -41,5 +41,5 @@ jac2dim_(const char *stub, fint *M, fint *N, fint *NO, fint *NZ,
 	if (cur_ASL)
 		return already_ASL("jacdim");
 	asl = ASL_alloc(ASL_read_pfgh);
-	return jac2dim_ASL(asl, stub, M, N, NO, NZ, MXROW, MXCOL, stub_len);
+	return jacpdim_ASL(asl, stub, M, N, NO, NZ, MXROW, MXCOL, stub_len);
 	}

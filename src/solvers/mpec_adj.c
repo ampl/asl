@@ -51,6 +51,33 @@ reverse(int *a, int *b)
 		}
 	}
 
+ static real
+rhsconst(ASL *asl, int i)
+{
+	expr_n *e;
+	int j;
+
+	if (i < nlc)
+		return 0.; /* constraint is nonlinear */
+	switch(asl->i.ASLtype) {
+	  case 1:
+	  case 2:
+	  case 4:
+		e = (expr_n*)((ASL_fg*)asl)->I.con_de_[i].e;
+		break;
+	  case 3:
+		e = (expr_n*)((ASL_fgh*)asl)->I.con2_de_[i].e;
+		break;
+	  case 5:
+		e = (expr_n*)((ASL_pfgh*)asl)->I.con2_de_[i].e;
+		break;
+	  default:
+		fprintf(Stderr, "Unexpected ASLtype in rhsconst\n");
+		exit(1);
+	  }
+	return e->v;
+	}
+
  void
 mpec_adjust_ASL(ASL *asl)
 {
@@ -211,7 +238,7 @@ mpec_adjust_ASL(ASL *asl)
 				/* v3 - v4 = body, v3 >= 0, v4 >= 0, */
 				/* v1 complements v3, v2 complements v4 */
 
-				*Lc = *Uc = 0.;
+				*Lc = *Uc = -rhsconst(asl, i);
 				*ind1++ = v1 = n1++;
 				*ind1++ = v2 = n1++;
 				*ind2++ = v3 = n1++;
@@ -220,18 +247,20 @@ mpec_adjust_ASL(ASL *asl)
 					vset(Lv1, 0.);
 					vset(Uv1, Infinity);
 					}
-				ncg[1].varno = n2+3;
+				/* v3 - v4 = _con[i].body */
+				ncg[1].varno = n2+3 /* v4 */;
 				ncg[1].coef = 1.;
 				ncg[1].next = 0;
-				ncg[0].varno = n2+2;
+				ncg[0].varno = n2+2 /* v3 */;
 				ncg[0].coef = -1.;
 				ncg[0].next = &ncg[1];
 				*pcg = ncg;
 				ncg += 2;
-				ncg[1].varno = n2;
+				/* v1 = v - L */
+				ncg[1].varno = n2 /* v1 */;
 				ncg[1].coef = -1.;
 				ncg[1].next = 0;
-				ncg[0].varno = j;
+				ncg[0].varno = j  /* v */;
 				ncg[0].coef = 1.;
 				ncg[0].next = &ncg[1];
 				*Lc1 = *Uc1 = *Lv;
@@ -239,7 +268,8 @@ mpec_adjust_ASL(ASL *asl)
 				Uc1 += incc;
 				*Cgrd1++ = ncg;
 				ncg += 2;
-				ncg[1].varno = n2+1;
+				/* v2 = U - v 0 */
+				ncg[1].varno = n2+1 /* v2 */;
 				ncg[1].coef = 1.;
 				ncg[1].next = 0;
 				ncg[0].varno = j;

@@ -28,6 +28,54 @@ extern "C" {
 #define alignarg(x)
 #endif
 
+#ifdef ALLOW_OPENMP
+#include <omp.h>
+#define NO_PTHREADS
+#endif
+#ifdef NO_PTHREADS
+#define PTHREADS(x)
+#define pthread_mutex_lock(t) /*nothing*/
+#define pthread_mutex_unlock(t) /*nothing*/
+#ifndef ALLOW_OPENMP
+#undef MULTIPLE_THREADS
+#endif
+#else
+#define PTHREADS(x) x
+#undef MULTIPLE_THREADS
+#define MULTIPLE_THREADS
+#include <pthread.h>
+#endif
+
+#ifdef MULTIPLE_THREADS
+ typedef struct {
+	ParHvInfo *tp;
+	int tno;
+	EvalWorkspace *ew;
+	range *r;
+	real *W;
+	real *hsave;		/* temporary results */
+	} Thparshv1;
+
+struct ParHvInfo {
+	ASL_pfgh *asl;
+	EvalWorkspace *ew;
+	Ihinfo *ihi;		/* current */
+	Thparshv1 *tpv1;
+	PTHREADS(pthread_mutex_t mutex;)
+	PTHREADS(pthread_t* T;)
+	int thpv1max;		/* number of tpv1 structures */
+	real *p;
+	real *ow;
+	real *y;
+	int nobj;
+	real *W;
+	real *hs0;		/* hsave base */
+	range *r;		/* current */
+	real align;		/* make sure (ParHvInfo*)+1 is properly aligned */
+	};
+extern void wk_init_ASL(real*, int*, real);
+#endif
+
  static void
 hv_fwd(int *o, real *w)
 {
@@ -1284,8 +1332,8 @@ hfg_back(Ops *O, real *w)
 		}
 	}
 
- static void
-funnelhes(EvalWorkspace *ew)
+ void
+funnelhes_ew_ASL(EvalWorkspace *ew)
 {
 	ASL_pfgh *asl;
 	Eresult *u;
@@ -1377,7 +1425,7 @@ hvp0comp(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y)
 	asl = (ASL_pfgh*)ew->asl;
 	W = ew->w;
 	if (ew->x0kind & ASL_need_funnel)
-		funnelhes(ew);
+		funnelhes_ew_ASL(ew);
 	if (nobj >= 0 && nobj < n_obj) {
 		ow = ow ? ow + nobj : &edag_one_ASL;
 		no = nobj;
@@ -1585,6 +1633,295 @@ dtmul(int n, real *x0, real *h, real *y0)
 		}
 	return x0;
 	}
+#ifdef MULTIPLE_THREADS
+ static int
+hvtodo(ParHvInfo *tp, Thparshv1 *tp1)
+{
+	Ihinfo *ihi;
+	range *r;
+	int k;
+
+	if (!(ihi = tp->ihi))
+		return 0;
+	if (!(r = tp->r)) {
+		/* starting */
+		if (!(r = ihi->r))
+			return 0;
+		goto have_r;
+		}
+	if ((r = r->rlist.prev))
+		goto have_r;
+	if (!(ihi = tp->ihi = ihi->next) || !(r = ihi->r))
+		return 0;
+	tp->ihi = ihi;
+ have_r:
+	tp1->r = tp->r = r;
+	tp1->hsave = tp->hs0 + r->hsave;
+	return 1;
+	}
+
+ EvalWorkspace*
+ewalloc4_ASL(ASL_pfgh *asl, EvalWorkspace *ew)
+{
+	/* Similar to ewalloc2_ASL, but omitting H0. */
+
+	EvalWorkspace *rv;
+	Varval *v, *ve;
+	arglist *al;
+	char *s;
+	const char **sa;
+	func_info *fi;
+	int i, nc, nf, nlogc, nlv, no, nv, nv0, nvx;
+	real *d, *lastx, *ra, *w;
+	size_t extra, L, La, Le, Lo, Lu, Lx, Lxc, *nxc;
+	tfinfo **ptfi, *tfi;
+#ifdef NANDEBUG
+	typedef union {real r; unsigned int x[2]; } U;
+	U u0, *u, *ue;
+#endif
+
+	switch (asl->i.ASLtype) {
+	  /* case ASL_read_fgh: */
+	  /* case ASL_read_pfg: */
+	  case ASL_read_pfgh:
+		break;
+	  default:
+		fprintf(Stderr, "\nUnexpected ASLtype = %d in ewalloc4(()\n", asl->i.ASLtype);
+		fflush(Stderr);
+		exit(1);
+		}
+	nc = nclcon;
+	nlogc = n_lcon;
+	no = n_obj;
+	nf = asl->i.nfinv;
+	nv = asl->i.n_var_;
+	La = nf * sizeof(arglist);
+	Lo = (nc + no)*sizeof(real);
+	Lu = asl->I.gscrx * sizeof(real);
+	Lx = x0len;
+	Le = (sizeof(EvalWorkspace) + sizeof(real) - 1) & ~(sizeof(real)-1);
+	Lxc = ((2*(nc + no)+ nlogc)*sizeof(size_t) + sizeof(real) - 1) & ~(sizeof(real)-1);
+	if ((nlv = nlvc) < nlvo)
+		nlv = nlvo;
+	L = La + Le + Lo + Lu + Lx + asl->i.derplen
+		+ asl->i.wlen + asl->i.numlen + Lxc
+		+ (asl->i.ra_max + 2*nv)*sizeof(real) + asl->i.sa_max*sizeof(char*);
+	if (L & (sizeof(real) - 1)) {
+		extra = sizeof(real) - (L & (sizeof(real) - 1));
+		L += extra;
+		}
+	rv = (EvalWorkspace*) M1alloc(L);
+	ACQUIRE_MBLK_LOCK(&asl->i, MemLock);
+	++asl->i.n_ew0;
+	*asl->i.pewthread = rv;
+	asl->i.pewthread = &rv->ewthread;
+	FREE_MBLK_LOCK(&asl->i, MemLock);
+	s = (char*)rv + Le;
+	memset(rv, 0, Le + Lxc);
+	rv->asl = (ASL*)asl;
+	rv->nlv = nlv;
+	rv->nxval = 1;
+	rv->x0kind = ASL_first_x;
+	nxc = (size_t*)s;
+	rv->ncxval = nxc;
+	rv->ncxgval = nxc += nc;
+	rv->nlxval = nxc += nc;
+	rv->noxval = nxc += nlogc;
+	rv->noxgval = nxc += no;
+	s += Lxc;
+	rv->hop_free = rv->hop_free0 = 0;
+	rv->uhw_free = rv->uhw_free0 = rv->uhw_free_end = 0;
+	rv->H0 = 0;
+	lastx = (real*)s;
+	s += Lx;
+	rv->unopscr = (real*)s;
+	s += Lu;
+	rv->oyow0 = (real*)s;
+	s += Lo;
+	memcpy(s, asl->i.numvals, asl->i.numlen);
+	rv->w = w = (real*)(s += asl->i.numlen);
+#ifdef NANDEBUG
+	u0.x[0] = 0x12345678;
+	u0.x[1] = 0xfff7abcd;	/* signalling NaN */
+	u = (U*)w;
+	ue = (U*)(w + asl->P.rtodo);
+	while(u < ue)
+		*u++ = u0;
+	__fpu_control = _FPU_IEEE - _FPU_EXTENDED + _FPU_DOUBLE - _FPU_MASK_IM;
+	_FPU_SETCW(__fpu_control);
+	signal(SIGFPE, fpecatch_ASL);
+#endif
+
+	/* The following loop only matters under obscure conditions when setting */
+	/* up Hessian compuations involving defined variables having linear parts */
+	/* and used linearly in a constraint or objective. */
+	/* With default AMPL settings, this situation does not arise. */
+	v = (Varval*)w;
+	for(ve = v + nv; v < ve; ++v)
+		v->dO = v->aO = 0.;
+
+	memset(w + asl->P.rtodo, 0, asl->P.zaplen);
+	rv->Lastx = lastx;
+	nv0 = asl->i.n_var0;
+	nvx = nv0 + asl->i.nsufext[ASL_Sufkind_var];
+	rv->dv = (Varval*)w + nvx;
+	rv->dv1 = (Varval*)rv->dv + combc + como;
+	s += asl->i.wlen;
+	rv->hvscratch = (real*)s;
+	s += nv*(2*sizeof(real));
+	rv->derps = d = (real*)s;
+	if ((i = asl->i.maxvar - asl->i.defvar0) > 0)
+		memset(d + asl->i.defvar0, 0, i*sizeof(real));
+	s += asl->i.derplen;
+/*	rv->derpzap = d + nvx + combc + como + comc1 + como1; */
+	rv->wantderiv = want_derivs;
+	rv->ndhmax = asl->P.ndhmax;
+	if (asl->i.X0_) {
+		memcpy(w, asl->i.X0_, nv0*sizeof(real));
+		if (nv > nv0)
+			memset(w + nv0, 0, (nv-nv0)*sizeof(real));
+		}
+	else
+		memset(w, 0, nv*sizeof(real));
+	if (nf) {
+		ra = (real*)s;
+		sa = (const char**)(ra + asl->i.ra_max);
+		rv->al = al = (arglist*)(sa + asl->i.sa_max);
+		ptfi = (tfinfo**)asl->i.invd;
+		memset(al, 0, nf*sizeof(arglist));
+		for(i = 0; i < nf; ++i, ++al) {
+			tfi = ptfi[i];
+			al->n = al->nin = tfi->n;
+			if ((al->nr = tfi->nr))
+				al->ra = ra;
+			al->at = tfi->at;
+			al->dig = tfi->wd;
+			if ((al->nsin = tfi->n - tfi->nr))
+				al->sa = sa;
+			fi = tfi->fi;
+			al->f = (function*)fi;
+			al->funcinfo = fi->funcinfo;
+			al->AE = asl->i.ae;
+			}
+		}
+	if (asl->P.wkinit0)
+		wk_init_ASL(w, asl->P.wkinit0, 0.);
+	if (asl->P.wkinit2)
+		wk_init_ASL(w, asl->P.wkinit2, 2.);
+	if (asl->P.wkinitm1)
+		wk_init_ASL(w, asl->P.wkinitm1, -1.);
+	/*if (ew)*/
+		memcpy(rv->w, ew->w, asl->i.wlen);
+	return rv;
+	}
+
+ static void*
+tstart3(void *arg)
+{
+	ASL_pfgh *asl;
+	EvalWorkspace *ew;
+	ParHvInfo *tp;
+	Thparshv1 *tp1;
+	Varval *V;
+	int j, n, nobj, nv, *ov, *ove, *ui, *uie;
+	linarg *la, **lap, **lape;
+	range *r;
+	real *hs, *hse, *oc, *ow, *p, *s, t, *w, *wh, *wi, *x, *y;
+
+	tp1 = arg;
+	tp = tp1->tp;
+	ow = tp->ow;
+	p = tp->p;
+	y = tp->y;
+	nobj = tp->nobj;
+	asl = tp->asl;
+	if (!(ew = tp1->ew)) {
+		tp1->ew = ew = ewalloc4_ASL(asl, tp->ew);
+		tp1->W = ew->w;
+		}
+	else if (ew->nxval != asl->i.Ew0->nxval)
+		memcpy(ew->w, asl->i.Ew0->w, asl->i.wlen);
+	w = ew->w;
+	wh = ew->hvscratch;
+	x = wh + n_var;
+	V = (Varval*)w;
+	s = w + asl->P.dOscratch;
+ top:
+	r = tp1->r;
+	hs = tp1->hsave;
+	if (r->hest) {
+		n = r->n;
+		nv = r->nv;
+		wi = wh;
+		if (n < nv) {
+			lap = r->lap;
+			lape = lap + n;
+			do {
+				la = *lap++;
+				ov = la->ov;
+				ove = ov + la->nnz;
+				oc = la->oc;
+				t = p[*ov]**oc++;
+				while(++ov < ove)
+					t += p[*ov]**oc++;
+				*wi++ = t;
+				}
+				while(lap < lape);
+			wi = dtmul(n, x, w + r->hest, wh);
+			lap = r->lap;
+			do *hs++ = *wi++;
+				while(++lap < lape);
+			}
+		else {
+			ui = r->ui;
+			uie = ui + nv;
+			do *wi++ = p[*ui++];
+				while(ui < uie);
+			wi = dtmul(nv, x, w + r->hest, wh);
+			hse = hs + nv;
+			do *hs++ = *wi++;
+				while(hs < hse);
+			}
+		}
+	else {
+		n = r->n;
+		wi = s;
+		lap = r->lap;
+		lape = lap + n;
+		do {
+			la = *lap++;
+			ov = la->ov;
+			ove = ov + la->nnz;
+			oc = la->oc;
+			t = p[*ov]**oc++;
+			while(++ov < ove)
+				t += p[*ov]**oc++;
+			*wi++ = t;
+			}
+			while(lap < lape);
+		pshv_prod_ASL(ew, r, nobj, ow, y);
+		lap = r->lap;
+		do {
+			la = *lap++;
+			*hs++ = V[la->u.v].aO;
+			}
+			while(lap < lape);
+		}
+	pthread_mutex_lock(&tp->mutex);
+#ifdef ALLOW_OPENMP
+#pragma omp critical
+ {
+#endif
+	j = hvtodo(tp,tp1);
+	pthread_mutex_unlock(&tp->mutex);
+#ifdef ALLOW_OPENMP
+ }
+#endif
+	if (j)
+		goto top;
+	return 0;
+	}
+#endif
 
  extern void hvpinit_nc_ASL(EvalWorkspace*, int, int, real*, real*);
 
@@ -1604,6 +1941,17 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
 	psg_elem *g, *ge;
 	range *r;
 	real *W, *cscale, *oc, *owi, t, t1, t2, *p0, *s, *w, *wi, *x;
+#ifdef MULTIPLE_THREADS
+	ParHvInfo *phvi;
+	Thparshv1 *tp1, *tpi;
+	int m, maxit = 1, nrng;
+	PTHREADS(pthread_t *T;)
+	real *hs, *hs0;
+#ifndef ALLOW_OPENMP
+	int it;
+	void *rc;
+#endif
+#endif
 
 	a = ew->asl;
 	W = ew->w;
@@ -1646,10 +1994,142 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
 		v->dO = t;
 		v->aO = v->adO = 0;
 		}
+#ifdef MULTIPLE_THREADS
+	if ((m = asl->P.hesvecth) <= 0 || (asl->P.sph_opts & 128))
+		m = 0;
+	else {
+		nrng = asl->P.nran;
+		if (m > nrng)
+			m = nrng;
+		if ((phvi = ew->parhvinfo)) {
+			if (m <= phvi->thpv1max)
+				goto have_phvi;
+			free(phvi);
+			}
+		ew->parhvinfo = phvi = (ParHvInfo*)M1alloc(sizeof(ParHvInfo)
+							+ asl->P.hvhslen*sizeof(real)
+							+ m*(sizeof(Thparshv1)
+							PTHREADS(+ sizeof(pthread_t*))));
+		if (!ew->hvscratch)
+			ew->hvscratch = (real*)M1alloc(2*n_var*sizeof(real));
+		phvi->asl = asl;
+		phvi->ew = ew;
+		phvi->nobj = nobj;
+		phvi->W = W;
+		phvi->ow = ow;
+		phvi->p = p;
+		phvi->y = y;
+		PTHREADS(pthread_mutex_init(&phvi->mutex, 0);)
+		phvi->thpv1max = m;
+		hs0 = phvi->hs0 = (real*)(phvi + 1);
+		tp1 = phvi->tpv1 = (Thparshv1*)(hs0 + asl->P.hvhslen);
+		for(j = 0; j < m; j++) {
+			tp1->tp = phvi;
+			tp1->tno = j;
+			tp1->ew = 0;
+			tp1->W = 0;
+			tp1++;
+			}
+		tp1 = phvi->tpv1;
+		tp1->W = W;
+		PTHREADS(phvi->T = (pthread_t*)tp1;)
+		tp1->ew = ew;
+ have_phvi:
+		hs0 = phvi->hs0;
+		PTHREADS(T = phvi->T;)
+		phvi->ihi = asl->P.ihi1;
+		tp1 = phvi->tpv1;
+		phvi->r = 0;
+#ifdef ALLOW_OPENMP
+#pragma omp parallel num_threads(m)
+ {
+		int it, jt;
+		Thparshv1 *tpi;
+
+		it = omp_get_thread_num();
+		tpi = tp1 + it;
+#pragma omp critical
+ {
+		if ((jt = hvtodo(phvi,tpi)) && maxit <= it)
+			maxit = it + 1;
+ }
+		if (jt)
+			tstart3(tpi);
+ }
+#else
+		pthread_mutex_lock(&phvi->mutex);
+		for(it = 1; it < m; ++it) {
+			tpi = tp1 + it;
+			if (!hvtodo(phvi,tpi))
+				break;
+			if ((j = pthread_create(&T[it], 0, &tstart3, tpi)))
+				fprintf(Stderr, "hvpcomp_ew_ASL:  return %d from pthread_create.\n", j);
+			}
+		maxit = it;
+		j = hvtodo(phvi,tp1);
+		pthread_mutex_unlock(&phvi->mutex);
+		if (j)
+			tstart3(tp1);
+		while(it > 1) {
+			if ((j = pthread_join(T[--it], &rc)))
+				fprintf(Stderr,
+					"Return %d from pthread_join for thread %d\n",
+					j, it);
+			}
+#endif
+		asl->P.thusedhv = maxit;
+		for(ihi = asl->P.ihi1; ihi && (r = ihi->r); ihi = ihi->next) {
+			if (r->hest)
+			    for(; r; r = r->rlist.prev) {
+				n = r->n;
+				nv = r->nv;
+				hs = hs0 + r->hsave;
+				if (n < nv) {
+					lap = r->lap;
+					lape = lap + n;
+					do if ((t = *hs++)) {
+						la = *lap;
+						ov = la->ov;
+						ove = ov + la->nnz;
+						oc = la->oc;
+						do hv[*ov++] += t**oc++;
+							while(ov < ove);
+						}
+						while(++lap < lape);
+					}
+				else {
+					ui = r->ui;
+					uie = ui + nv;
+					do hv[*ui++] += *hs++;
+						while(ui < uie);
+					}
+				}
+			else
+			    for(; r; r = r->rlist.prev) {
+				n = r->n;
+				lap = r->lap;
+				lape = lap + n;
+				hs = W + r->hest;
+				do {
+					la = *lap++;
+					if ((t = *hs++)) {
+						ov = la->ov;
+						ove = ov + la->nnz;
+						oc = la->oc;
+						do hv[*ov++] += t**oc++;
+							while(ov < ove);
+						}
+					}
+					while(lap < lape);
+				}
+			}
+		goto pdone;
+		}
+#endif
+	s = &W[asl->P.dOscratch];
 	kw = kp + 1;
 	w = (real*)new_mblk(kw);
 	x = w + n_var;
-	s = &W[asl->P.dOscratch];
 	ns = 0;
 	for(ihi = asl->P.ihi1; ihi && (r = ihi->r); ihi = ihi->next) {
 		if (r->hest)
@@ -1732,6 +2212,9 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
 	wi = s + ns;
 	while(wi > s)
 		*--wi = 0.;
+#ifdef MULTIPLE_THREADS
+ pdone:
+#endif
 	if (asl->P.nobjgroups) {
 	    if (nobj >= 0 && nobj < n_obj) {
 		owi = ow ? ow + nobj : &edag_one_ASL;
@@ -1794,6 +2277,13 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
 		while(hv < w)
 			*hv++ *= *s++;
 		}
+#ifdef MULTIPLE_THREADS
+	if (asl->P.hesvecth > 0 && (asl->P.sph_opts & 64) && asl->P.thusedhv != maxit) {
+		printf("threads for Hv products = %d\n", maxit);
+		fflush(stdout);
+		}
+	asl->P.thusedhv = maxit;
+#endif
 	}
 
 /* Variant of hvpcomp_ew_ASL that has a final nerror argument, working
@@ -1815,6 +2305,75 @@ hvpcompe_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *
 	*Jp = Jsave;
 	}
 
+#ifdef DMG_DEBUG
+ static void
+dbprint1(ASL_pfgh *asl, range *r, real *s, pthread_t tno)
+{
+	int i, n, *ov, *ove;
+	linarg *la, **lap, **lape;
+	real *oc, t;
+
+	printf("pshv_prod th %ld {\n", tno);
+	printf("range %lx = %d x %d:", r, r->n, r->nv);
+	lap = r->lap;
+	lape = lap + (n = r->n);
+	while(lap < lape) {
+		la = *lap++;
+		ov = la->ov;
+		oc = la->oc;
+		t = *oc++;
+		if (t < 0.) {
+			t = -t;
+			printf("\n\t-");
+			}
+		else
+			printf("\n\t");
+		if (t != 1.)
+			printf("%g*", t);
+		ove = ov + la->nnz;
+		printf("x%d", *ov++);
+		while(ov < ove) {
+			t = *oc++;
+			if (t < 0.) {
+				printf(" - ");
+				t = -t;
+				}
+			else
+				printf(" + ");
+			if (t != 1.)
+				printf("%g*", t);
+			printf("x%d", *ov++);
+			}
+		}
+	for(i = 0; i < n; ++i)
+		if ((t = s[i]))
+			printf("\ns[%d] = %g", i, t);
+	printf("\n");
+	}
+
+ static void
+dbprint2(EvalWorkspace *ew, range *r, pthread_t tno)
+{
+	Varval *V, *v;
+	int i, n;
+	linarg *la, **lap;
+	real t, *w;
+
+	lap = r->lap;
+	n = r->n;
+	w = ew->w;
+	V = (Varval*)w;
+	for(i = 0; i < n; ++i) {
+		la = *lap++;
+		v = V + la->u.v;
+		if ((t = v->aO))
+			printf("hv[%d] = %g\n", i, t);
+		}
+	printf("pshv_prod th %ld }\n", tno);
+	}
+#endif
+
+
  void
 pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, real *ow, real *y)
 {
@@ -1829,6 +2388,9 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, real *ow, real *y)
 	psb_elem *b;
 	psg_elem *g;
 	real *cscale, *s, owi, t, *w;
+#ifdef DMG_DEBUG
+	pthread_t tno;
+#endif
 
 	asl = (ASL_pfgh*)ew->asl;
 	w = ew->w;
@@ -1844,10 +2406,14 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, real *ow, real *y)
 			}
 		}
 	if (ew->x0kind & ASL_need_funnel)
-		funnelhes(ew);
+		funnelhes_ew_ASL(ew);
 	s = &w[asl->P.dOscratch];
 	lap = r->lap;
 	lape = lap + r->n;
+#ifdef DMG_DEBUG
+	tno = pthread_self();
+	dbprint1(asl, r, s, tno);
+#endif
 	while(lap < lape) {
 		v = &V[(*lap++)->u.v];
 		v->dO = *s++;
@@ -1923,6 +2489,9 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, real *ow, real *y)
 			x->adO += v->adO;
 			}
 		}
+#ifdef DMG_DEBUG
+	dbprint2(ew, r, tno);
+#endif
 	}
 
  void

@@ -3349,3 +3349,87 @@ source file jac2dim.c.
   solvers2.tgz: minor tweaks as in solvers.tgz, plus a bug fix to
 pfghread.c that affected Hessians of imported functions having
 several arguments involving variables.
+
+20240106
+  solvers2.tgz:  fix a bug with constant terms that seemingly involve
+variables, such as (v-v)^2; the terms were ignored instead of
+contributing to the objective or constraint in which they appeared,
+which mattered when the terms were nonzero, such as cos(v-v)^2.
+
+20240527
+  jacdim.c:  jac2dim_ should invoke jacpdim_ASL rather than (the
+unavailable) jac2dim_ASL.
+  mpec_adj.c:  fix a bug with complementarities involving double
+inequalities on a linear expression.
+
+20240528
+  pfghread.c in solvers2.tgz:  fix a bug (e.g., fault) seen in
+some Hessian computations or Hessian-vector products.
+
+0240601
+  mpec_adj.c in solvers2.tgz:  bug fix affecting ASL_cc_simplify.
+
+20240603
+  sphes.c in solvers2.tgz:  fix a glitch with -DALLOW_OPENMP.
+
+20240618
+  solvers2.tgz:  fix various bugs related to parallel evaluations.
+Now we assume pthreads if neither ALLOW_OPENMP nor NO_MBLK_LOCK is
+#defined.  Add the possibility of computing Hessian-vector products in
+parallel using at most asl->P.hesvecth processors.
+
+20240622
+  solvers2.tgz:  fix various more bugs related to parallel
+evaluations.  New int asl->P.thusedsetup records the number of threads
+used in the last call on sphes_setup (which is called automatically if
+needed and not yet called).  This joins asl->P.thused for the number
+of threads used in the most recent sphes call and asl->P.thusedhv for
+the number of threads used in the most recent Hessian-vector product.
+These numbers can be requested to be printed when they change by
+setting bits 16, 32, or 64 of asl->P.sphopts for setup, sphes, and
+(for 64) the various Hessian-vector product functions.
+
+20240926
+  Fix a bug in obj_adj.c that only matters when suf_sos is called
+and the model is of the form
+
+	...
+	var v;
+	s.t. vdef: v = ...;
+	minimize obj: v;
+
+(If instead one simply declared "minimize obj: ...;" then the bug did
+not bite.)  This fix affects both solvers.tgz and solvers2.tgz.
+
+20241018
+  Fix bugs in sphes.c and pshvprod.c of solvers2.tgz affecting
+parallel Hessian and Hessian-vector computations.
+
+20241108
+  solvers2.tgz:  fix some bugs in parallel evaluations; new
+possibilities for doing Hessian evaluation and/or sparsity
+determination in parallel, controlled by new values in psinfo.h:
+
+	int hesevalth;	/* number of threads for sphes_ew_ASL */
+	int hessetupth;	/* number of threads for sphes_setup_ew_ASL */
+	int hesvecth;	/* number of threads for Hessian-vector products */
+	int sph_opts;	/* options affecting threaded sphes and sphes_setup */
+
+Partially separable structure: Hessian is the sum of products
+		matrix-transpose * internal Hessian * matrix.
+
+Current sph_opts bits:
+	1 = assume internal Hessians are dense
+	2 = print dimensions internal Hessians
+	4 = suppress parallel setup for Hessian evaluations
+	8 = suppress parallel Hessian evaluations
+	16 = 0x10 = print number of threads for setting up Hessian evaluations
+	32 = 0x20 = print number of threads for doing Hessian evaluations
+	64 = 0x40 = print number of threads used for Hessian-vector products
+	128 = 0x80 = suppress parallel Hessian-vector products
+	256 = 0x100 = allow parallel evaluation of internal Hessians
+			used in Hessian-vector products.  The default is not
+			to do this in parallel because it slows evaluations
+			on a large example.
+
+Note that parallel Hessian evaluations are not available in solvers.tgz.

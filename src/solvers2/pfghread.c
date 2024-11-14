@@ -187,6 +187,7 @@ Static {
 	int _nsce;
 	int _nv0x;
 	int _nzclim;
+	int rnsum;
 	int slmax;
 	int slscratchlev;
 	int slscratchmax;
@@ -607,10 +608,6 @@ new_opblock(Static *S, int need)
 	return opnew;
 	}
 
-#ifdef DEBUG
-	/*DEBUG*/int zorkheswork, zorkheswork1, *zorkopnext;
-#endif
-
  static int*
 nextop(Static *S, int n)
 {
@@ -623,10 +620,6 @@ nextop(Static *S, int n)
 		op1 = op + n;
 		}
 	opnext = op1;
-#ifdef DEBUG
-	/*DEBUG*/ if (op <= zorkopnext && op1 > zorkopnext)
-	/*DEBUG*/	printf("");
-#endif
 	return op;
 	}
 
@@ -1154,17 +1147,28 @@ new_range(Static *S, range *r, range **rp)
 	uilen = r->nv*sizeof(int);
 	len = sizeof(range) + uilen;
 	r1 = (range*)mem(len);
-	r1->nintv = 0;
+	r1->hest = r1->nintv = 0;
 	n = r1->n = r->n;
+	S->rnsum += n;
+	r1->hsave = asl->P.hvhslen;
 	if (n < (r1->nv = r->nv)) {
+		if (asl->P.rnmax1 < n)
+			asl->P.rnmax1 = n;
 		r1->uhlen = 0;
 		S->nhop += n*n;
+#ifdef PSHVREAD
+		asl->P.thlen += (n*(n+1)) >> 1;
+		asl->P.hvhslen += n;
+#endif
 		}
 #ifdef PSHVREAD
 	else {
 		S->uhlen += r1->uhlen = sizeof(uHeswork) + (r->n-1)*sizeof(Ogptrs);
 		if (asl->P.rnmax < n)
 			asl->P.rnmax = n;
+		++asl->P.nuhw;
+		asl->P.thlen += n;
+		asl->P.hvhslen += r->nv;
 		}
 #endif
 	r1->chksum = r->chksum;
@@ -2971,7 +2975,7 @@ psfind(Static *S)
 #endif
 	asl = S->asl;
 	asl->P.krnmax = asl->P.rnmax = 0;
-	asl->P.dvsp0 = (int*)M1zapalloc(2*(Ncom)*sizeof(int));
+	asl->P.dvsp0 = Ncom ? (int*)M1zapalloc(2*(Ncom)*sizeof(int)) : 0;
 	asl->P.ndvsp = asl->P.dvsp0 + Ncom;
 	m = asl->i.n_con0;
 	dv_walk(S);
@@ -5955,6 +5959,10 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		memset(X0, 0, nvr*sizeof(real));
 	if (havex0)
 		memset(havex0, 0, nvr);
+	SS.rnsum = 0;
+#ifdef PSHVREAD
+	asl->P.thlen = 0;
+#endif
 	asl->i.objconst = oc = (real*)M1zapalloc(x + no*sizeof(real));
 	con_de = Cde = (cde *)(oc + no);
 	lcon_de = Lde = Cde + nc;
@@ -6057,6 +6065,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			/* var_e[i].a for common variables i. */
 			adjust(S, flags);
 			nzjac = nz;
+			asl->P.rnsum = SS.rnsum;
 #ifdef PSHVREAD
 			a->p.Conival = conpival_ew_ASL;
 			a->p.Conival_nomap = conpival_nomap_ew_ASL;
@@ -6297,10 +6306,6 @@ heswork(int *o, int *oe)
 
 	n = 0;
 	while(o != oe) {
-#ifdef DEBUG
-		/*DEBUG*/ if (++zorkheswork == zorkheswork1)
-		/*DEGUG*/	printf("");
-#endif
 	    switch(*o) {
 
 		case OPCOPY0:
@@ -6759,7 +6764,8 @@ hes_setup(Static *S)
 	asl->P.khesoprod = 5;
 	asl->P.nmax = nmax;
 	asl->P.rtodo = h0 = h;
-	h += n = (nvx*sizeof(range*) + sizeof(real) - 1) / sizeof(real);
+	/* 20240616 changing asl->P.nran to asl->i.defvar0 in the next line */
+	h += n = (asl->i.defvar0*sizeof(range*) + sizeof(real) - 1) / sizeof(real);
 	asl->P.utodo = h;
 	h += n;
 	asl->P.otodo = h;

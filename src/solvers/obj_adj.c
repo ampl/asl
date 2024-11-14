@@ -1,5 +1,5 @@
 /*******************************************************************
-Copyright (C) 2019, 2020 AMPL Optimization, Inc.; written by David M. Gay.
+Copyright (C) 2019, 2020, 2024 AMPL Optimization, Inc.; written by David M. Gay.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -30,6 +30,32 @@ of or in connection with the use or performance of this software.
 #undef psb_elem
 #include "obj_adj.h" /* for Objrep */
 #include "r_qp.hd" /* for OPNUM */
+
+ static void
+suf_adjust(SufDesc *d, int k, int n)
+{
+	int i, i1, *ip;
+	real *rp;
+
+	for(; d; d = d->next) {
+		if (d->kind & ASL_Sufkind_input) {
+			i = k;
+			if (d->kind & ASL_Sufkind_real) {
+				if ((rp = d->u.r)) {
+					for(; i < n; i = i1) {
+						i1 = i + 1;
+						rp[i] = rp[i1];
+						}
+					}
+				}
+			else if ((ip = d->u.i))
+				for(; i < n; i = i1) {
+					i1 = i + 1;
+					ip[i] = ip[i1];
+					}
+			}
+		}
+	}
 
  static void
 obj_adj1(ASL *asl, int no, int *pco, cgrad **pcgo, real *prhs)
@@ -222,8 +248,11 @@ obj_adj1(ASL *asl, int no, int *pco, cgrad **pcgo, real *prhs)
 	--n_conjac[1];
 	if (n_conjac[1] > m)
 		n_conjac[1] = m;
-	if (!cm && co != m)
-		cm = get_vcmap_ASL(asl, ASL_Sufkind_con);
+	if (co != m) {
+		suf_adjust(asl->i.suffixes[1], co, m);
+		if (!cm)
+			cm = get_vcmap_ASL(asl, ASL_Sufkind_con);
+		}
 	if (cclass) {
 		if (oclass) {
 			i = oclass[no] = cclass[co];
@@ -272,6 +301,7 @@ obj_adj1(ASL *asl, int no, int *pco, cgrad **pcgo, real *prhs)
 		}
 	n_var = --n;
 	if (cv != n) {
+		suf_adjust(asl->i.suffixes[0], cv, n);
 		vm = get_vcmap_ASL(asl, ASL_Sufkind_var);
 		nx = asl->i.n_var0 + asl->i.nsufext[ASL_Sufkind_var] - 1;
 		for(i = cva; i < nx; ++i)

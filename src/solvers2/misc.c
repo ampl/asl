@@ -818,7 +818,7 @@ ASL_alloc(int k)
 		if (!Stderr)
 			Stderr_init_ASL();	/* set Stderr if necessary */
 		Mach_ASL();
-#ifdef MULTIPLE_THREADS
+#ifdef ALLOW_OPENMP
 		init_dtoa_locks();
 		set_max_dtoa_threads(1);
 #endif
@@ -837,9 +837,9 @@ ASL_alloc(int k)
 	h = a->p.h.next = ASLhead_ASL.next;
 	a->p.h.prev = h->prev;
 	h->prev = ASLhead_ASL.next = &a->p.h;
-#ifdef MBLK_LOCK_INIT
-	for(n = 0; n < MBLK_KMAX_ASL; ++n)
-		MBLK_LOCK_INIT(&a->mblk_free[n].Lock);
+#ifdef ALLOW_OPENMP
+	omp_init_lock(&a->i.MemLock);
+	omp_init_lock(&a->i.Mem1Lock);
 #endif
 	return cur_ASL = a;
 	}
@@ -859,14 +859,14 @@ mem_ASL(ASL *asl, unsigned int len)
 #else
 	len = (len + (sizeof(int)-1)) & ~(sizeof(int)-1);
 #endif
-	ACQUIRE_MBLK_LOCK(&asl->i, MemLock);
+	ACQUIRE_MBLK_LOCK((&asl->i),MemLock);
 	memNext = asl->i.memNext;
 	if (memNext + len >= asl->i.memLast) {
 		memNext = (char *)M1alloc(k = Egulp*Sizeof(void*) + len);
 		asl->i.memLast = memNext + k;
 		}
 	asl->i.memNext = memNext + len;
-	FREE_MBLK_LOCK(&asl->i, MemLock);
+	FREE_MBLK_LOCK((&asl->i),MemLock);
 	return memNext;
 	}
 

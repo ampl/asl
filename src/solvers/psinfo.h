@@ -105,6 +105,9 @@ range {
 	int	*cei;		/* common expressions: union over refs */
 	real	*hest;		/* nonzero ==> internal Hessian triangle */
 				/* computed by hvpinit */
+#ifdef MULTIPLE_THREADS
+	real	*hsave;		/* temp. threaded Hessian results, thlen numbers */
+#endif
 	};
 
  struct
@@ -247,6 +250,7 @@ ps_info {
 	int *iOscratch;	/* length = nmax */
 	Ihinfo *ihi;
 	Ihinfo *ihi1;	/* first with positive count */
+	size_t thlen;	/* total number of scratch cells for threaded Hessians */
 	int hes_setup_called;
 	int nmax;	/* max{r in ranges} r->n */
 	int ihdcur;	/* Current max internal Hessian dimension, */
@@ -255,6 +259,9 @@ ps_info {
 	int ihdmin;	/* min possible ihd > 0 and <= ihdmax, or 0 */
 	int khesoprod;	/* used in new_Hesoprod in sputhes.c */
 	int pshv_g1;	/* whether pshv_prod should multiply by g1 */
+	int hesevalth;	/* number of threads for sphes_ew_ASL */
+	int hessetupth;	/* number of threads for sphes_setup_ew_ASL */
+	int hesvecth;	/* number of threads for Hessian-vector products */
 	int linmultr;	/* linear common terms used in more than one range */
 	int linhesfun;	/* linear common terms in Hessian funnels */
 	int nlmultr;	/* nonlin common terms used in more than one range */
@@ -265,6 +272,8 @@ ps_info {
 	int npsgcomp;	/* Has psgcomp been called?  For sphes_setup. */
 	expr_va *valist;	/* for sphes_setup */
 	expr_if *iflist;	/* for sphes_setup */
+	int sph_opts;	/* options affecting threaded sphes and sphes_setup */
+	int thused;	/* number of threads most recenly used for Hessian computations */
 	int *zlsave;	/* for S->_zl */
 	real *oyow;	/* for xpsg_check */
 	int onobj;	/* for xpsg_check */
