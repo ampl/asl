@@ -41,9 +41,10 @@ To build other flavours of the library, replace the ```cmake ..``` command with:
 * **VS2017 32 bits:** `cmake .. -G "Visual Studio 15 2017"
 
 
-## License
+## Licenses
 
 BSD-3
+SMLNJ
 
 ***
 Copyright © 2023 AMPL Optimization inc. All rights reserved.
