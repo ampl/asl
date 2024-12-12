@@ -305,7 +305,6 @@ xs0 = \
 	amplsolv.sy \
 	arith.ibm \
 	arith.h0 \
-	arith.h1 \
 	arithchk.c \
 	asl.h \
 	asl_pfg.h \

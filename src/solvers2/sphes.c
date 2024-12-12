@@ -24,21 +24,12 @@ of or in connection with the use or performance of this software.
 #else
 #define alignarg(x) /*nothing*/
 #endif
-#ifdef ALLOW_OPENMP
-/* asl.h has #defined MULTIPLE_THREADS */
-#include <omp.h>
-#define NO_PTHREADS
-#elif !defined(NO_PTHREADS)
-#include <pthread.h>
-#ifndef MULTIPLE_THREADS
-#define MULTIPLE_THREADS
-#endif
-#define PTHREADS(x) x
-#endif
 #ifdef NO_PTHREADS
 #define pthread_mutex_lock(t) /*nothing*/
 #define pthread_mutex_unlock(t) /*nothing*/
 #define PTHREADS(x) /*nothing*/
+#else
+#define PTHREADS(x) x
 #endif
 #undef exit
 extern void wk_init_ASL(real*, int*, real);
@@ -1674,10 +1665,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 		tp.iow = ow;
 		tp.iy = y;
 		tp.utodo = utodo;
-		hs0 = hs = (real*)new_mblk(htcl(m*(
-#ifndef ALLOW_OPENMP
-						   sizeof(pthread_t*) +
-#endif
+		hs0 = hs = (real*)new_mblk(htcl(m*(PTHREADS(sizeof(pthread_t*) +)
 						   sizeof(Thpars1))
 					+ asl->P.thlen*sizeof(real)
 					+ nrng*(sizeof(RangeInfo))));
@@ -2259,10 +2247,7 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 		if (!(hs0 = hs = asl->P.hesparwk)) {
  alloc_anew:
 			asl->P.hesparwk =
-			hs = (real*)M1alloc(m*(
-#ifndef ALLOW_OPENMP
-						sizeof(pthread_t*) +
-#endif
+			hs = (real*)M1alloc(m*(PTHREADS(sizeof(pthread_t*) +)
 						sizeof(Thpars1))
 					+ asl->P.thlen*sizeof(real)
 					+ nrng*(sizeof(RangeInfo)));

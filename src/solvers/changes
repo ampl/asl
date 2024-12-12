@@ -3433,3 +3433,31 @@ Current sph_opts bits:
 			on a large example.
 
 Note that parallel Hessian evaluations are not available in solvers.tgz.
+
+20241111
+  fpinit.c in solvers.tgz and solvers2.tgz:  insert
+	#define _GNU_SOURCE
+before
+	include "fenv.h"
+to make fedisableexcept() visible on some systems (as someone
+requested).  It is "fenv.h" rather than <fenv.h> because it was
+sometimes necessary to supply a custom fenv.h, as indicated in
+the comment
+
+/* Some Intel Linux systems (e.g., S.u.S.E. 5.2) come with a suitable fenv.h, */
+/* but some (e.g., S.U.S.E. 6.1) do not.  This is for the latter systems.  */
+
+20241115
+  pfghread.c in solvers2.tgz: fix an allocation bug introduced 20240618.
+  xp2known.c in solvers2.tgz: fix a glitch that appeared when not
+compiled with -DALLOW_OPENMP .
+
+20241121
+  solvers.c in solvers2.tgz: bypass a bug seen in the preprocessor of
+at least one Microsoft compiler.  On most systems, the change should
+be invisible, except that under a debugger, some line numbers in
+sphes.c will have changed.
+
+20241122
+  asl.h in solvers2.tgz:  only require pthreads.h when compiled with
+-DMULTIPLE_THREADS (and not with -DALLOW_OPENMP).

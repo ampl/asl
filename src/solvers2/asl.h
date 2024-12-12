@@ -378,6 +378,7 @@ Exitcall {
 		void *v;
 		};
 
+#define NO_PTHREADS
 #ifdef ALLOW_OPENMP
 #undef MULTIPLE_THREADS
 #define MULTIPLE_THREADS
@@ -387,12 +388,13 @@ Exitcall {
 #define ACQUIRE_MBLK_LOCK(I,L) if ((I)->rd_M1z_bytes) omp_set_lock(&((I)->L))
 #define FREE_MBLK_LOCK(I,L) if ((I)->rd_M1z_bytes) omp_unset_lock(&((I)->L))
 #else
-#ifdef NO_MBLK_LOCK
+#if !defined(MULTIPLE_THREADS) || defined(NO_MBLK_LOCK)
 #undef MBLK_LOCK
 #undef MULTIPLE_THREADS
 #define ACQUIRE_MBLK_LOCK(I,L) /*nothing*/
 #define FREE_MBLK_LOCK(I,L) /*nothing*/
 #else
+#undef NO_PTHREADS
 #include <pthread.h>
 #define MBLK_LOCK pthread_mutex_t
 #ifndef MULTIPLE_THREADS

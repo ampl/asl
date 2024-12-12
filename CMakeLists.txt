@@ -14,7 +14,7 @@
 # BUILD_MT_LIBS to build the multithreaded libraries 
 # BUILD_F2C to build the fortran to c converter (https://www.netlib.org/f2c/f2c.pdf)
 # BUILD_EXAMPLES to build the examples
-
+cmake_minimum_required(VERSION 3.5)
 if (${CMAKE_VERSION} VERSION_GREATER "3.13.0")
   cmake_policy(SET CMP0077 NEW)
 endif()
@@ -27,7 +27,7 @@ if (NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
 endif()
 project(ASL)
 
-cmake_minimum_required(VERSION 3.0)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Set the path to CMake modules.
 set(AMPL_CMAKE_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/support/cmake)
@@ -376,7 +376,7 @@ createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
 # Create ASL 2
 set(ADDITIONALDEFS "")
 if(WIN32)
-   set(ADDITIONALDEFS NO_MBLK_LOCK NO_PTHREADS)
+   set(ADDITIONALDEFS NO_MBLK_LOCK )
 endif()
 createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES
                     DEFINITIONS ${ADDITIONALDEFS})

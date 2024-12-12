@@ -5,10 +5,10 @@ arith.h0	e206209c	2309
 arith.h1	12e5e42c	1871
 arith.ibm	f398be2b	1391
 arithchk.c	63b0185	6532
-asl.h	ff744e06	48918
+asl.h	1d93ebd2	48993
 asl_pfg.h	6483336	1268
 asl_pfgh.h	49b5a53	1288
-asldate.c	8721c18	29
+asldate.c	f4afa32d	29
 atof.c	1fabc7d3	1747
 auxinfo.c	1a3c8690	1488
 avltree.c	10aeaa58	11346
@@ -91,9 +91,9 @@ opcode.hd	12bc8de3	1348
 opno.hd	f8e46748	2123
 opno2.h	f82baf62	4720
 opnos.hd	1be96111	120
-pfghread.c	f3b93e8b	131968
+pfghread.c	f898c96c	131961
 printf.c	147de217	24293
-pshvprod.c	f6c5f139	61858
+pshvprod.c	1d09aeff	61664
 psinfo.h	e05960fc	13888
 punknown.c	fa46cf10	1704
 qpcheck.c	1712f297	1588
@@ -107,7 +107,7 @@ rnd_prod.s	f4996bed	1471
 sigcatch.c	fe35ba8b	2374
 sjac0dim.c	ff686adb	1546
 sos_add.c	f59f41c0	22398
-sphes.c	354e74f	54173
+sphes.c	187471ef	53914
 sprintf.c	e6ce1d45	3050
 sscanf.c	e8e79b09	3302
 stderr.c	fc99b4f4	2096
@@ -121,4 +121,4 @@ wrtsol_.c	15a9faa4	2431
 ws_desc.c	fceb8f65	214
 wsu_desc.c	fbb1c30c	170
 xectim.c	e56314e8	3543
-xp2known.c	3d83d8f	11944
+xp2known.c	1ca179c	11961

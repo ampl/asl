@@ -6647,7 +6647,7 @@ hes_setup(Static *S)
 	ASL_pfgh *asl;
 	cexp *C;
 	hes_fun *hf, *hfth;
-	int *c, *ce, *cei, *dvsp0, h, h0, i, i0, k, k1, k2, n, n0, ncom;
+	int *c, *ce, *cei, *dvsp0, h, h0, i, i0, j, j1, k, k1, k2, n, n0, ncom;
 	int *ndvsp, nmax, ns, nvx, *vp, *vr, *vre, *z;
 	linarg *la, **lap, **lape;
 	ograd *og;
@@ -6764,8 +6764,9 @@ hes_setup(Static *S)
 	asl->P.khesoprod = 5;
 	asl->P.nmax = nmax;
 	asl->P.rtodo = h0 = h;
-	/* 20240616 changing asl->P.nran to asl->i.defvar0 in the next line */
-	h += n = (asl->i.defvar0*sizeof(range*) + sizeof(real) - 1) / sizeof(real);
+	if ((j = asl->P.nran*sizeof(range*)) < (j1 = asl->i.defvar0*sizeof(real)))
+		j = j1;
+	h += n = (j + sizeof(real) - 1) / sizeof(real);
 	asl->P.utodo = h;
 	h += n;
 	asl->P.otodo = h;

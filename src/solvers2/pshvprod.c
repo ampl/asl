@@ -28,22 +28,12 @@ extern "C" {
 #define alignarg(x)
 #endif
 
-#ifdef ALLOW_OPENMP
-#include <omp.h>
-#define NO_PTHREADS
-#endif
 #ifdef NO_PTHREADS
 #define PTHREADS(x)
 #define pthread_mutex_lock(t) /*nothing*/
 #define pthread_mutex_unlock(t) /*nothing*/
-#ifndef ALLOW_OPENMP
-#undef MULTIPLE_THREADS
-#endif
 #else
 #define PTHREADS(x) x
-#undef MULTIPLE_THREADS
-#define MULTIPLE_THREADS
-#include <pthread.h>
 #endif
 
 #ifdef MULTIPLE_THREADS
@@ -1639,7 +1629,6 @@ hvtodo(ParHvInfo *tp, Thparshv1 *tp1)
 {
 	Ihinfo *ihi;
 	range *r;
-	int k;
 
 	if (!(ihi = tp->ihi))
 		return 0;
