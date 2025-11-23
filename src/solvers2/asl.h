@@ -233,43 +233,43 @@ Edagpars {
 	int want_derivs_;
 	int ihd_limit_;
 	int solve_code_;
-	real (*Objval)		(EvalWorkspace*,int nobj, real *X, fint *nerror);
-	real (*Objval_nomap)	(EvalWorkspace*,int nobj, real *X, fint *nerror);
-	void (*Objgrd)		(EvalWorkspace*,int nobj, real *X, real *G, fint *nerror);
-	void (*Objgrd_nomap)	(EvalWorkspace*,int nobj, real *X, real *G, fint *nerror);
-	void (*Conval)		(EvalWorkspace*,real *X, real *R, fint *nerror);
-	void (*Jacval)		(EvalWorkspace*,real *X, real *J, fint *nerror);
-	real (*Conival)		(EvalWorkspace*,int ncon, real *X, fint *nerror);
-	real (*Conival_nomap)	(EvalWorkspace*,int ncon, real *X, fint *nerror);
-	void (*Congrd)		(EvalWorkspace*,int nc, real *X, real *G, fint *nerror);
-	void (*Congrd_nomap)	(EvalWorkspace*,int nc, real *X, real *G, fint *nerror);
-	void (*Hvcomp)		(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y);
-	void (*Hvcomp_nomap)	(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y);
-	void (*Hvcompe)		(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y, fint*);
-	void (*Hvcompe_nomap)	(EvalWorkspace*,real *hv, real *p, int no, real *ow, real *y, fint*);
-	void (*Hvcompd)		(EvalWorkspace*,real *hv, real *p, int co);
-	void (*Hvcompde)	(EvalWorkspace*,real *hv, real *p, int co, fint*);
-	varno_t (*Hvcomps)	(EvalWorkspace*,real *hv, real *p, int co, varno_t nz, varno_t *z);
-	varno_t (*Hvcompse)	(EvalWorkspace*,real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
-	void (*Hvinit)		(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y);
-	void (*Hvinit_nomap)	(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y);
-	void (*Hvinite)		(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y, fint*);
-	void (*Hvinite_nomap)	(EvalWorkspace*,int hid_limit, int nobj, real *ow, real *y, fint*);
+	real (*Objval)		(EvalWorkspace*,int nobj, const real *X, fint *nerror);
+	real (*Objval_nomap)	(EvalWorkspace*,int nobj, const real *X, fint *nerror);
+	void (*Objgrd)		(EvalWorkspace*,int nobj, const real *X, real *G, fint *nerror);
+	void (*Objgrd_nomap)	(EvalWorkspace*,int nobj, const real *X, real *G, fint *nerror);
+	void (*Conval)		(EvalWorkspace*,const real *X, real *R, fint *nerror);
+	void (*Jacval)		(EvalWorkspace*,const real *X, real *J, fint *nerror);
+	real (*Conival)		(EvalWorkspace*,int ncon, const real *X, fint *nerror);
+	real (*Conival_nomap)	(EvalWorkspace*,int ncon, const real *X, fint *nerror);
+	void (*Congrd)		(EvalWorkspace*,int nc, const real *X, real *G, fint *nerror);
+	void (*Congrd_nomap)	(EvalWorkspace*,int nc, const real *X, real *G, fint *nerror);
+	void (*Hvcomp)		(EvalWorkspace*,real *hv, const real *p, int no, const real *ow, const real *y);
+	void (*Hvcomp_nomap)	(EvalWorkspace*,real *hv, const real *p, int no, const real *ow, const real *y);
+	void (*Hvcompe)		(EvalWorkspace*,real *hv, const real *p, int no, const real *ow, const real *y, fint*);
+	void (*Hvcompe_nomap)	(EvalWorkspace*,real *hv, const real *p, int no, const real *ow, const real *y, fint*);
+	void (*Hvcompd)		(EvalWorkspace*,real *hv, const real *p, int co);
+	void (*Hvcompde)	(EvalWorkspace*,real *hv, const real *p, int co, fint*);
+	varno_t (*Hvcomps)	(EvalWorkspace*,real *hv, const real *p, int co, varno_t nz, varno_t *z);
+	varno_t (*Hvcompse)	(EvalWorkspace*,real *hv, const real *p, int co, varno_t nz, varno_t *z, fint*);
+	void (*Hvinit)		(EvalWorkspace*,int hid_limit, int nobj, const real *ow, const real *y);
+	void (*Hvinit_nomap)	(EvalWorkspace*,int hid_limit, int nobj, const real *ow, const real *y);
+	void (*Hvinite)		(EvalWorkspace*,int hid_limit, int nobj, const real *ow, const real *y, fint*);
+	void (*Hvinite_nomap)	(EvalWorkspace*,int hid_limit, int nobj, const real *ow, const real *y, fint*);
 /*	void (*Hesset)		(EvalWorkspace*,int flags, int no, int nno, int nc, int nnc);*/
-	int  (*Lconval)		(EvalWorkspace*,int ncon, real *X, fint *nerror);
-	int  (*Xknown)		(EvalWorkspace*,real*, fint*);
-	void (*Duthes)		(EvalWorkspace*,real *H, int nobj, real *ow, real *y);
-	void (*Duthes_nomap)	(EvalWorkspace*,real *H, int nobj, real *ow, real *y);
-	void (*Duthese)		(EvalWorkspace*,real *H, int nobj, real *ow, real *y, fint*);
-	void (*Duthese_nomap)	(EvalWorkspace*,real *H, int nobj, real *ow, real *y, fint*);
-	void (*Fulhes)		(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y);
-	void (*Fulhes_nomap)	(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y);
-	void (*Fulhese)		(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y, fint*);
-	void (*Fulhese_nomap)	(EvalWorkspace*,real *H, fint LH, int no, real *ow, real *y, fint*);
-	void (*Sphes)		(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y);
-	void (*Sphes_nomap)	(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y);
-	void (*Sphese)		(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
-	void (*Sphese_nomap)	(EvalWorkspace*,SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
+	int  (*Lconval)		(EvalWorkspace*,int ncon, const real *X, fint *nerror);
+	int  (*Xknown)		(EvalWorkspace*, const real*, fint*);
+	void (*Duthes)		(EvalWorkspace*,real *H, int nobj, const real *ow, const real *y);
+	void (*Duthes_nomap)	(EvalWorkspace*,real *H, int nobj, const real *ow, const real *y);
+	void (*Duthese)		(EvalWorkspace*,real *H, int nobj, const real *ow, const real *y, fint*);
+	void (*Duthese_nomap)	(EvalWorkspace*,real *H, int nobj, const real *ow, const real *y, fint*);
+	void (*Fulhes)		(EvalWorkspace*,real *H, fint LH, int no, const real *ow, const real *y);
+	void (*Fulhes_nomap)	(EvalWorkspace*,real *H, fint LH, int no, const real *ow, const real *y);
+	void (*Fulhese)		(EvalWorkspace*,real *H, fint LH, int no, const real *ow, const real *y, fint*);
+	void (*Fulhese_nomap)	(EvalWorkspace*,real *H, fint LH, int no, const real *ow, const real *y, fint*);
+	void (*Sphes)		(EvalWorkspace*,SputInfo**, real *H, int nobj, const real *ow, const real *y);
+	void (*Sphes_nomap)	(EvalWorkspace*,SputInfo**, real *H, int nobj, const real *ow, const real *y);
+	void (*Sphese)		(EvalWorkspace*,SputInfo**, real *H, int nobj, const real *ow, const real *y, fint*);
+	void (*Sphese_nomap)	(EvalWorkspace*,SputInfo**, real *H, int nobj, const real *ow, const real *y, fint*);
 	fint (*Sphset)		(EvalWorkspace*,SputInfo**, int nobj, int ow, int y, int uptri);
 	fint (*Sphset_nomap)	(EvalWorkspace*,SputInfo**, int nobj, int ow, int y, int uptri);
 	EvalWorkspace* (*EWalloc)(ASL*);
@@ -1146,7 +1146,7 @@ QPinfo {
  extern void deriv_errclear_ASL(EvalWorkspace *);
  extern void derprop(derpblock*, real*, real*, real);
  extern char *dtoa_r(double, int, int, int*, int*, char**, char*, size_t);
- extern void duthes_ew_ASL(EvalWorkspace*, real *H, int nobj, real *ow, real *y);
+ extern void duthes_ew_ASL(EvalWorkspace*, real *H, int nobj, const real *ow, const real *y);
  extern ufunc *dynlink_ASL(const char*);
  extern int edag_peek(EdRead*);
  extern void equ_adjust_ASL(ASL*, int*, int*);
@@ -1162,7 +1162,7 @@ QPinfo {
  extern void fintrouble_ASL(EvalWorkspace*, func_info*, const char*, TMInfo*);
  extern void flagsave_ASL(ASL*, int);
  extern char *fread_sol_ASL(ASL*, const char *fname, real**xp, real **yp);
- extern void fullhes_ew_ASL(EvalWorkspace*, real *H, fint LH, int no, real *ow, real *y);
+ extern void fullhes_ew_ASL(EvalWorkspace*, real *H, fint LH, int no, const real *ow, const real *y);
  extern Sig_ret_type fpecatch(int);
  extern jmp_buf fpe_jmpbuf_ASL;
  extern func_info *func_lookup(ASL*, const char*, int add);
@@ -1227,7 +1227,7 @@ QPinfo {
  extern char *obj_name_ASL(ASL*,int);
  extern int obj_prec(void);
  extern void obj_adj_ASL(ASL*);
- extern void obj_adj_xy_ASL(ASL *asl, real *x, real *x0, real *y);
+ extern void obj_adj_xy_ASL(ASL *asl, real *x, const real *x0, real *y);
  extern real objconst_ASL(ASL*,int);
  extern void objgrd_(fint *N, real *X, fint *NOBJ, real *G, fint *nerror);
  extern real objval_(fint *N, real *X, fint *NOBJ, fint *nerror);
@@ -1252,7 +1252,7 @@ QPinfo {
  extern void sigcatch_ASL(void);
  extern void* sos_add_ASL(ASL*, FILE*, int);
  extern int sos_finish_ASL(ASL*,void**,int,int*,int**,int*,int**,int**,real**);
- extern void sphes_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, real *ow, real *y);
+ extern void sphes_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, const real *ow, const real *y);
  extern fint sphsetup_ew_ASL(EvalWorkspace*, SputInfo**, int nobj, int ow, int y, int uptri);
  extern void student_check_ASL(ASL*);
  extern void suf_declare_ASL(ASL*, SufDecl*, int);
@@ -1264,19 +1264,19 @@ QPinfo {
  extern char *var_name_nomap_ASL(ASL*,int,int*);
  extern void varscale_ASL(ASL*, int, real, fint*);
  extern void what_prog(void);
- extern void write_sol_ASL(ASL*, const char *msg, double *x, double *y, Option_Info*);
- extern int  write_solf_ASL(ASL*, const char *msg, double *x, double *y, Option_Info *,
+ extern void write_sol_ASL(ASL*, const char *msg, const double *x, const double *y, Option_Info*);
+ extern int  write_solf_ASL(ASL*, const char *msg, const double *x, const double *y, Option_Info *,
 			const char*);
- extern int  write_solfx_ASL(ASL*, const char *msg, double *x, double *y, Option_Info *,
+ extern int  write_solfx_ASL(ASL*, const char *msg, const double *x, const double *y, Option_Info *,
 			Fwrite, Fwrite, Fwrite, const char*);
- extern void wrsolw_(char *msg, fint *nmsg, real *x, real *y, fint *wantsol,
+ extern void wrsolw_(char *msg, fint *nmsg, const real *x, const real *y, fint *wantsol,
 			ftnlen msg_len);
- extern void wrtsol_(char *msg, fint *nmsg, real *x, real *y,
+ extern void wrtsol_(char *msg, fint *nmsg, const real *x, const real *y,
 			ftnlen msg_len);
  extern real xectim_(void);
- extern void xknown_ASL(EvalWorkspace*, real*, fint*);
- extern void xknowe_(real *x, fint *nerror);
- extern void xknown_(real *x);
+ extern void xknown_ASL(EvalWorkspace*, const real*, fint*);
+ extern void xknowe_(const real *x, fint *nerror);
+ extern void xknown_(const real *x);
  extern void xunkno_(void);
  extern void xunknown_ASL(EvalWorkspace*);
  extern void zero_div_ASL(EvalWorkspace*, real, const char*);

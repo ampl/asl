@@ -78,7 +78,7 @@ notread(const char *what, const char *pred)
 	}
 
  static real
-obj0val(EvalWorkspace *ew, int nobj, real *X, fint *nerror)
+obj0val(EvalWorkspace *ew, int nobj, const real *X, fint *nerror)
 {
 	Not_Used(nobj);
 	Not_Used(X);
@@ -88,7 +88,7 @@ obj0val(EvalWorkspace *ew, int nobj, real *X, fint *nerror)
 	}
 
  static void
-obj0grd(EvalWorkspace *ew, int nobj, real *X, real *G, fint *nerror)
+obj0grd(EvalWorkspace *ew, int nobj, const real *X, real *G, fint *nerror)
 {
 	Not_Used(nobj);
 	Not_Used(X);
@@ -99,7 +99,7 @@ obj0grd(EvalWorkspace *ew, int nobj, real *X, real *G, fint *nerror)
 	}
 
  static void
-con0val(EvalWorkspace *ew, real *X, real *R, fint *nerror)
+con0val(EvalWorkspace *ew, const real *X, real *R, fint *nerror)
 {
 	Not_Used(X);
 	Not_Used(R);
@@ -109,7 +109,7 @@ con0val(EvalWorkspace *ew, real *X, real *R, fint *nerror)
 	}
 
  static void
-jac0val(EvalWorkspace *ew, real *X, real *J, fint *nerror)
+jac0val(EvalWorkspace *ew, const real *X, real *J, fint *nerror)
 {
 	Not_Used(X);
 	Not_Used(J);
@@ -119,7 +119,7 @@ jac0val(EvalWorkspace *ew, real *X, real *J, fint *nerror)
 	}
 
  static real
-con0ival(EvalWorkspace *ew, int i, real *X, fint *nerror)
+con0ival(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	Not_Used(i);
 	Not_Used(X);
@@ -130,7 +130,7 @@ con0ival(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  static real
-conivalmap(EvalWorkspace *ew, int i, real *X, fint *nerror)
+conivalmap(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL *a;
 	int *cm;
@@ -142,7 +142,7 @@ conivalmap(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  static void
-congrdmap(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
+congrdmap(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	ASL *a;
 	int *cm;
@@ -154,7 +154,7 @@ congrdmap(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
 	}
 
  static int
-lcon0val(EvalWorkspace *ew, int i, real *X, fint *nerror)
+lcon0val(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	Not_Used(i);
 	Not_Used(X);
@@ -165,7 +165,7 @@ lcon0val(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  static void
-con0grd(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
+con0grd(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	Not_Used(i);
 	Not_Used(X);
@@ -176,7 +176,7 @@ con0grd(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
 	}
 
  static void
-hv0comp(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y)
+hv0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, const real *y)
 {
 	Not_Used(hv);
 	Not_Used(p);
@@ -188,7 +188,7 @@ hv0comp(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y)
 	}
 
  static void
-hv0compd(EvalWorkspace *ew, real *hv, real *p, int co)
+hv0compd(EvalWorkspace *ew, real *hv, const real *p, int co)
 {
 	Not_Used(hv);
 	Not_Used(p);
@@ -198,7 +198,7 @@ hv0compd(EvalWorkspace *ew, real *hv, real *p, int co)
 	}
 
  static void
-hv0compde(EvalWorkspace *ew, real *hv, real *p, int co, fint *nerror)
+hv0compde(EvalWorkspace *ew, real *hv, const real *p, int co, fint *nerror)
 {
 	Not_Used(hv);
 	Not_Used(p);
@@ -209,7 +209,7 @@ hv0compde(EvalWorkspace *ew, real *hv, real *p, int co, fint *nerror)
 	}
 
  static void
-hv0compe(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
+hv0compe(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(hv);
 	Not_Used(p);
@@ -222,7 +222,7 @@ hv0compe(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y, fint
 	}
 
  static varno_t
-hv0comps(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z)
+hv0comps(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 {
 	Not_Used(hv);
 	Not_Used(p);
@@ -235,7 +235,7 @@ hv0comps(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z)
 	}
 
  static varno_t
-hv0compse(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerror)
+hv0compse(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, varno_t *z, fint *nerror)
 {
 	Not_Used(hv);
 	Not_Used(p);
@@ -249,7 +249,7 @@ hv0compse(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z, 
 	}
 
  static void
-hv0init(EvalWorkspace *ew, int n, int no, real *ow, real *y)
+hv0init(EvalWorkspace *ew, int n, int no, const real *ow, const real *y)
 {
 	Not_Used(n);
 	Not_Used(no);
@@ -260,7 +260,7 @@ hv0init(EvalWorkspace *ew, int n, int no, real *ow, real *y)
 	}
 
  static void
-hv0inite(EvalWorkspace *ew, int n, int no, real *ow, real *y, fint *nerror)
+hv0inite(EvalWorkspace *ew, int n, int no, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(n);
 	Not_Used(no);
@@ -272,7 +272,7 @@ hv0inite(EvalWorkspace *ew, int n, int no, real *ow, real *y, fint *nerror)
 	}
 
  static int
-x0known(EvalWorkspace *ew, real *x, fint *nerror)
+x0known(EvalWorkspace *ew, const real *x, fint *nerror)
 {
 	Not_Used(x);
 	Not_Used(nerror);
@@ -282,7 +282,7 @@ x0known(EvalWorkspace *ew, real *x, fint *nerror)
 	}
 
  static void
-dut0hes(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y)
+dut0hes(EvalWorkspace *ew, real *H, int nobj, const real *ow, const real *y)
 {
 	Not_Used(H);
 	Not_Used(nobj);
@@ -293,7 +293,7 @@ dut0hes(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y)
 	}
 
  static void
-dute0hes(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y, fint *nerror)
+dute0hes(EvalWorkspace *ew, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(H);
 	Not_Used(nobj);
@@ -305,7 +305,7 @@ dute0hes(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y, fint *nerror)
 	}
 
  static void
-ful0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y)
+ful0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, const real *ow, const real *y)
 {
 	Not_Used(H);
 	Not_Used(LH);
@@ -317,7 +317,7 @@ ful0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y)
 	}
 
  static void
-fule0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y, fint *nerror)
+fule0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(H);
 	Not_Used(LH);
@@ -330,7 +330,7 @@ fule0hes(EvalWorkspace *ew, real *H, fint LH, int nobj, real *ow, real *y, fint 
 	}
 
  static void
-sut0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, real *ow, real *y)
+sut0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, const real *ow, const real *y)
 {
 	Not_Used(p);
 	Not_Used(H);
@@ -342,7 +342,7 @@ sut0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, real *ow, real *y)
 	}
 
  static void
-sute0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, real *ow, real *y, fint *nerror)
+sute0hes(EvalWorkspace *ew, SputInfo **p, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(p);
 	Not_Used(H);
@@ -678,7 +678,7 @@ M1free_ASL(Edaginfo *I, void **mnext, void **mlast)
 	}
 
  void
-xknown_(real *x)
+xknown_(const real *x)
 {
 	ASL *asl;
 	EvalWorkspace *ws;
@@ -690,7 +690,7 @@ xknown_(real *x)
 	}
 
  void
-xknowe_(real *x, fint *nerror)
+xknowe_(const real *x, fint *nerror)
 {
 	ASL *asl;
 	EvalWorkspace *ws;

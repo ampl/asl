@@ -313,7 +313,7 @@ obj_adj1(ASL *asl, int no, int *pco, cgrad **pcgo, real *prhs)
 	}
 
  static real
-objval_adj(EvalWorkspace *ew, int no, real *X, fint *nerror)
+objval_adj(EvalWorkspace *ew, int no, const real *X, fint *nerror)
 {
 	ASL *asl;
 	Objrep *od;
@@ -342,7 +342,7 @@ objval_adj(EvalWorkspace *ew, int no, real *X, fint *nerror)
 	}
 
  static void
-objgrd_adj(EvalWorkspace *ew, int no, real *X, real *G, fint *nerror)
+objgrd_adj(EvalWorkspace *ew, int no, const real *X, real *G, fint *nerror)
 {
 	ASL *asl;
 	Objrep *od;
@@ -403,12 +403,13 @@ jac_adj(ASL *asl)
 	}
 
  static void
-paradj(EvalWorkspace *ew, int *pno, real **pow, real **py)
+paradj(EvalWorkspace *ew, int *pno, const real **pow, const real **py)
 {
 	ASL *asl;
 	Objrep *Od, **Or;
+	const real *ow, *y;
 	int *cm, i, j, k, nc, nc0, needow, no, nobj;
-	real *ow, wo, *ws, *y, *ys;
+	real wo, *ws, *ys;
 
 	asl = ew->asl;
 	nobj = n_obj;
@@ -464,16 +465,16 @@ paradj(EvalWorkspace *ew, int *pno, real **pow, real **py)
 		if (!y)
 			*py = ys;
 		if (ow) {
-			memcpy(*pow = ws, ow, nobj*sizeof(real));
-			ow = ws;
+			memcpy(ws, ow, nobj*sizeof(real));
+			*pow = ow = ws;
 			wo = ow[k];
 			}
  loop:
 		ys[Od->ico] = wo * Od->c12;
 		if (ow) {
-			ow[k] = 0.;
+			ws[k] = 0.;
 			while(++k < nobj)
-				if ((wo = ow[k]) && (Od = Or[k]))
+				if ((wo = ws[k]) && (Od = Or[k]))
 					goto loop;
 			}
 		}
@@ -481,7 +482,7 @@ paradj(EvalWorkspace *ew, int *pno, real **pow, real **py)
 	}
 
  static void
-hvcomp_adj(EvalWorkspace *ew, real *hv, real *p, int no, real *ow, real *y)
+hvcomp_adj(EvalWorkspace *ew, real *hv, const real *p, int no, const real *ow, const real *y)
 {
 	ASL *asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
@@ -489,7 +490,7 @@ hvcomp_adj(EvalWorkspace *ew, real *hv, real *p, int no, real *ow, real *y)
 	}
 
  static void
-hvcompe_adj(EvalWorkspace *ew, real *hv, real *p, int no, real *ow, real *y, fint *nerror)
+hvcompe_adj(EvalWorkspace *ew, real *hv, const real *p, int no, const real *ow, const real *y, fint *nerror)
 {
 	ASL *asl;
 	Jmp_buf **Jp, *Jsave, b;
@@ -508,7 +509,7 @@ hvcompe_adj(EvalWorkspace *ew, real *hv, real *p, int no, real *ow, real *y, fin
 	}
 
  static void
-hvinit_adj(EvalWorkspace *ew, int hid_limit, int no, real *ow, real *y)
+hvinit_adj(EvalWorkspace *ew, int hid_limit, int no, const real *ow, const real *y)
 {
 	ASL *asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
@@ -516,7 +517,7 @@ hvinit_adj(EvalWorkspace *ew, int hid_limit, int no, real *ow, real *y)
 	}
 
  static void
-hvinite_adj(EvalWorkspace *ew, int hid_limit, int no, real *ow, real *y, fint *nerror)
+hvinite_adj(EvalWorkspace *ew, int hid_limit, int no, const real *ow, const real *y, fint *nerror)
 {
 	ASL *asl;
 	Jmp_buf **Jp, *Jsave, b;
@@ -535,7 +536,7 @@ hvinite_adj(EvalWorkspace *ew, int hid_limit, int no, real *ow, real *y, fint *n
 	}
 
  static void
-duthes_adj(EvalWorkspace *ew, real *H, int no, real *ow, real *y)
+duthes_adj(EvalWorkspace *ew, real *H, int no, const real *ow, const real *y)
 {
 	ASL *asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
@@ -543,7 +544,7 @@ duthes_adj(EvalWorkspace *ew, real *H, int no, real *ow, real *y)
 	}
 
  static void
-duthese_adj(EvalWorkspace *ew, real *H, int no, real *ow, real *y, fint *nerror)
+duthese_adj(EvalWorkspace *ew, real *H, int no, const real *ow, const real *y, fint *nerror)
 {
 	ASL *asl;
 	Jmp_buf **Jp, *Jsave, b;
@@ -562,7 +563,7 @@ duthese_adj(EvalWorkspace *ew, real *H, int no, real *ow, real *y, fint *nerror)
 	}
 
  static void
-fulhes_adj(EvalWorkspace *ew, real *H, fint LH, int no, real *ow, real *y)
+fulhes_adj(EvalWorkspace *ew, real *H, fint LH, int no, const real *ow, const real *y)
 {
 	ASL *asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
@@ -570,7 +571,7 @@ fulhes_adj(EvalWorkspace *ew, real *H, fint LH, int no, real *ow, real *y)
 	}
 
  static void
-fulhese_adj(EvalWorkspace *ew, real *H, fint LH, int no, real *ow, real *y, fint *nerror)
+fulhese_adj(EvalWorkspace *ew, real *H, fint LH, int no, const real *ow, const real *y, fint *nerror)
 {
 	ASL *asl;
 	Jmp_buf **Jp, *Jsave, b;
@@ -589,7 +590,7 @@ fulhese_adj(EvalWorkspace *ew, real *H, fint LH, int no, real *ow, real *y, fint
 	}
 
  static void
-sphes_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, real *ow, real *y)
+sphes_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, const real *ow, const real *y)
 {
 	ASL *asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
@@ -597,7 +598,7 @@ sphes_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, real *ow, real *y)
 	}
 
  static void
-sphese_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, real *ow, real *y, fint *nerror)
+sphese_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, const real *ow, const real *y, fint *nerror)
 {
 	ASL *asl;
 	Jmp_buf **Jp, *Jsave, b;
@@ -849,7 +850,7 @@ obj_adj_ASL(ASL *asl)
 	}
 
  void
-obj_adj_xy_ASL(ASL *asl, real *x, real *x0, real *y)
+obj_adj_xy_ASL(ASL *asl, real *x, const real *x0, real *y)
 {
 	EvalWorkspace *ew;
 	Objrep *od, **odp;

@@ -54,9 +54,9 @@ struct ParHvInfo {
 	PTHREADS(pthread_mutex_t mutex;)
 	PTHREADS(pthread_t* T;)
 	int thpv1max;		/* number of tpv1 structures */
-	real *p;
-	real *ow;
-	real *y;
+	const real *p;
+	const real *ow;
+	const real *y;
 	int nobj;
 	real *W;
 	real *hs0;		/* hsave base */
@@ -1389,7 +1389,7 @@ funnelhes_ew_ASL(EvalWorkspace *ew)
 	}
 
  static void
-hvp0comp(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y)
+hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, const real *y)
 	/* p = direction */
 	/* y = Lagrange multipliers */
 	/* hv = result */
@@ -1397,6 +1397,7 @@ hvp0comp(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y)
 	ASL_pfgh *asl;
 	Varval *v, *vp, *x, *x0, *x1, *xe;
 	cexp *c, *c1;
+	const real *p1;
 	int *dvsp0, *e, gm, i, i0, i1, j, n, nc, ndv, *ndvsp, no, noe, nov, *ov, *ove;
 	linarg *la;
 	lincoef *lc, *lce;
@@ -1404,7 +1405,7 @@ hvp0comp(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y)
 	ps_func *f, *f0;
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
-	real *cscale, g1, g2, *oc, *p1, t, t2, *W;
+	real *cscale, g1, g2, *oc, t, t2, *W;
 
 #ifdef IGNORE_BOGUS_WARNINGS
 	c = 0;
@@ -1812,10 +1813,11 @@ tstart3(void *arg)
 	ParHvInfo *tp;
 	Thparshv1 *tp1;
 	Varval *V;
+	const real *p, *ow, *y;
 	int j, n, nobj, nv, *ov, *ove, *ui, *uie;
 	linarg *la, **lap, **lape;
 	range *r;
-	real *hs, *hse, *oc, *ow, *p, *s, t, *w, *wh, *wi, *x, *y;
+	real *hs, *hse, *oc, *s, t, *w, *wh, *wi, *x;
 
 	tp1 = arg;
 	tp = tp1->tp;
@@ -1912,10 +1914,10 @@ tstart3(void *arg)
 	}
 #endif
 
- extern void hvpinit_nc_ASL(EvalWorkspace*, int, int, real*, real*);
+ extern void hvpinit_nc_ASL(EvalWorkspace*, int, int, const real*, const real*);
 
  void
-hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y)
+hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, const real *y)
 	/* p = direction */
 	/* y = Lagrange multipliers */
 	/* hv = result */
@@ -1924,12 +1926,13 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
 	ASL_pfgh *asl;
 	Ihinfo *ihi;
 	Varval *V, *v;
+	const real *owi;
 	int j, kp, kw, n, no, noe, nov, ns, nv, *ov, *ove, *ui, *uie;
 	linarg *la, **lap, **lape;
 	ps_func *ps, *pe;
 	psg_elem *g, *ge;
 	range *r;
-	real *W, *cscale, *oc, *owi, t, t1, t2, *p0, *s, *w, *wi, *x;
+	real *W, *cscale, *oc, t, t1, t2, *p0, *s, *w, *wi, *x;
 #ifdef MULTIPLE_THREADS
 	ParHvInfo *phvi;
 	Thparshv1 *tp1, *tpi;
@@ -2279,7 +2282,7 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-hvpcompe_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
+hvpcompe_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -2364,7 +2367,7 @@ dbprint2(EvalWorkspace *ew, range *r, pthread_t tno)
 
 
  void
-pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, real *ow, real *y)
+pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, const real *ow, const real *y)
 {
 	ASL_pfgh *asl;
 	Varval *V, *v, *vp, *x;
@@ -2484,7 +2487,7 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, real *ow, real *y)
 	}
 
  void
-hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co)
+hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 	/* p = direction */
 	/* hv = result */
 	/* co >= 0: behave like hvpcomp_ASL with nobj = -1, ow = 0, y[i] = i == co ? 1. : 0. */
@@ -2745,7 +2748,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-hvpcompde_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, fint *nerror)
+hvpcompde_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -2761,7 +2764,7 @@ hvpcompde_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, fint *nerror)
 	}
 
  varno_t
-hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z)
+hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 	/* p = direction */
 	/* hv = result */
 	/* co >= 0: behave like hvpcomp_ASL with nobj = -1, ow = 0, y[i] = i == co ? 1. : 0. */
@@ -3061,7 +3064,7 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_
    similarly to the final nerror argument to objval_(), etc. */
 
  varno_t
-hvpcompse_ew_ASL(EvalWorkspace *ew, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerror)
+hvpcompse_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, varno_t *z, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 	varno_t rv;

@@ -418,23 +418,23 @@ tfinfo {
 
 #endif /* PSINFO_H0_included */
 #ifdef PSHVREAD
- extern void duthes_ew_ASL(EvalWorkspace*, real *H, int nobj, real *ow, real *y);
- extern void duthese_ew_ASL(EvalWorkspace*, real *H, int nobj, real *ow, real *y, fint*);
+ extern void duthes_ew_ASL(EvalWorkspace*, real *H, int nobj, const real *ow, const real *y);
+ extern void duthese_ew_ASL(EvalWorkspace*, real *H, int nobj, const real *ow, const real *y, fint*);
  extern real eval2_ASL(int*, EvalWorkspace*);
- extern void fullhes_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, real*ow, real *y);
- extern void fullhese_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, real*ow, real *y, fint*);
+ extern void fullhes_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, const real *ow, const real *y);
+ extern void fullhese_ew_ASL(EvalWorkspace*, real*H, fint LH, int nobj, const real *ow, const real *y, fint*);
  extern void funnelhes_ew_ASL(EvalWorkspace*);
- extern void hvpinit_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, real *ow, real *y);
- extern void hvpinite_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, real *ow, real *y, fint*);
+ extern void hvpinit_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, const real *ow, const real *y);
+ extern void hvpinite_ew_ASL(EvalWorkspace*, int hid_lim, int nobj, const real *ow, const real *y, fint*);
  extern ASL_pfgh *pscheck_ASL(ASL*, const char*);
- extern void pshv_prod_ASL(EvalWorkspace*, range *r, int nobj, real *ow, real *y);
+ extern void pshv_prod_ASL(EvalWorkspace*, range *r, int nobj, const real *ow, const real *y);
  extern fint sphes_setup_ew_ASL(EvalWorkspace*, SputInfo**, int nobj, int ow, int y, int ul);
- extern void sphes_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, real *ow, real *y);
- extern void sphese_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
- extern int xp_check_ASL(EvalWorkspace*, real*);
- extern void xpsg_check_ASL(EvalWorkspace*, int nobj, real *ow, real *y);
+ extern void sphes_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, const real *ow, const real *y);
+ extern void sphese_ew_ASL(EvalWorkspace*, SputInfo**, real *H, int nobj, const real *ow, const real *y, fint*);
+ extern int xp_check_ASL(EvalWorkspace*, const real*);
+ extern void xpsg_check_ASL(EvalWorkspace*, int nobj, const real *ow, const real *y);
 #else /* PSHVREAD */
- extern int xp1known_ew_ASL(EvalWorkspace*, real*, fint*);
+ extern int xp1known_ew_ASL(EvalWorkspace*, const real*, fint*);
 #endif /* PSHVREAD */
 
 #ifdef __cplusplus

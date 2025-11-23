@@ -26,16 +26,16 @@ of or in connection with the use or performance of this software.
  extern "C" {
 #endif
 
- extern void conpgrd_ew_ASL(EvalWorkspace*, int nc, real *X, real *G, fint *nerror);
- extern void conpgrd_nomap_ew_ASL(EvalWorkspace*, int nc, real *X, real *G, fint *nerror);
- extern real conpival_ew_ASL(EvalWorkspace*, int nc, real *X, fint *ne);
- extern real conpival_nomap_ew_ASL(EvalWorkspace*, int nc, real *X, fint *ne);
- extern void conpval_ew_ASL(EvalWorkspace*, real *X, real *F, fint *nerror);
+ extern void conpgrd_ew_ASL(EvalWorkspace*, int nc, const real *X, real *G, fint *nerror);
+ extern void conpgrd_nomap_ew_ASL(EvalWorkspace*, int nc, const real *X, real *G, fint *nerror);
+ extern real conpival_ew_ASL(EvalWorkspace*, int nc, const real *X, fint *ne);
+ extern real conpival_nomap_ew_ASL(EvalWorkspace*, int nc, const real *X, fint *ne);
+ extern void conpval_ew_ASL(EvalWorkspace*, const real *X, real *F, fint *nerror);
  extern real eval2_ASL(int *o, EvalWorkspace*);
- extern void jacpval_ew_ASL(EvalWorkspace*, real *X, real *JAC, fint *nerror);
- extern int  lconpval_ew_ASL(EvalWorkspace*, int nc, real *X, fint *ne);
- extern void objpgrd_ew_ASL(EvalWorkspace*, int nobj, real *X, real *G, fint *nerror);
- extern real objpval_ew_ASL(EvalWorkspace*, int nobj, real *X, fint *nerror);
+ extern void jacpval_ew_ASL(EvalWorkspace*, const real *X, real *JAC, fint *nerror);
+ extern int  lconpval_ew_ASL(EvalWorkspace*, int nc, const real *X, fint *ne);
+ extern void objpgrd_ew_ASL(EvalWorkspace*, int nobj, const real *X, real *G, fint *nerror);
+ extern real objpval_ew_ASL(EvalWorkspace*, int nobj, const real *X, fint *nerror);
 
 #ifdef __cplusplus
 	}
@@ -2330,7 +2330,7 @@ funnelset(EvalWorkspace *ew, cexp **dvf)
 	}
 
  void
-conpval_ew_ASL(EvalWorkspace *ew, real *X, real *F, fint *nerror)
+conpval_ew_ASL(EvalWorkspace *ew, const real *X, real *F, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
@@ -2430,7 +2430,7 @@ conpval_ew_ASL(EvalWorkspace *ew, real *X, real *F, fint *nerror)
 	}
 
  void
-jacpval_ew_ASL(EvalWorkspace *ew, real *X, real *G, fint *nerror)
+jacpval_ew_ASL(EvalWorkspace *ew, const real *X, real *G, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
@@ -2557,7 +2557,7 @@ NNOBJ_chk(ASL *asl, int i, const char *who)
 	}
 
  real
-objpval_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
+objpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
@@ -2635,7 +2635,7 @@ objpval_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  void
-objpgrd_ew_ASL(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
+objpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
@@ -2745,7 +2745,7 @@ INchk(ASL *asl, const char *who, int i, int ix)
 	}
 
  static real
-cpval(EvalWorkspace *ew, int i, real *X, fint *nerror)
+cpval(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
@@ -2795,7 +2795,7 @@ cpval(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  static real
-Conivalp(EvalWorkspace *ew, int i, real *X, fint *nerror)
+Conivalp(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL_pfgh *asl;
 	cgrad *gr, **gr0;
@@ -2844,7 +2844,7 @@ Conivalp(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  real
-conpival_nomap_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
+conpival_nomap_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL *a = ew->asl;
 	INchk(a, "conpival_nomap", i, a->i.n_con0);
@@ -2852,7 +2852,7 @@ conpival_nomap_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  real
-conpival_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
+conpival_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL *a;
 	int *cm;
@@ -2865,7 +2865,7 @@ conpival_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  int
-lconpval_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
+lconpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL *a;
 	real f;
@@ -2878,7 +2878,7 @@ lconpval_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  static void
-Congrdp(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
+Congrdp(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
@@ -2992,7 +2992,7 @@ Congrdp(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-conpgrd_nomap_ew_ASL(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
+conpgrd_nomap_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	ASL *a;
 	static char who[] = "conpgrd_nomap";
@@ -3005,7 +3005,7 @@ conpgrd_nomap_ew_ASL(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-conpgrd_ew_ASL(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
+conpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	ASL *a;
 	int *cm;
@@ -3022,9 +3022,9 @@ conpgrd_ew_ASL(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror)
 
  static void
 xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t nx,
-	real (*ev)(EvalWorkspace *ew, int i, real *X, fint *nerror),
-	void (*gv)(EvalWorkspace *ew, int i, real *X, real *G, fint *nerror),
-	real *y, int oxk)
+	real (*ev)(EvalWorkspace *ew, int i, const real *X, fint *nerror),
+	void (*gv)(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror),
+	const real *y, int oxk)
 {
 	int i, i1, i2, needeval;
 	ps_func *f;
@@ -3056,7 +3056,7 @@ xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t n
 	}
 
  void
-xpsg_check_ASL(EvalWorkspace *ew, int nobj, real *ow, real *y)
+xpsg_check_ASL(EvalWorkspace *ew, int nobj, const real *ow, const real *y)
 {
 	ASL_pfgh *asl;
 	int i, nc, no, nz, oxk, tno;

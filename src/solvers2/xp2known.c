@@ -75,7 +75,7 @@ extern EvalWorkspace *ewalloc4_ASL(ASL_pfgh *, EvalWorkspace *);
 extern void dv_comp_ASL(EvalWorkspace*, int, int);
 
  int
-xp_check_ASL(EvalWorkspace *ew, real *x)
+xp_check_ASL(EvalWorkspace *ew, const real *x)
 {
 	ASL_pfgh *asl;
 	Varval *V;
@@ -133,7 +133,7 @@ xp_check_ASL(EvalWorkspace *ew, real *x)
 	}
 
  int
-xp2known_ew_ASL(EvalWorkspace *ew, real *X, fint *nerror)
+xp2known_ew_ASL(EvalWorkspace *ew, const real *X, fint *nerror)
 {
 	ASL *a;
 	Jmp_buf err_jmp0;
@@ -168,7 +168,7 @@ Umultinfo {
 	};
 
  static void
-bigUmult(EvalWorkspace *ew, real *h, range *r, int nobj, real *ow, Umultinfo *u, real *y)
+bigUmult(EvalWorkspace *ew, real *h, range *r, int nobj, const real *ow, Umultinfo *u, const real *y)
 {
 	ASL_pfgh *asl;
 	Umultinfo *u0, *u1, *ue, **utodo, **utodoi;
@@ -346,7 +346,7 @@ tstart4(void *arg)
 #endif
 
  void
-hvpinit_nc_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y)
+hvpinit_nc_ASL(EvalWorkspace *ew, int ndhmax, int nobj, const real *ow, const real *y)
 {
 	ASL_pfgh *asl;
 	Ihinfo *ihi;
@@ -524,7 +524,7 @@ hvpinit_nc_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y)
 	}
 
  void
-hvpinit_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y)
+hvpinit_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, const real *ow, const real *y)
 {
 	ASL_pfgh *asl = (ASL_pfgh*)ew->asl;
 	ASL_CHECK(((ASL*)asl), ASL_read_pfgh, "hvpinit");
@@ -536,7 +536,7 @@ hvpinit_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-hvpinite_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, real *ow, real *y, fint *nerror)
+hvpinite_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf **Jp, *Jsave, b;

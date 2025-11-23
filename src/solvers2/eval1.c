@@ -1470,7 +1470,7 @@ dv_funnel(ASL_fg *asl, EvalWorkspace *ew, cexp **dvf)
 	}
 
  static int
-x0_check1(EvalWorkspace *ew, real *X)
+x0_check1(EvalWorkspace *ew, const real *X)
 {
 	ASL_fg *asl;
 	int i, nv, *vm;
@@ -1513,7 +1513,7 @@ x0_check1(EvalWorkspace *ew, real *X)
 	}
 
  int
-x1known_ew_ASL(EvalWorkspace *ew, real *X, fint *nerror)
+x1known_ew_ASL(EvalWorkspace *ew, const real *X, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -1540,7 +1540,7 @@ x1known_ew_ASL(EvalWorkspace *ew, real *X, fint *nerror)
 	}
 
  real
-obj1val_ew_ASL(EvalWorkspace *ew, int nobj, real *X, fint *nerror)
+obj1val_ew_ASL(EvalWorkspace *ew, int nobj, const real *X, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -1613,7 +1613,7 @@ obj1val_ew_ASL(EvalWorkspace *ew, int nobj, real *X, fint *nerror)
 	}
 
  real
-con1ival_ew_ASL(EvalWorkspace *ew, int ncon, real *X, fint *nerror)
+con1ival_ew_ASL(EvalWorkspace *ew, int ncon, const real *X, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -1690,7 +1690,7 @@ con1ival_ew_ASL(EvalWorkspace *ew, int ncon, real *X, fint *nerror)
 	}
 
  void
-con1val_ew_ASL(EvalWorkspace *ew, real *X, real *F, fint *nerror)
+con1val_ew_ASL(EvalWorkspace *ew, const real *X, real *F, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -1781,7 +1781,7 @@ con1val_ew_ASL(EvalWorkspace *ew, real *X, real *F, fint *nerror)
 	}
 
  int
-lcon1val_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
+lcon1val_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -1823,7 +1823,7 @@ lcon1val_ew_ASL(EvalWorkspace *ew, int i, real *X, fint *nerror)
 	}
 
  void
-obj1grd_ew_ASL(EvalWorkspace *ew, int nobj, real *X, real *G, fint *nerror)
+obj1grd_ew_ASL(EvalWorkspace *ew, int nobj, const real *X, real *G, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -1933,7 +1933,7 @@ obj1grd_ew_ASL(EvalWorkspace *ew, int nobj, real *X, real *G, fint *nerror)
 	}
 
  void
-con1grd_ew_ASL(EvalWorkspace *ew, int nc, real *X, real *G, fint *nerror)
+con1grd_ew_ASL(EvalWorkspace *ew, int nc, const real *X, real *G, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -2060,7 +2060,7 @@ con1grd_ew_ASL(EvalWorkspace *ew, int nc, real *X, real *G, fint *nerror)
 	}
 
  void
-jac1val_ew_ASL(EvalWorkspace *ew, real *X, real *G, fint *nerror)
+jac1val_ew_ASL(EvalWorkspace *ew, const real *X, real *G, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;

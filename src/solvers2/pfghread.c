@@ -85,8 +85,8 @@ la_ref {
 extern "C" {
 #endif
 
-extern real conpival_nomap_ew_ASL(EvalWorkspace*, int, real*, fint*);
-extern void conpgrd_nomap_ew_ASL(EvalWorkspace*, int, real *, real*, fint*);
+extern real conpival_nomap_ew_ASL(EvalWorkspace*, int, const real*, fint*);
+extern void conpgrd_nomap_ew_ASL(EvalWorkspace*, int, const real *, real*, fint*);
 
 #ifdef PSHVREAD
 #define Static Static_pshv
@@ -3985,7 +3985,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				ka = new_a(S);
 			*deriv = ka;
 			new_derp(S, ia, ka, rv+4);
-			op = nextopp(S, 5 + sizeof(void*)/sizeof(int));
+			op = nextopp(S, 7 + sizeof(void*)/sizeof(int));
 			if (needalign(op,4)) {
 				k = OP_PLTERM1align;
 				pp = (plterm**)&op[5];
@@ -3993,7 +3993,6 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			else {
 				k = n_OPPLTERM1;
 				pp = (plterm**)&op[4];
-				opnext = (int*)&pp[1];
 				}
 			op[0] = k;
 			op[2] = rv;
@@ -4003,7 +4002,7 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			wlast = rv + 1;
 			if (!S->dop)
 				new_dop(S);
-			op = nextop(S, 4 + sizeof(void*)/sizeof(int));
+			op = nextop(S, 6 + sizeof(void*)/sizeof(int));
 			if (needalign(op,3)) {
 				k = OP_PLTERM0align;
 				pp = (plterm**)&op[4];
@@ -4011,12 +4010,12 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			else {
 				k = n_OPPLTERM0;
 				pp = (plterm**)&op[3];
-				opnext = (int*)&pp[1];
 				}
 			op[0] = k;
 			op[1] = rv;
 			op[2] = i;
 			}
+		opnext = (int*)&pp[1];
 		*pp = p;
 		break;
 	  case OPIFnl:
@@ -6337,7 +6336,7 @@ heswork(int *o, int *oe)
 			goto more_plterm;
 #endif
 		case n_OPPLTERM1:
-			pp = (plterm**)(o+5);
+			pp = (plterm**)(o+4);
 alignarg(more_plterm:)
 			n += 4;
 			o = (int*)&pp[1];

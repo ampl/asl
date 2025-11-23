@@ -1085,7 +1085,7 @@ RangeInfo {
 	int i, iow, ir, iy, nobj, nr, nzc, start;
 	int *tdone;
 	linarg **lap, **lape;
-	real *ow, *y;
+	const real *ow, *y;
 	} Thpars;
 
  typedef struct {
@@ -1242,10 +1242,11 @@ tstart2(void *arg)
 	Thpars *tp;
 	Thpars1 *tp1;
 	Varval *V, *v;
+	const real *ow, *y;
 	int i, i1, j, n, nobj, *ui, *uie;
 	linarg *la, **lap, **lape;
 	range *r;
-	real *hs, *ow, *s, *si, *w, *y;
+	real *hs, *s, *si, *w;
 	uHeswork *uhw;
 
 	tp1 = arg;
@@ -2068,7 +2069,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 	}
 
  void
-sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
+sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *ow, const real *y)
 {
 	/* sparse upper triangle of Hessian */
 
@@ -2092,14 +2093,15 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
 #endif
 #endif
 	Varval *V, *v;
+	const real *owi, *y1;
 	fint *hr;
 	int i, j, k, n, no, noe, nov, nov1, *ov, *ov1, *ove, *ui, *uie, uptri;
 	linarg *la, **lap, **lap1, **lape;
 	ps_func *p, *pe;
 	psg_elem *g, *ge;
 	range *r, *r0, **rnext, **rp, **rtodo;
-	real *Hi, *H0, *H00, *cscale, *oc, *oc1, *owi, *s, *si;
-	real t, t1, *vsc, *vsc0, *vsc1, *w, *y1;
+	real *Hi, *H0, *H00, *cscale, *oc, *oc1, *s, *si;
+	real t, t1, *vsc, *vsc0, *vsc1, *w;
 	size_t *hcs;
 	ssize_t *ulc, *uli;
 	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
@@ -2594,7 +2596,7 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, real *ow, re
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-sphese_ew_ASL(EvalWorkspace *ew, SputInfo **spi, real *H, int nobj, real *ow, real *y, fint *nerror)
+sphese_ew_ASL(EvalWorkspace *ew, SputInfo **spi, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 

@@ -3433,6 +3433,7 @@ funnelkind(Static *S, int i0, int *ip)
 
 	ce = cexps + i0;
 	ce->vref = 0;
+	ce->cenext = 0;
 	if (!(nzc0 = nzc))
 		return nocopy;
 	k1 = k2 = nzcperm(S);
@@ -3458,7 +3459,7 @@ funnelkind(Static *S, int i0, int *ip)
 						zci[nzc++] = tl->item.i;
 					}
 				    else {
-					cej->vref = (int*)ce2;
+					cej->cenext = ce2;
 					ce2 = cej;
 					}
 				    }
@@ -3519,8 +3520,8 @@ funnelkind(Static *S, int i0, int *ip)
 				if (!ce2)
 					goto ret2;
 				while((cej = ce2)) {
-					ce2 = (cexp*)cej->vref;
-					cej->vref = 0;
+					ce2 = cej->cenext;
+					cej->cenext = 0;
 					for(tl = cej->cref; tl; tl = tl->next)
 						if (!zc[tl->item.i]++)
 							zci[nzc++] = tl->item.i;
@@ -3558,8 +3559,8 @@ funnelkind(Static *S, int i0, int *ip)
 			}
 		}
 	while((cej = ce2)) {
-		ce2 = (cexp*)cej->vref;
-		cej->vref = 0;
+		ce2 = cej->cenext;
+		cej->cenext = 0;
 		}
 	rv = 0;
 	if (nocopy || nderp > 3*(nzc0+k1))

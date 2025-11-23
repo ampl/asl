@@ -3461,3 +3461,14 @@ sphes.c will have changed.
 20241122
   asl.h in solvers2.tgz:  only require pthreads.h when compiled with
 -DMULTIPLE_THREADS (and not with -DALLOW_OPENMP).
+
+20241202
+  fgh_read.c in solvers.tgz:  change the declaration of f_OPHOL to
+	extern char* f_OPHOL ANSI((expr* A_ASL));
+  makefile.u in solvers.tgz: remove dependency on arith.h1.
+
+20250727
+  nlp.h, nlp2.h, pfg_read.c:  add and use field cenext (rather than
+using the vref field for both its intended purpose and a "next"
+pointer).  The old way caused trouble when rereading a large .nl file.
+(This only affects solvers.tgz; solvers2.tgz is not affected.)

@@ -122,14 +122,14 @@ Invd1 {
 #ifdef __cplusplus
  extern "C" {
 #endif
- extern void con1grd(EvalWorkspace*, int nc, real *X, real *G, fint *nerror);
- extern real con1ival(EvalWorkspace*,int nc, real *X, fint *ne);
- extern void con1val(EvalWorkspace*, real *X, real *F, fint *nerror);
- extern void jac1val(EvalWorkspace*, real *X, real *JAC, fint *nerror);
- extern int  lcon1val(EvalWorkspace*, int nc, real *X, fint *ne);
- extern void obj1grd(EvalWorkspace*, int nobj, real *X, real *G, fint *nerror);
- extern real obj1val(EvalWorkspace*, int nobj, real *X, fint *nerror);
- extern int x1known(EvalWorkspace*, real*, fint*);
+ extern void con1grd(EvalWorkspace*, int nc, const real *X, real *G, fint *nerror);
+ extern real con1ival(EvalWorkspace*,int nc, const real *X, fint *ne);
+ extern void con1val(EvalWorkspace*, const real *X, real *F, fint *nerror);
+ extern void jac1val(EvalWorkspace*, const real *X, real *JAC, fint *nerror);
+ extern int  lcon1val(EvalWorkspace*, int nc, const real *X, fint *ne);
+ extern void obj1grd(EvalWorkspace*, int nobj, const real *X, real *G, fint *nerror);
+ extern real obj1val(EvalWorkspace*, int nobj, const real *X, fint *nerror);
+ extern int x1known(EvalWorkspace*, const real*, fint*);
 #ifdef __cplusplus
 	}
 #endif

@@ -138,6 +138,7 @@ cexp {
 	int	zlen;
 	derp	*d;
 	int	*vref;
+	cexp	*cenext;
 	};
 
  struct

@@ -165,6 +165,7 @@ cexp2 {
 	derp	*d;
 	int	*vref;
 	hes_fun	*hfun;
+	cexp2	*cenext;
 	};
 
  struct

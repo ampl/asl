@@ -23,6 +23,7 @@ of or in connection with the use or performance of this software.
 #endif
 
 #define conpival conpival_ew_ASL
+#define conpival_nomap conpival_nomap_ew_ASL
 #define conpgrd  conpgrd_ew_ASL
 #define conpval  conpval_ew_ASL
 #define jacpval  jacpval_ew_ASL
@@ -40,22 +41,23 @@ of or in connection with the use or performance of this software.
 #ifdef __cplusplus
 extern "C" {
 #endif
- extern real conpival(EvalWorkspace*, int nc, real *X, fint *ne);
- extern void conpgrd(EvalWorkspace*, int nc, real *X, real *G, fint *nerror);
- extern void conpval(EvalWorkspace*, real *X, real *F, fint *nerror);
+ extern real conpival(EvalWorkspace*, int nc, const real *X, fint *ne);
+ extern real conpival_nomap(EvalWorkspace*, int nc, const real *X, fint *ne);
+ extern void conpgrd(EvalWorkspace*, int nc, const real *X, real *G, fint *nerror);
+ extern void conpval(EvalWorkspace*, const real *X, real *F, fint *nerror);
  extern real eval2_ASL(int *o, EvalWorkspace*);
- extern void jacpval(EvalWorkspace*, real *X, real *JAC, fint *nerror);
- extern int  lconpval(EvalWorkspace*, int nc, real *X, fint *ne);
- extern void objpgrd(EvalWorkspace*, int nobj, real *X, real *G, fint *nerror);
- extern real objpval(EvalWorkspace*, int nobj, real *X, fint *nerror);
- extern void hvpcomp(EvalWorkspace*, real *hv, real *p, int nobj, real *ow, real *y);
- extern void hvpcompd(EvalWorkspace*,real *hv, real *p, int co);
- extern void hvpcompde(EvalWorkspace*,real *hv, real *p, int co, fint*);
- extern void hvpcompe(EvalWorkspace*, real *hv, real *p, int nobj, real *ow, real *y, fint*);
- extern varno_t hvpcomps(EvalWorkspace*, real *hv, real *p, int co, varno_t nz, varno_t *z);
- extern varno_t hvpcompse(EvalWorkspace*, real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
+ extern void jacpval(EvalWorkspace*, const real *X, real *JAC, fint *nerror);
+ extern int  lconpval(EvalWorkspace*, int nc, const real *X, fint *ne);
+ extern void objpgrd(EvalWorkspace*, int nobj, const real *X, real *G, fint *nerror);
+ extern real objpval(EvalWorkspace*, int nobj, const real *X, fint *nerror);
+ extern void hvpcomp(EvalWorkspace*, real *hv, const real *p, int nobj, const real *ow, const real *y);
+ extern void hvpcompd(EvalWorkspace*,real *hv, const real *p, int co);
+ extern void hvpcompde(EvalWorkspace*,real *hv, const real *p, int co, fint*);
+ extern void hvpcompe(EvalWorkspace*, real *hv, const real *p, int nobj, const real *ow, const real *y, fint*);
+ extern varno_t hvpcomps(EvalWorkspace*, real *hv, const real *p, int co, varno_t nz, varno_t *z);
+ extern varno_t hvpcompse(EvalWorkspace*, real *hv, const real *p, int co, varno_t nz, varno_t *z, fint*);
 
- extern int xp2known(EvalWorkspace*, real*, fint*);
+ extern int xp2known(EvalWorkspace*, const real*, fint*);
 #ifdef __cplusplus
 	}
 #endif

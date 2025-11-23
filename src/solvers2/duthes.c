@@ -41,18 +41,19 @@ add_op(real *w, real *H, psg_elem *g, real t)
 	}
 
  void
-duthes_ew_ASL(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y)
+duthes_ew_ASL(EvalWorkspace *ew, real *H, int nobj, const real *ow, const real *y)
 {
 	/* dense upper triangle of Hessian */
 	ASL *a;
 	ASL_pfgh *asl;
 	Varval *V, *v;
+	const real *owi;
 	int i, j, n, no, noe, *ov, *ov1, *ov1e, *ove;
 	linarg *la, **lap, **lap1, **lape;
 	ps_func *p, *pe;
 	psg_elem *g, *ge;
 	range *r, *r0;
-	real *Hj, *cscale, g2, *oc, *oc1, *owi, *s, *si, t, t1, *w;
+	real *Hj, *cscale, g2, *oc, *oc1, *s, *si, t, t1, *w;
 
 	asl = (ASL_pfgh*)(a = ew->asl);
 	ASL_CHECK(a, ASL_read_pfgh, "duthes");
@@ -139,7 +140,7 @@ duthes_ew_ASL(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-duthese_ew_ASL(EvalWorkspace *ew, real *H, int nobj, real *ow, real *y, fint *nerror)
+duthese_ew_ASL(EvalWorkspace *ew, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
