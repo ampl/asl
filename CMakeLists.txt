@@ -167,7 +167,7 @@ if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^x86")
     set(ARITH_H "${ARITH_H}/* sizeof(size_t) = ${SIZE_T_SIZE}")
     set(ARITH_H "${ARITH_H} but sizeof(ssize_t) = ${SSIZE_T_SIZE} */\n")
   endif()
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/arith.h
+  file(WRITE ${GENERATED_INCLUDE_DIR}/arith.h
        "${ARITH_H}#define QNaN0 0x0\n#define QNaN1 0xfff80000\n")
 else()
   if(NOT WIN32)
