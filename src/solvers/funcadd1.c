@@ -118,9 +118,9 @@ file_kind(const char *name) /* 1 == regular file, 2 ==> directory; else 0 */
 
 	if (stat(name,&sb))
 		return 0;
-	if (sb.st_mode & S_IFDIR)
+	if (S_ISDIR(sb.st_mode))
 		return 2;
-	if (sb.st_mode & S_IFREG)
+	if (S_ISREG(sb.st_mode))
 		return 1;
 	return 0;
 	}
