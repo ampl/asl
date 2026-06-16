@@ -8,9 +8,7 @@
 
 set(archdetect_c_code
     "
-#if defined(__aarch64__) || defined(_M_ARM64)
-    #error cmake_ARCH arm64
-#elif defined(__arm__) || defined(__TARGET_ARCH_ARM)
+#if defined(__arm__) || defined(__TARGET_ARCH_ARM)
     #if defined(__ARM_ARCH_7__) \\
         || defined(__ARM_ARCH_7A__) \\
         || defined(__ARM_ARCH_7R__) \\
@@ -150,8 +148,8 @@ function(getArchitectureFlags ARCH COMPILE_FLAGS LINK_FLAGS)
   if(NOT ((ARCH EQUAL 32) OR (ARCH EQUAL 64)))
     message(ERROR_CRITICAL "Please define the architecture")
   endif()
-  if(UNIX AND NOT CPUARCH MATCHES "arm")
-    if(CPUARCH MATCHES "ppc64" AND CMAKE_SYSTEM_NAME STREQUAL "AIX") # on AIX
+  if(UNIX AND (CPUARCH MATCHES "^(i386|x86_64)$" OR (CPUARCH MATCHES "ppc64" AND CMAKE_SYSTEM_NAME STREQUAL "AIX")))
+    if(CPUARCH MATCHES "ppc64") # on AIX
       if(ARCH EQUAL 32)
         set(CCFLAG "")
       elseif(ARCH EQUAL 64)
