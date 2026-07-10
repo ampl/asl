@@ -45,14 +45,15 @@ add_op(real *H, ograd *og0, real t)
 	}
 
  void
-duthes_ASL(ASL *a, real *H, int nobj, real *ow, real *y)
+duthes_ASL(ASL *a, real *H, int nobj, const real *ow, const real *y)
 {
 	/* dense upper triangle of Hessian */
+	const real *owi;
 	int i, j, n, no, noe;
 	linarg *la, **lap, **lap1, **lape;
 	expr_v *v;
 	range *r, *r0;
-	real *Hj, *cscale, *owi, *s, *si, t, t1;
+	real *Hj, *cscale, *s, *si, t, t1;
 	ograd *og, *og1;
 	ps_func *p, *pe;
 	psg_elem *g, *ge;
@@ -137,7 +138,7 @@ duthes_ASL(ASL *a, real *H, int nobj, real *ow, real *y)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-duthese_ASL(ASL *asl, real *H, int nobj, real *ow, real *y, fint *nerror)
+duthese_ASL(ASL *asl, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 

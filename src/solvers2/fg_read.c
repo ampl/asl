@@ -365,11 +365,17 @@ eread(EdRead *R, uint *deriv, uint atop)
 	derpblock dbsave, *db, *db1, *db2, **pdb;
 	func_info *fi;
 	int a0, a1, *at, i, ica, j, jca, k, k1, k2, k3, kd, numargs;
-	int *op, *ope[2], *opg, *opg1, *opg2, *opg3, **pop, rv, symargs;
+	int *op, *ope[2], *opg, *opg1, *opg2, *opg3, **pop, *powops, rv, symargs;
 	plterm *p;
 	real *b, t;
 	size_t L;
 	uint af, atop2, ia, ja, ka, kaf, *pia, *pja;
+	static int POWops[9] = {nOPPOW0, nOPPOW1, nOPPOW2, nOPPOW3, nOPPOW4,	
+				OP2POW0, OP2POW1, nOPCPOW, OPCPOWalign};
+	static int signpowops[9] = {nOPsignpow0, nOPsignpow1, nOPsignpow2,
+					nOPsignpow3, nOPsignpow4,	
+					OP2signpow0, OP2signpow1,
+					nOPCsignpow, OPCsignpowalign};
 #else  /* Just_Linear */
 	Not_Used(deriv);
 #endif /* Just_Linear */
@@ -498,13 +504,8 @@ eread(EdRead *R, uint *deriv, uint atop)
 					}
 				if (kd) {
 					k1 = rv + 1;
-					if (k2 >= 0) {
-						ia = pja[k2];
-						pja[k2] = 0;
-						new_derp(S, ia, ka, k1+k3);
-						}
-					while(i > 0) {
-						if ((k2 = at[--i]) >= 0 && (ia = pja[i])) {
+					for(i = 0; i < j; ++i) {
+						if ((k2 = at[i]) >= 0 && (ia = pja[i])) {
 							new_derp(S, ia, ka, k1+k2);
 							if (ia > ka)
 								free_a(S, ia);
@@ -648,6 +649,10 @@ eread(EdRead *R, uint *deriv, uint atop)
 	  case OP_log:
 		k = nOP_log0;
 		k1 = nOP_log1;
+		goto unop;
+	  case OP_logistic:
+		k = nOP_logistic0;
+		k1 = nOP_logistic1;
 		goto unop;
 	  case OP_exp:
 		k = nOP_exp;
@@ -872,8 +877,13 @@ eread(EdRead *R, uint *deriv, uint atop)
 				new_derp(S, ia, ka, S->one);
 			}
 		goto bret;
+	  case OPsignpow:
+		powops = signpowops;
+		goto morePOW;
 	  case OPPOW:
-		k = nOPPOW0;
+		powops = POWops;
+ morePOW:
+		k = powops[0];
 		ia = ja = 0;
 		if (deriv) {
 			*deriv = 0;
@@ -897,17 +907,17 @@ eread(EdRead *R, uint *deriv, uint atop)
 			if (ia) {
 				if (ja) {
 					wlast = rv + 3;
-					k = nOPPOW3;
+					k = powops[3];
 					new_derp(S, ia, ka, rv+1);
 					new_derp(S, ja, ka, rv+2);
 					}
 				else {
 					wlast = rv + 2;
-					k = nOPPOW1;
+					k = powops[1];
 					new_derp(S, ia, ka, rv+1);
 					if (j < 0) {
 						if ((t = S->htvals_end[j]) == 2.) {
-							k = OP2POW1;
+							k = powops[6];
  pow2:
 							op = nextop(S, 3);
 							op[0] = k;
@@ -915,25 +925,25 @@ eread(EdRead *R, uint *deriv, uint atop)
 							return op[1] = rv;
 							}
 						if (t == floor(t))
-							k = nOPPOW4;
+							k = powops[4];
 						}
 					}
 				}
 			else {
 				wlast = rv + 2;
-				k = nOPPOW2;
+				k = powops[2];
 				new_derp(S, ja, ka, rv+1);
 				if (i < 0) {
 					t = S->htvals_end[i];
 					if (t > 0.) {
 						op = nextop(S, 7);
 						if (isodd(op,1)) {
-							op[0] = OPCPOWalign;
+							op[0] = powops[8];
 							op[1] = j;
 							b = (real*)&op[2];
 							}
 						else {
-							op[0] = nOPCPOW;
+							op[0] = powops[7];
 							b = (real*)&op[1];
 							op[5] = j;
 							}
@@ -946,7 +956,7 @@ eread(EdRead *R, uint *deriv, uint atop)
 				}
 			}
 		else if (j < 0 && S->htvals_end[j] == 2.) {
-			k = OP2POW0;
+			k = powops[0];
 			goto pow2;
 			}
 		goto bret;

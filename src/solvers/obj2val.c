@@ -18,7 +18,7 @@ of or in connection with the use or performance of this software.
 
 #include "jac2dim.h"
 
- extern int x2_check_ASL ANSI((ASL_fgh*, real *));
+ extern int x2_check_ASL ANSI((ASL_fgh*, const real *));
 #define x2_check(x) x2_check_ASL(asl,x)
 
  static void
@@ -34,7 +34,7 @@ NNOBJ_chk(ASL *asl, int i, const char *who)
 	}
 
  real
-obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
+obj2val_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	ASL_fgh *asl;
 	Jmp_buf err_jmp0;
@@ -108,7 +108,7 @@ obj2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  void
-obj2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+obj2grd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_fgh *asl;
 	Jmp_buf err_jmp0;

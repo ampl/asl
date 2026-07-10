@@ -96,7 +96,7 @@ tablines(const char *s)
 	}
 
  static void
-showsol(ASL *asl, real *x, int n, int n0, Name name, const char *what, const char *pfix)
+showsol(ASL *asl, const real *x, int n, int n0, Name name, const char *what, const char *pfix)
 {
 	int i, j, k, k0;
 
@@ -113,9 +113,10 @@ showsol(ASL *asl, real *x, int n, int n0, Name name, const char *what, const cha
 	}
 
  static real *
-scale(real *x, real *s, real **yp, int n)
+scale(const real *x, real *s, real **yp, int n)
 {
-	real *xe, *y, *y0;
+	const real *xe;
+	real *y, *y0;
 
 	y0 = y = *yp;
 	xe = x + n;
@@ -126,7 +127,7 @@ scale(real *x, real *s, real **yp, int n)
 	}
 
  static real*
-copy(int n, int n1, real *x, real **yp, int *z, int *zap)
+copy(int n, int n1, const real *x, real **yp, int *z, int *zap)
 {
 	int i, j;
 	real *y;
@@ -186,7 +187,7 @@ AMPL_version_ASL(ASL *asl)
 	}
 
  int
-write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi,
+write_solfx_ASL(ASL *asl, const char *msg, const double *x, const double *y, Option_Info *oi,
 		Fwrite fw_d, Fwrite fw_i, Fwrite fw_s, const char *solfname)
 {
 	FILE *f;
@@ -194,10 +195,11 @@ write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi
 	SufHead sh;
 	char *bsmsg, buf[80];
 	const char *s, *s1, *s2;
+	const real *x0, *y0, *yc;
 	fint J[2], m, z[4];
 	ftnlen L[6];
 	int N, binary, i, i1, *ip, j, k, n, nlneed, rv, tail, wantsol, *zz;
-	real *rp, *x0, *y0, *y1, *xycopy;
+	real *rp, *y1, *xc, *xycopy;
 	size_t nn;
 	static const char *wkind[] = {"w", "wb"};
 
@@ -219,7 +221,7 @@ write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi
 			nlneed = 0;
 			}
 		}
-	xycopy = 0;
+	xc = xycopy = 0;
 	wantsol = 1;
 	if (!solfname)
 		solfname = asl->i.solfile;
@@ -254,14 +256,16 @@ write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi
 			y1 = xycopy = (real*)Malloc(k*sizeof(real));
 		if (x) {
 			if (asl->i.vscale)
-				x = scale(x, asl->i.vscale, &y1, n_var);
+				xc = scale(x, asl->i.vscale, &y1, n_var);
 			if ((ip = asl->i.vmap))
-				x = copy(asl->i.n_var0, n_var, x, &y1, ip, asl->i.vzap);
+				xc = copy(asl->i.n_var0, n_var, x, &y1, ip, asl->i.vzap);
 			else if (x == x0 && asl->i.n_var0 > n_var) {
 				memcpy(y1, x, n_var*sizeof(real));
-				x = y1;
+				xc = y1;
 				y1 += asl->i.n_var0;
 				}
+			if (xc)
+				x = xc;
 			}
 		z[0] = m = asl->i.n_con0;
 		if (!y)
@@ -277,8 +281,10 @@ write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi
 				y = y1;
 				}
 			}
-		if (asl->i.Or && x)
-			obj_adj_xy_ASL(asl, x, x0, y);
+		if (!xc)
+			xc = (real*)x;
+		if (asl->i.Or && xc)
+			obj_adj_xy_ASL(asl, xc, x0, (real*)y);
 		}
 	if (!amplflag && !(wantsol & 1))
 		goto write_done;
@@ -431,14 +437,14 @@ write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi
 				fprintf(f, "%s\n", buf);
 				}
 			}
-		y1 = y;
+		yc = y;
 		while(--m >= 0) {
-			g_fmtp(buf, *y1++, 0);
+			g_fmtp(buf, *yc++, 0);
 			fprintf(f,"%s\n", buf);
 			}
-		y1 = x;
+		yc = x;
 		while(--n >= 0) {
-			g_fmtp(buf, *y1++, 0);
+			g_fmtp(buf, *yc++, 0);
 			fprintf(f, "%s\n", buf);
 			}
 		if (tail)
@@ -522,14 +528,14 @@ write_solfx_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi
 	}
 
  void
-write_sol_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi)
+write_sol_ASL(ASL *asl, const char *msg, const double *x, const double *y, Option_Info *oi)
 {
 	if (write_solfx_ASL(asl, msg, x, y, oi, fwrite, fwrite, fwrite, 0))
 		exit(2);
 	}
 
  int
-write_solf_ASL(ASL *asl, const char *msg, double *x, double *y, Option_Info *oi, const char *fname)
+write_solf_ASL(ASL *asl, const char *msg, const double *x, const double *y, Option_Info *oi, const char *fname)
 {
 	return write_solfx_ASL(asl, msg, x, y, oi, fwrite, fwrite, fwrite, fname);
 	}

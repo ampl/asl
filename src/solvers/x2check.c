@@ -19,7 +19,7 @@ of or in connection with the use or performance of this software.
 #include "jac2dim.h"
 
  int
-x2_check_ASL(ASL_fgh *asl, real *X)
+x2_check_ASL(ASL_fgh *asl, const real *X)
 {
 	expr_v *V;
 	int *vm;
@@ -63,7 +63,7 @@ x2_check_ASL(ASL_fgh *asl, real *X)
 	}
 
  int
-x2known_ASL(ASL *asl, real *X, fint *nerror)
+x2known_ASL(ASL *asl, const real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	int ij, rc;

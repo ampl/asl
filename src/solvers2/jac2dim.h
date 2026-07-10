@@ -25,18 +25,18 @@ of or in connection with the use or performance of this software.
 #ifdef __cplusplus
 extern "C" {
 #endif
- extern void hv2comp_ASL(ASL*, real *hv, real *p, int nobj, real *ow, real *y);
- extern void hv2compd_ASL(ASL*, real *hv, real *p, int co);
- extern varno_t hv2comps_ASL(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z);
- extern real con2ival_ASL(ASL*, int i, real *X, fint *ne);
- extern void con2grd_ASL (ASL*, int i, real *X, real *G, fint *nerror);
- extern void con2val_ASL (ASL*, real *X, real *F, fint *nerror);
- extern void jac2val_ASL (ASL*, real *X, real *J, fint *nerror);
- extern int  lcon2val_ASL(ASL*, int i, real *X, fint *ne);
- extern real obj2val_ASL (ASL*, int nobj, real *X, fint *nerror);
- extern void obj2grd_ASL (ASL*, int nobj, real *X, real *G, fint *ne);
- extern int  x2_check_ASL(ASL_fgh*, real*);
- extern int x2known_ASL (ASL*, real*, fint*);
+ extern void hv2comp_ASL(ASL*, real *hv, const real *p, int nobj, const real *ow, const real *y);
+ extern void hv2compd_ASL(ASL*, real *hv, const real *p, int co);
+ extern varno_t hv2comps_ASL(ASL*, real *hv, const real *p, int co, varno_t nz, varno_t *z);
+ extern real con2ival_ASL(ASL*, int i, const real *X, fint *ne);
+ extern void con2grd_ASL (ASL*, int i, const real *X, real *G, fint *nerror);
+ extern void con2val_ASL (ASL*, const real *X, real *F, fint *nerror);
+ extern void jac2val_ASL (ASL*, const real *X, real *J, fint *nerror);
+ extern int  lcon2val_ASL(ASL*, int i, const real *X, fint *ne);
+ extern real obj2val_ASL (ASL*, int nobj, const real *X, fint *nerror);
+ extern void obj2grd_ASL (ASL*, int nobj, const real *X, real *G, fint *ne);
+ extern int  x2_check_ASL(ASL_fgh*, const real*);
+ extern int x2known_ASL (ASL*, const real*, fint*);
 #ifdef __cplusplus
 	}
 #endif

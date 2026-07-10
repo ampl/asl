@@ -39,8 +39,8 @@ extern "C" {
 #endif
  static real Missing_func(arglist*);
  static int compar(const void*, const void*, void*);
- extern real con1ival_nomap_ASL(ASL*, int, real*, fint*);
- extern void con1grd_nomap_ASL(ASL*, int, real *, real*, fint*);
+ extern real con1ival_nomap_ASL(ASL*, int, const real*, fint*);
+ extern void con1grd_nomap_ASL(ASL*, int, const real *, real*, fint*);
 #ifdef __cplusplus
 	}
 #endif /* __cplusplus */

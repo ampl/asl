@@ -113,7 +113,7 @@ showsol(ASL *asl, const real *x, int n, int n0, Name name, const char *what, con
 	}
 
  static real *
-scale(const real *x, const real *s, real **yp, int n)
+scale(const real *x, real *s, real **yp, int n)
 {
 	const real *xe;
 	real *y, *y0;
@@ -195,11 +195,11 @@ write_solfx_ASL(ASL *asl, const char *msg, const double *x, const double *y, Opt
 	SufHead sh;
 	char *bsmsg, buf[80];
 	const char *s, *s1, *s2;
-	const real *t, *x0, *y0;
+	const real *x0, *y0, *yc;
 	fint J[2], m, z[4];
 	ftnlen L[6];
 	int N, binary, i, i1, *ip, j, k, n, nlneed, rv, tail, wantsol, *zz;
-	real *rp, *x1, *y1, *xycopy;
+	real *rp, *y1, *xc, *xycopy;
 	size_t nn;
 	static const char *wkind[] = {"w", "wb"};
 
@@ -221,7 +221,7 @@ write_solfx_ASL(ASL *asl, const char *msg, const double *x, const double *y, Opt
 			nlneed = 0;
 			}
 		}
-	xycopy = 0;
+	xc = xycopy = 0;
 	wantsol = 1;
 	if (!solfname)
 		solfname = asl->i.solfile;
@@ -229,7 +229,7 @@ write_solfx_ASL(ASL *asl, const char *msg, const double *x, const double *y, Opt
 		wantsol = oi->wantsol;
 	if (wantsol || amplflag) {
 		k = 0;
-		x1 = y1 = 0;
+		y1 = 0;
 		if ((x0 = x)) {
 			if (asl->i.vmap) {
 				k = asl->i.n_var0;
@@ -256,15 +256,16 @@ write_solfx_ASL(ASL *asl, const char *msg, const double *x, const double *y, Opt
 			y1 = xycopy = (real*)Malloc(k*sizeof(real));
 		if (x) {
 			if (asl->i.vscale)
-				 x1 = scale(x, asl->i.vscale, &y1, n_var);
+				xc = scale(x, asl->i.vscale, &y1, n_var);
 			if ((ip = asl->i.vmap))
-				x1 = copy(asl->i.n_var0, n_var, x, &y1, ip, asl->i.vzap);
+				xc = copy(asl->i.n_var0, n_var, x, &y1, ip, asl->i.vzap);
 			else if (x == x0 && asl->i.n_var0 > n_var) {
-				memcpy(x1 = y1, x, n_var*sizeof(real));
+				memcpy(y1, x, n_var*sizeof(real));
+				xc = y1;
 				y1 += asl->i.n_var0;
 				}
-			if (x1)
-				x = x1;
+			if (xc)
+				x = xc;
 			}
 		z[0] = m = asl->i.n_con0;
 		if (!y)
@@ -272,18 +273,18 @@ write_solfx_ASL(ASL *asl, const char *msg, const double *x, const double *y, Opt
 		else {
 			y0 = y;
 			if (asl->i.lscale)
-				y1 = scale(y, asl->i.lscale, &y1, n_con);
+				y = scale(y, asl->i.lscale, &y1, n_con);
 			if ((ip = asl->i.cmap))
-				y1 = copy(asl->i.n_con0, n_con, y, &y1, ip, asl->i.czap);
+				y = copy(asl->i.n_con0, n_con, y, &y1, ip, asl->i.czap);
 			else if (y0 == y && asl->i.n_con0 > n_con) {
 				memcpy(y1, y, n_con*sizeof(real));
 				y = y1;
 				}
-			if (y1)
-				y = y1;
 			}
-		if (asl->i.Or && x1)
-			obj_adj_xy_ASL(asl, x1, x0, y1);
+		if (!xc)
+			xc = (real*)x;
+		if (asl->i.Or && xc)
+			obj_adj_xy_ASL(asl, xc, x0, (real*)y);
 		}
 	if (!amplflag && !(wantsol & 1))
 		goto write_done;
@@ -436,14 +437,14 @@ write_solfx_ASL(ASL *asl, const char *msg, const double *x, const double *y, Opt
 				fprintf(f, "%s\n", buf);
 				}
 			}
-		t = y;
+		yc = y;
 		while(--m >= 0) {
-			g_fmtp(buf, *t++, 0);
+			g_fmtp(buf, *yc++, 0);
 			fprintf(f,"%s\n", buf);
 			}
-		t = x;
+		yc = x;
 		while(--n >= 0) {
-			g_fmtp(buf, *t++, 0);
+			g_fmtp(buf, *yc++, 0);
 			fprintf(f, "%s\n", buf);
 			}
 		if (tail)

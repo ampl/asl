@@ -320,7 +320,7 @@ obj_adj1(ASL *asl, int no, int *pco, cgrad **pcgo, real *prhs)
 	}
 
  static real
-objval_adj(ASL *asl, int no, real *X, fint *nerror)
+objval_adj(ASL *asl, int no, const real *X, fint *nerror)
 {
 	Objrep *od;
 	cgrad *cg, *cg0, **gr0, **pcg;
@@ -347,7 +347,7 @@ objval_adj(ASL *asl, int no, real *X, fint *nerror)
 	}
 
  static void
-objgrd_adj(ASL *asl, int no, real *X, real *G, fint *nerror)
+objgrd_adj(ASL *asl, int no, const real *X, real *G, fint *nerror)
 {
 	Objrep *od;
 	cgrad *gr;
@@ -406,11 +406,12 @@ jac_adj(ASL *asl)
 	}
 
  static void
-paradj(ASL *asl, int *pno, real **pow, real **py)
+paradj(ASL *asl, int *pno, const real **pow, const real **py)
 {
 	Objrep *Od, **Or;
+	const real *ow, *y;
 	int *cm, i, j, k, nc, nc0, needow, no, nobj;
-	real *ow, wo, *ws, *y, *ys;
+	real wo, *ws, *ys;
 
 	nobj = n_obj;
 	no = *pno;
@@ -463,14 +464,14 @@ paradj(ASL *asl, int *pno, real **pow, real **py)
 		if (!y)
 			*py = ys;
 		if (ow) {
-			memcpy(*pow = ws, ow, nobj*sizeof(real));
-			ow = ws;
+			memcpy(ws, ow, nobj*sizeof(real));
+			*pow = ow = ws;
 			wo = ow[k];
 			}
  loop:
 		ys[Od->ico] = wo * Od->c12;
 		if (ow) {
-			ow[k] = 0.;
+			ws[k] = 0.;
 			while(++k < nobj)
 				if ((wo = ow[k]) && (Od = Or[k]))
 					goto loop;
@@ -480,14 +481,14 @@ paradj(ASL *asl, int *pno, real **pow, real **py)
 	}
 
  static void
-hvcomp_adj(ASL *asl, real *hv, real *p, int no, real *ow, real *y)
+hvcomp_adj(ASL *asl, real *hv, const real *p, int no, const real *ow, const real *y)
 {
 	paradj(asl, &no, &ow, &y);
 	asl->p.Hvcomp_nomap(asl, hv, p, no, ow, y);
 	}
 
  static void
-hvcompe_adj(ASL *asl, real *hv, real *p, int no, real *ow, real *y, fint *nerror)
+hvcompe_adj(ASL *asl, real *hv, const real *p, int no, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -504,14 +505,14 @@ hvcompe_adj(ASL *asl, real *hv, real *p, int no, real *ow, real *y, fint *nerror
 	}
 
  static void
-hvinit_adj(ASL *asl, int hid_limit, int no, real *ow, real *y)
+hvinit_adj(ASL *asl, int hid_limit, int no, const real *ow, const real *y)
 {
 	paradj(asl, &no, &ow, &y);
 	asl->p.Hvinit_nomap(asl, hid_limit, no, ow, y);
 	}
 
  static void
-hvinite_adj(ASL *asl, int hid_limit, int no, real *ow, real *y, fint *nerror)
+hvinite_adj(ASL *asl, int hid_limit, int no, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -528,14 +529,14 @@ hvinite_adj(ASL *asl, int hid_limit, int no, real *ow, real *y, fint *nerror)
 	}
 
  static void
-duthes_adj(ASL *asl, real *H, int no, real *ow, real *y)
+duthes_adj(ASL *asl, real *H, int no, const real *ow, const real *y)
 {
 	paradj(asl, &no, &ow, &y);
 	asl->p.Duthes_nomap(asl, H, no, ow, y);
 	}
 
  static void
-duthese_adj(ASL *asl, real *H, int no, real *ow, real *y, fint *nerror)
+duthese_adj(ASL *asl, real *H, int no, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -552,14 +553,14 @@ duthese_adj(ASL *asl, real *H, int no, real *ow, real *y, fint *nerror)
 	}
 
  static void
-fulhes_adj(ASL *asl, real *H, fint LH, int no, real *ow, real *y)
+fulhes_adj(ASL *asl, real *H, fint LH, int no, const real *ow, const real *y)
 {
 	paradj(asl, &no, &ow, &y);
 	asl->p.Fulhes_nomap(asl, H, LH, no, ow, y);
 	}
 
  static void
-fulhese_adj(ASL *asl, real *H, fint LH, int no, real *ow, real *y, fint *nerror)
+fulhese_adj(ASL *asl, real *H, fint LH, int no, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -576,14 +577,14 @@ fulhese_adj(ASL *asl, real *H, fint LH, int no, real *ow, real *y, fint *nerror)
 	}
 
  static void
-sphes_adj(ASL *asl, SputInfo **spi, real *H, int no, real *ow, real *y)
+sphes_adj(ASL *asl, SputInfo **spi, real *H, int no, const real *ow, const real *y)
 {
 	paradj(asl, &no, &ow, &y);
 	asl->p.Sphes_nomap(asl, spi, H, no, ow, y);
 	}
 
  static void
-sphese_adj(ASL *asl, SputInfo **spi, real *H, int no, real *ow, real *y, fint *nerror)
+sphese_adj(ASL *asl, SputInfo **spi, real *H, int no, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -832,7 +833,7 @@ obj_adj_ASL(ASL *asl)
 	}
 
  void
-obj_adj_xy_ASL(ASL *asl, real *x, real *x0, real *y)
+obj_adj_xy_ASL(ASL *asl, real *x, const real *x0, real *y)
 {
 	Objrep *od, **odp;
 	cgrad *cgsave, **cgp;

@@ -20,8 +20,8 @@ of or in connection with the use or performance of this software.
 
 #ifdef __cplusplus
  extern "C" {
- extern  real con1ival_nomap_ASL(ASL *a, int i, real *X, fint *nerror);
- extern void con1grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror);
+ extern  real con1ival_nomap_ASL(ASL *a, int i, const real *X, fint *nerror);
+ extern void con1grd_nomap_ASL(ASL *a, int i, const real *X, real *G, fint *nerror);
 	}
 #endif
 
@@ -37,7 +37,7 @@ INchk(ASL *asl, const char *who, int i, int ix)
 	}
 
  static real
-cival(ASL_fg *asl, int i, real *X, fint *nerror)
+cival(ASL_fg *asl, int i, const real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	expr *e;
@@ -75,7 +75,7 @@ cival(ASL_fg *asl, int i, real *X, fint *nerror)
 	}
 
  static real
-Conival1(ASL_fg *asl, int i, real *X, fint *nerror)
+Conival1(ASL_fg *asl, int i, const real *X, fint *nerror)
 {
 	cgrad *gr;
 	int j1, kv, *vmi;
@@ -119,14 +119,14 @@ Conival1(ASL_fg *asl, int i, real *X, fint *nerror)
 	}
 
  real
-con1ival_nomap_ASL(ASL *a, int i, real *X, fint *nerror)
+con1ival_nomap_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	INchk(a, "con1ival_nomap", i, a->i.n_con0);
 	return  Conival1((ASL_fg*)a, i, X, nerror);
 	}
 
  real
-con1ival(ASL *a, int i, real *X, fint *nerror)
+con1ival(ASL *a, int i, const real *X, fint *nerror)
 {
 	int *cm;
 
@@ -137,7 +137,7 @@ con1ival(ASL *a, int i, real *X, fint *nerror)
 	}
 
  int
-lcon1val(ASL *a, int i, real *X, fint *nerror)
+lcon1val(ASL *a, int i, const real *X, fint *nerror)
 {
 	real f;
 
@@ -147,7 +147,7 @@ lcon1val(ASL *a, int i, real *X, fint *nerror)
 	}
 
  static void
-Congrd1(ASL_fg *asl, int i, real *X, real *G, fint *nerror)
+Congrd1(ASL_fg *asl, int i, const real *X, real *G, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	cde *d;
@@ -247,7 +247,7 @@ Congrd1(ASL_fg *asl, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-con1grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+con1grd_nomap_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_fg *asl;
 	static char who[] = "con1grd_nomap";
@@ -260,7 +260,7 @@ con1grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-con1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+con1grd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_fg *asl;
 	int *cm;

@@ -23,8 +23,8 @@ of or in connection with the use or performance of this software.
 extern "C" {
 #endif
 
-extern real con2ival_nomap_ASL(ASL*, int, real*, fint*);
-extern void con2grd_nomap_ASL(ASL*, int, real *, real*, fint*);
+extern real con2ival_nomap_ASL(ASL*, int, const real*, fint*);
+extern void con2grd_nomap_ASL(ASL*, int, const real *, real*, fint*);
 
 #define Egulp 400
 
@@ -1379,7 +1379,7 @@ bholread(EdRead *R)
 	}
 
  static void
-hv2init_ignore(ASL *asl, int hid_limit, int nobj, real *ow, real *y) {}
+hv2init_ignore(ASL *asl, int hid_limit, int nobj, const real *ow, const real *y) {}
 
  int
 fgh_read_ASL(ASL *a, FILE *nl, int flags)

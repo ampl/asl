@@ -77,7 +77,7 @@ notread(const char *what, const char *pred)
 	}
 
  static real
-obj0val(ASL *a, int nobj, real *X, fint *nerror)
+obj0val(ASL *a, int nobj, const real *X, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(nobj);
@@ -87,7 +87,7 @@ obj0val(ASL *a, int nobj, real *X, fint *nerror)
 	}
 
  static void
-obj0grd(ASL *a, int nobj, real *X, real *G, fint *nerror)
+obj0grd(ASL *a, int nobj, const real *X, real *G, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(nobj);
@@ -98,7 +98,7 @@ obj0grd(ASL *a, int nobj, real *X, real *G, fint *nerror)
 	}
 
  static void
-con0val(ASL *a, real *X, real *R, fint *nerror)
+con0val(ASL *a, const real *X, real *R, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(X);
@@ -108,7 +108,7 @@ con0val(ASL *a, real *X, real *R, fint *nerror)
 	}
 
  static void
-jac0val(ASL *a, real *X, real *J, fint *nerror)
+jac0val(ASL *a, const real *X, real *J, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(X);
@@ -118,7 +118,7 @@ jac0val(ASL *a, real *X, real *J, fint *nerror)
 	}
 
  static real
-con0ival(ASL *a, int i, real *X, fint *nerror)
+con0ival(ASL *a, int i, const real *X, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(i);
@@ -129,7 +129,7 @@ con0ival(ASL *a, int i, real *X, fint *nerror)
 	}
 
  static real
-conivalmap(ASL *a, int i, real *X, fint *nerror)
+conivalmap(ASL *a, int i, const real *X, fint *nerror)
 {
 	int *cm;
 	if ((cm = a->i.cmap))
@@ -138,7 +138,7 @@ conivalmap(ASL *a, int i, real *X, fint *nerror)
 	}
 
  static void
-congrdmap(ASL *a, int i, real *X, real *G, fint *nerror)
+congrdmap(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	int *cm;
 	if ((cm = a->i.cmap))
@@ -147,7 +147,7 @@ congrdmap(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  static int
-lcon0val(ASL *a, int i, real *X, fint *nerror)
+lcon0val(ASL *a, int i, const real *X, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(i);
@@ -158,7 +158,7 @@ lcon0val(ASL *a, int i, real *X, fint *nerror)
 	}
 
  static void
-con0grd(ASL *a, int i, real *X, real *G, fint *nerror)
+con0grd(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(i);
@@ -169,7 +169,7 @@ con0grd(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  static void
-hv0comp(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
+hv0comp(ASL *a, real *hv, const real *p, int nobj, const real *ow, const real *y)
 {
 	Not_Used(a);
 	Not_Used(hv);
@@ -181,7 +181,7 @@ hv0comp(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 	}
 
  static void
-hv0compd(ASL *a, real *hv, real *p, int co)
+hv0compd(ASL *a, real *hv, const real *p, int co)
 {
 	Not_Used(a);
 	Not_Used(hv);
@@ -191,7 +191,7 @@ hv0compd(ASL *a, real *hv, real *p, int co)
 	}
 
  static void
-hv0compde(ASL *a, real *hv, real *p, int co, fint *nerror)
+hv0compde(ASL *a, real *hv, const real *p, int co, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(hv);
@@ -202,7 +202,7 @@ hv0compde(ASL *a, real *hv, real *p, int co, fint *nerror)
 	}
 
  static void
-hv0compe(ASL *a, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
+hv0compe(ASL *a, real *hv, const real *p, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(hv);
@@ -215,7 +215,7 @@ hv0compe(ASL *a, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
 	}
 
  static varno_t
-hv0comps(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
+hv0comps(ASL *a, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 {
 	Not_Used(a);
 	Not_Used(hv);
@@ -228,7 +228,7 @@ hv0comps(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
 	}
 
  static varno_t
-hv0compse(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerror)
+hv0compse(ASL *a, real *hv, const real *p, int co, varno_t nz, varno_t *z, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(hv);
@@ -242,7 +242,7 @@ hv0compse(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerro
 	}
 
  static void
-hv0init(ASL *a, int n, int no, real *ow, real *y)
+hv0init(ASL *a, int n, int no, const real *ow, const real *y)
 {
 	Not_Used(a);
 	Not_Used(n);
@@ -253,7 +253,7 @@ hv0init(ASL *a, int n, int no, real *ow, real *y)
 	}
 
  static void
-hv0inite(ASL *a, int n, int no, real *ow, real *y, fint *nerror)
+hv0inite(ASL *a, int n, int no, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(n);
@@ -277,7 +277,7 @@ hes0set(ASL *a, int flags, int obj, int nobj, int con, int ncon)
 	}
 
  static int
-x0known(ASL *a, real *x, fint *nerror)
+x0known(ASL *a, const real *x, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(x);
@@ -287,7 +287,7 @@ x0known(ASL *a, real *x, fint *nerror)
 	}
 
  static void
-dut0hes(ASL *a, real *H, int nobj, real *ow, real *y)
+dut0hes(ASL *a, real *H, int nobj, const real *ow, const real *y)
 {
 	Not_Used(a);
 	Not_Used(H);
@@ -298,7 +298,7 @@ dut0hes(ASL *a, real *H, int nobj, real *ow, real *y)
 	}
 
  static void
-dut0hese(ASL *a, real *H, int nobj, real *ow, real *y, fint *nerror)
+dut0hese(ASL *a, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(H);
@@ -309,7 +309,7 @@ dut0hese(ASL *a, real *H, int nobj, real *ow, real *y, fint *nerror)
 	}
 
  static void
-ful0hes(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
+ful0hes(ASL *a, real *H, fint LH, int nobj, const real *ow, const real *y)
 {
 	Not_Used(a);
 	Not_Used(H);
@@ -321,7 +321,7 @@ ful0hes(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
 	}
 
  static void
-ful0hese(ASL *a, real *H, fint LH, int nobj, real *ow, real *y, fint *nerror)
+ful0hese(ASL *a, real *H, fint LH, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(H);
@@ -334,7 +334,7 @@ ful0hese(ASL *a, real *H, fint LH, int nobj, real *ow, real *y, fint *nerror)
 	}
 
  static void
-sut0hes(ASL *a, SputInfo **p, real *H, int nobj, real *ow, real *y)
+sut0hes(ASL *a, SputInfo **p, real *H, int nobj, const real *ow, const real *y)
 {
 	Not_Used(a);
 	Not_Used(p);
@@ -346,7 +346,7 @@ sut0hes(ASL *a, SputInfo **p, real *H, int nobj, real *ow, real *y)
 	}
 
  static void
-sut0hese(ASL *a, SputInfo **p, real *H, int nobj, real *ow, real *y, fint *nerror)
+sut0hese(ASL *a, SputInfo **p, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Not_Used(a);
 	Not_Used(p);

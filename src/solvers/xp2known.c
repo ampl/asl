@@ -39,7 +39,7 @@ ihd_clear_ASL(ASL_pfgh *asl)
 	}
 
  int
-xp_check_ASL(ASL_pfgh *asl, real *x)
+xp_check_ASL(ASL_pfgh *asl, const real *x)
 {
 	cexp *c, *c1, *ce;
 	expr *e;
@@ -135,7 +135,7 @@ xp_check_ASL(ASL_pfgh *asl, real *x)
 	}
 
  int
-xp2known_ASL(ASL* asl, real *X, fint *nerror)
+xp2known_ASL(ASL* asl, const real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	int ij, rc;
@@ -161,7 +161,7 @@ xp2known_ASL(ASL* asl, real *X, fint *nerror)
 	}
 
  static real *
-bigUmult(ASL_pfgh *asl, real *h, range *r, int nobj, real *ow, real *y)
+bigUmult(ASL_pfgh *asl, real *h, range *r, int nobj, const real *ow, const real *y)
 {
 	real *s, t;
 	Umultinfo *u, *u0, *u1, *ue, **utodo, **utodoi;
@@ -226,7 +226,7 @@ bigUmult(ASL_pfgh *asl, real *h, range *r, int nobj, real *ow, real *y)
 	}
 
  void
-hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
+hvpinit_ASL(ASL *a, int ndhmax, int nobj, const real *ow, const real *y)
 {
 	ASL_pfgh *asl;
 	Ihinfo *ihi;
@@ -286,7 +286,7 @@ hvpinit_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-hvpinite_ASL(ASL *a, int ndhmax, int nobj, real *ow, real *y, fint *nerror)
+hvpinite_ASL(ASL *a, int ndhmax, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf **Jp, *Jsave, b;

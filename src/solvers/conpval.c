@@ -195,7 +195,7 @@ psgcomp(ASL_pfgh *asl, ps_func *f)
 	}
 
  void
-conpval_ASL(ASL *a, real *X, real *F, fint *nerror)
+conpval_ASL(ASL *a, const real *X, real *F, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
@@ -289,7 +289,7 @@ conpval_ASL(ASL *a, real *X, real *F, fint *nerror)
 	}
 
  void
-jacpval_ASL(ASL *a, real *X, real *G, fint *nerror)
+jacpval_ASL(ASL *a, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
@@ -423,7 +423,7 @@ NNOBJ_chk(ASL *asl, int i, const char *who)
 	}
 
  real
-objpval_ASL(ASL *a, int i, real *X, fint *nerror)
+objpval_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
@@ -494,7 +494,7 @@ objpval_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  void
-objpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+objpgrd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
 	Jmp_buf err_jmp0;
@@ -597,7 +597,7 @@ INchk(ASL *asl, const char *who, int i, int ix)
 	}
 
  static real
-cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
+cpval(ASL_pfgh *asl, int i, const real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	expr *e;
@@ -641,7 +641,7 @@ cpval(ASL_pfgh *asl, int i, real *X, fint *nerror)
 	}
 
  static real
-Conivalp(ASL_pfgh *asl, int i, real *X, fint *nerror)
+Conivalp(ASL_pfgh *asl, int i, const real *X, fint *nerror)
 {
 	cgrad *gr;
 	int j1, kv, *vmi;
@@ -685,14 +685,14 @@ Conivalp(ASL_pfgh *asl, int i, real *X, fint *nerror)
 	}
 
  real
-conpival_nomap_ASL(ASL *a, int i, real *X, fint *nerror)
+conpival_nomap_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	INchk(a, "conpival_nomap", i, a->i.n_con0);
 	return  Conivalp((ASL_pfgh*)a, i, X, nerror);
 	}
 
  real
-conpival_ASL(ASL *a, int i, real *X, fint *nerror)
+conpival_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	int *cm;
 
@@ -703,7 +703,7 @@ conpival_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  int
-lconpval(ASL *a, int i, real *X, fint *nerror)
+lconpval(ASL *a, int i, const real *X, fint *nerror)
 {
 	real f;
 
@@ -713,7 +713,7 @@ lconpval(ASL *a, int i, real *X, fint *nerror)
 	}
 
  static void
-Congrdp(ASL_pfgh *asl, int i, real *X, real *G, fint *nerror)
+Congrdp(ASL_pfgh *asl, int i, const real *X, real *G, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	cgrad *gr, *gr0;
@@ -837,7 +837,7 @@ Congrdp(ASL_pfgh *asl, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-conpgrd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+conpgrd_nomap_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
 	static char who[] = "conpgrd_nomap";
@@ -850,7 +850,7 @@ conpgrd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+conpgrd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
 	int *cm;
@@ -867,9 +867,9 @@ conpgrd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 
  static void
 xpsgchk(ASL_pfgh *asl, ps_func *f0, int *xv, int n, int nx,
-	real (*ev)(ASL *a, int i, real *X, fint *nerror),
-	void (*gv)(ASL *a, int i, real *X, real *G, fint *nerror),
-	real *y, int oxk, int isobj)
+	real (*ev)(ASL *a, int i, const real *X, fint *nerror),
+	void (*gv)(ASL *a, int i, const real *X, real *G, fint *nerror),
+	const real *y, int oxk, int isobj)
 {
 	int i, i1, i2;
 	ps_func *f;
@@ -901,7 +901,7 @@ xpsgchk(ASL_pfgh *asl, ps_func *f0, int *xv, int n, int nx,
 	}
 
  void
-xpsg_check_ASL(ASL_pfgh *asl, int nobj, real *ow, real *y)
+xpsg_check_ASL(ASL_pfgh *asl, int nobj, const real *ow, const real *y)
 {
 	int i, nc, no, nx, nz, oxk, tno, *xv;
 	ps_func *f;

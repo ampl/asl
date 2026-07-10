@@ -20,7 +20,6 @@ of or in connection with the use or performance of this software.
 #define SKIP_NL2_DEFINES
 #include "nlp2.h"
 #include "opno.hd"
-#include "opno2.h"
 #include "opcode.hd"
 
 #ifdef __cplusplus
@@ -378,6 +377,13 @@ ewalk1(Staticfgw *S, int *o, int *ostop)
 	  case nOPPOW4:
 		op = OPPOW;
 		goto bin;
+	  case nOPsignpow0:
+	  case nOPsignpow1:
+	  case nOPsignpow2:
+	  case nOPsignpow3:
+	  case nOPsignpow4:
+		op = OPsignpow;
+		goto bin;
 	  Opalign(OPLESSalign)
 	  case nOPLESS0:
 	  case nOPLESS1:
@@ -550,6 +556,10 @@ ewalk1(Staticfgw *S, int *o, int *ostop)
 	  case nOP_log1:
 		op = OP_log;
 		goto un;
+	  case nOP_logistic0:
+	  case nOP_logistic1:
+		op = OP_logistic;
+		goto un;
 	  case nOP_exp:
 		op = OP_exp;
 		goto un;
@@ -672,11 +682,25 @@ ewalk1(Staticfgw *S, int *o, int *ostop)
 		w[o[1]] = e;
 		o += 3;
 		goto top;
+	  case OP2signpow0:
+	  case OP2signpow1:
+		e = Ealloc(S, sizeof(expr));
+		e->opno = OPsignpow;
+		e->opcl = Binop;
+		e->L = w[o[2]];
+		e->R = (expr*)&Two;
+		w[o[1]] = e;
+		o += 3;
+		goto top;
 #ifdef X64_bit_pointers
 	  case OPCPOWalign:
 		rv = w[o[1]];
 		rp = (real*)&o[2];
 		goto more_CPOW;
+	  case OPCsignpowalign:
+		rv = w[o[1]];
+		rp = (real*)&o[2];
+		goto more_Csignpow;
 #endif
 	  case nOPCPOW:
 		rp = (real*)&o[1];
@@ -688,6 +712,22 @@ ewalk1(Staticfgw *S, int *o, int *ostop)
 		en->v = rp[0];
 		w[o[1]] = e = Ealloc(S, sizeof(expr));
 		e->opno = OPPOW;
+		e->opcl = Binop;
+		e->L = (expr*)en;
+		e->R = rv;
+		o += 7;
+		goto top;
+
+	  case nOPCsignpow:
+		rp = (real*)&o[1];
+		rv = w[o[5]];
+ alignarg(more_Csignpow:)
+		en = (exprn*)Ealloc(S, sizeof(exprn));
+		en->opno = OPNUM;
+		en->opcl = Enum;
+		en->v = rp[0];
+		w[o[1]] = e = Ealloc(S, sizeof(expr));
+		e->opno = OPsignpow;
 		e->opcl = Binop;
 		e->L = (expr*)en;
 		e->R = rv;
@@ -740,21 +780,13 @@ ewalk1(Staticfgw *S, int *o, int *ostop)
 		goto top;
 
 	  case OPGOTO:
-	  case OPGOTO2:
-	  case OP_NEXTBLK:
-	  case OPGOTOF:
-	  case OPGOTOF2:
-	  case OPGOTOF2n:
+	  case OPNEXTBLK:
 		o = *(int**)(o+1);	/* for chaining blocks of code */
 		goto top;
 
 #ifdef X64_bit_pointers
 	  case OPGOTOalign:
-	  case OPGOTO2align:
-	  case OP_NEXTBLKalign:
-	  case OPGOTOFalign:
-	  case OPGOTOF2align:
-	  case OPGOTOF2nalign:
+	  case OPNEXTBLKalign:
 		o = *(int**)(o+2);
 		goto top;
 #endif

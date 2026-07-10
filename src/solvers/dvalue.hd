@@ -73,7 +73,12 @@
 0 /* OPIMPELSE */,
 0 /* OP_IFF */,
 11 /* OPALLDIFF */,
-11 /* OPSOMESAME */,
+0 /* OPSOMESAME */,
+0,
+0,
+0,
+0 /* OP_logistic */,
+0 /* OPsignpow */,
 1 /* OP1POW */,
 1 /* f_OP2POW */,
 1 /* f_OPCPOW */

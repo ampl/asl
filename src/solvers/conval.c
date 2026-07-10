@@ -19,7 +19,7 @@ of or in connection with the use or performance of this software.
 #include "nlp.h"
 
  void
-con1val_ASL(ASL *a, register real *X, real *F, fint *nerror)
+con1val_ASL(ASL *a, register const real *X, real *F, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -107,7 +107,7 @@ con1val_ASL(ASL *a, register real *X, real *F, fint *nerror)
 	}
 
  void
-jac1val_ASL(ASL *a, real *X, real *G, fint *nerror)
+jac1val_ASL(ASL *a, const real *X, real *G, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;

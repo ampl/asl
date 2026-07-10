@@ -19,7 +19,7 @@ of or in connection with the use or performance of this software.
 #include "jac2dim.h"
 
  void
-con2val_ASL(ASL *a, real *X, real *F, fint *nerror)
+con2val_ASL(ASL *a, const real *X, real *F, fint *nerror)
 {
 	ASL_fgh *asl;
 	Jmp_buf err_jmp0;
@@ -107,7 +107,7 @@ con2val_ASL(ASL *a, real *X, real *F, fint *nerror)
 	}
 
  void
-jac2val_ASL(ASL *a, real *X, real *G, fint *nerror)
+jac2val_ASL(ASL *a, const real *X, real *G, fint *nerror)
 {
 	ASL_fgh *asl;
 	Jmp_buf err_jmp0;

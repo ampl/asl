@@ -45,7 +45,7 @@ slen(register char *s, ftnlen len)
 wrsolw_(msg, nmsg, x, y, ws, msg_len) char *msg; fint *nmsg, *ws;
 				  real *x, *y; ftnlen msg_len;
 #else
-wrsolw_(char *msg, fint *nmsg, real *x, real *y, fint *ws, ftnlen msg_len)
+wrsolw_(char *msg, fint *nmsg, const real *x, const real *y, fint *ws, ftnlen msg_len)
 #endif
 {
 	char *b, *buf, *me;
@@ -84,7 +84,7 @@ wrsolw_(char *msg, fint *nmsg, real *x, real *y, fint *ws, ftnlen msg_len)
 wrtsol_(msg, nmsg, x, y, msg_len) char *msg; fint *nmsg;
 				  real *x, *y; ftnlen msg_len;
 #else
-wrtsol_(char *msg, fint *nmsg, real *x, real *y, ftnlen msg_len)
+wrtsol_(char *msg, fint *nmsg, const real *x, const real *y, ftnlen msg_len)
 #endif
 {
 	static fint ws = 7;

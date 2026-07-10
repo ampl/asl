@@ -3472,3 +3472,20 @@ sphes.c will have changed.
 using the vref field for both its intended purpose and a "next"
 pointer).  The old way caused trouble when rereading a large .nl file.
 (This only affects solvers.tgz; solvers2.tgz is not affected.)
+
+20251017
+  solvers2.tgz:  asl.h duthes.c eval1.c eval2.c fullhes.c jacpdim.h
+misc.c nlp.h obj_adj.c pfghread.c pshvprod.c psinfo.h sphes.c
+writesol.c wrtsol_.c xp2known.c:  add "const" to some pointers;
+behavior should not change.
+
+20251121
+  solvers2.tgz:  pfghread.c: fix some bugs with piecewise-linear terms.
+
+
+20260109 (20260107 for ASL2)
+Add support for
+	logistic(x) = 1 / (1 + exp(-x))
+and
+	signpow(x,y) = sign(x)*|x|^y
+when these functions do not appear in amplfunc.dll. 

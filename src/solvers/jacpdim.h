@@ -38,23 +38,23 @@ of or in connection with the use or performance of this software.
 #ifdef __cplusplus
 extern "C" {
 #endif
- extern real conpival(ASL*, int nc, real *X, fint *ne);
- extern real conpival_nomap_ASL(ASL*, int nc, real *X, fint *ne);
- extern void conpgrd(ASL*, int nc, real *X, real *G, fint *nerror);
- extern void conpgrd_nomap_ASL(ASL*, int nc, real *X, real *G, fint *nerror);
- extern void conpval(ASL*, real *X, real *F, fint *nerror);
- extern void jacpval(ASL*, real *X, real *JAC, fint *nerror);
- extern int  lconpval(ASL*, int nc, real *X, fint *ne);
- extern void objpgrd(ASL*, int nobj, real *X, real *G, fint *nerror);
- extern real objpval(ASL*, int nobj, real *X, fint *nerror);
- extern void hvpcomp(ASL*, real *hv, real *p, int nobj, real *ow, real *y);
- extern void hvpcompd(ASL*, real *hv, real *p, int co);
- extern void hvpcompde(ASL* ,real *hv, real *p, int co, fint*);
- extern void hvpcompe(ASL*, real *hv, real *p, int nobj, real *ow, real *y, fint*);
- extern varno_t hvpcomps(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z);
- extern varno_t hvpcompse(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
- extern int xp_check_ASL(ASL_pfgh*, real*);
- extern int xp2known(ASL*, real*, fint*);
+ extern real conpival(ASL*, int nc, const real *X, fint *ne);
+ extern real conpival_nomap_ASL(ASL*, int nc, const real *X, fint *ne);
+ extern void conpgrd(ASL*, int nc, const real *X, real *G, fint *nerror);
+ extern void conpgrd_nomap_ASL(ASL*, int nc, const real *X, real *G, fint *nerror);
+ extern void conpval(ASL*, const real *X, real *F, fint *nerror);
+ extern void jacpval(ASL*, const real *X, real *JAC, fint *nerror);
+ extern int  lconpval(ASL*, int nc, const real *X, fint *ne);
+ extern void objpgrd(ASL*, int nobj, const real *X, real *G, fint *nerror);
+ extern real objpval(ASL*, int nobj, const real *X, fint *nerror);
+ extern void hvpcomp(ASL*, real *hv, const real *p, int nobj, const real *ow, const real *y);
+ extern void hvpcompd(ASL*, real *hv, const real *p, int co);
+ extern void hvpcompde(ASL* ,real *hv, const real *p, int co, fint*);
+ extern void hvpcompe(ASL*, real *hv, const real *p, int nobj, const real *ow, const real *y, fint*);
+ extern varno_t hvpcomps(ASL*, real *hv, const real *p, int co, varno_t nz, varno_t *z);
+ extern varno_t hvpcompse(ASL*, real *hv, const real *p, int co, varno_t nz, varno_t *z, fint*);
+ extern int xp_check_ASL(ASL_pfgh*, const real*);
+ extern int xp2known(ASL*, const real*, fint*);
 #ifdef __cplusplus
 	}
 #endif

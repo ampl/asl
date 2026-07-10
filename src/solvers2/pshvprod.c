@@ -119,6 +119,7 @@ hv_fwd(int *o, real *w)
 /*		case Hv_binaryR:*/
 		case OPDIV01:
 		case nOPPOW01:
+		case nOPsignpow01:
 		case nOPREM01:
 		case OP_atan201:
 			r = (Eresult*)(w + o[2]);
@@ -162,6 +163,7 @@ alignarg(more_OPLESS01:)
 
 /*		case Hv_binaryLR:*/
 		case n_OPPOW2:
+		case n_OPsignpow2:
 		case OP_atan22:
 		case OPDIV2:
 		case nOPREM2:
@@ -198,6 +200,7 @@ alignarg(more_OPLESS2:)
 
 /*		case Hv_unary:	*/
 		case OP_2POW1:
+		case OP_2signpow1:
 		case n_OPABS1:
 		case OP_acos1:
 		case OP_acosh1:
@@ -209,6 +212,7 @@ alignarg(more_OPLESS2:)
 		case OP_cosh1:
 		case OP_log101:
 		case OP_log1:
+		case OP_logistic1:
 		case OP_sin1:
 		case OP_sinh1:
 		case OP_sqrt1:
@@ -230,6 +234,8 @@ alignarg(more_OPLESS2:)
 		case OPDIV10:
 		case nOPPOW1i:
 		case nOPPOW10:
+		case nOPsignpow1i:
+		case nOPsignpow10:
 		case OP_atan210:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -394,10 +400,12 @@ alignarg(more_func:)
 
 #ifdef X64_bit_pointers
 		case OPCPOW1align:
+		case OPCsignpow1align:
 			rp = (real*)&o[5];
 			goto moreOPCPOW1;
 #endif
 		case nOPCPOW1:
+		case nOPCsignpow1:
 			rp = (real*)&o[4];
 alignarg(moreOPCPOW1:)
 			r = (Eresult*)(w + o[2]);
@@ -516,7 +524,7 @@ hv_back(int *o, real *w, real aO0, real adO0)
 	for(;;) {
 		switch(*o) {
 		case OPRET:
-		case OPRETB:
+		case nOPRETB:
 			return;
 #ifdef X64_bit_pointers
 		  case OPGOTOBalign:
@@ -528,6 +536,7 @@ hv_back(int *o, real *w, real aO0, real adO0)
 /*		case Hv_binaryR: */
 		case OPDIV01:
 		case nOPPOW01:
+		case nOPsignpow01:
 		case OP_atan201:
 			r = (Eresult*)(w + o[2]);
 			R = (Eresult*)(w + o[4]);
@@ -544,6 +553,7 @@ hv_back(int *o, real *w, real aO0, real adO0)
 
 /*		case Hv_binaryLR: */
 		case n_OPPOW2:
+		case n_OPsignpow2:
 		case OP_atan22:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -610,6 +620,10 @@ hv_back(int *o, real *w, real aO0, real adO0)
 		alignarg(case OPCPOW1align:)
 		case nOPPOW10:
 		case nOPPOW1i:
+		case nOPCsignpow1:
+		alignarg(case OPCsignpow1align:)
+		case nOPsignpow10:
+		case nOPsignpow1i:
 		case OP_acos1:
 		case OP_acosh1:
 		case OP_asin1:
@@ -621,6 +635,7 @@ hv_back(int *o, real *w, real aO0, real adO0)
 		case OP_cosh1:
 		case OP_log101:
 		case OP_log1:
+		case OP_logistic1:
 		case OP_sin1:
 		case OP_sinh1:
 		case OP_sqrt1:
@@ -640,6 +655,7 @@ hv_back(int *o, real *w, real aO0, real adO0)
 			break;
 
 		case OP_2POW1:
+		case OP_2signpow1:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
 			L->adO += r->adO * r->dL;
@@ -895,15 +911,18 @@ hfg_fwd(Ops *O, real *w)
 		case OPMULT10:
 		case OPDIV10:
 		case nOPPOW1i:
+		case nOPsignpow1i:
 /*		case Hv_timesR:	*/
 		case OPMULT01:
 /*		case Hv_binaryR:*/
 		case OPDIV01:
 		case nOPPOW01:
+		case nOPsignpow01:
 		case nOPLESS01:
 		case OP_atan201:
 /*		case Hv_binaryLR:*/
 		case n_OPPOW2:
+		case n_OPsignpow2:
 		case OP_atan22:
 		case OPDIV2:
 		case nOPREM2:
@@ -925,6 +944,7 @@ hfg_fwd(Ops *O, real *w)
 			o += 5;
 			break;
 		case nOPCPOW1:
+		case nOPCsignpow1:
 			r = (Eresult*)&w[o[2]];
 			rp = (real*)&o[4];
 			o = (int*)&rp[1];
@@ -950,6 +970,7 @@ hfg_fwd(Ops *O, real *w)
 		case OP_tan1:
 		case OPtanh1:
 		case OP_2POW1:
+		case OP_2signpow1:
 /*		case Hv_negate:	*/
 		case OPUMINUS1:
 		case OPCOPY1:
@@ -1053,6 +1074,7 @@ alignarg(more_func:)
 			++o;
 
 		case OPCPOW1align:
+		case OPCsignpow1align:
 			r = (Eresult*)(w + o[2]);
 			rp = (real*)&o[5];
 			o = (int*)&rp[1];
@@ -1105,6 +1127,7 @@ hfg_back(Ops *O, real *w)
 /*		case Hv_binaryR: */
 		case OPDIV01:
 		case nOPPOW01:
+		case nOPsignpow01:
 		case nOPLESS01:
 		case OP_atan201:
 			r = (Eresult*)(w + o[2]);
@@ -1121,6 +1144,7 @@ hfg_back(Ops *O, real *w)
 
 /*		case Hv_binaryLR: */
 		case n_OPPOW2:
+		case n_OPsignpow2:
 		case OP_atan22:
 /*		case Hv_timesLR: */
 		case OPDIV2:
@@ -1148,6 +1172,9 @@ hfg_back(Ops *O, real *w)
 		case nOPCPOW1:
 		alignarg(case OPCPOW1align:)
 		case nOPPOW10:
+		case nOPCsignpow1:
+		alignarg(case OPCsignpow1align:)
+		case nOPsignpow10:
 		case OP_acos1:
 		case OP_acosh1:
 		case OP_asin1:
@@ -1159,14 +1186,17 @@ hfg_back(Ops *O, real *w)
 		case OP_cosh1:
 		case OP_log101:
 		case OP_log1:
+		case OP_logistic1:
 		case OP_sin1:
 		case OP_sinh1:
 		case OP_sqrt1:
 		case OP_tan1:
 		case OPtanh1:
 		case OP_2POW1:
+		case OP_2signpow1:
 		case OPDIV10:
 		case nOPPOW1i:
+		case nOPsignpow1i:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
 			L->aO  += r->aO * r->dL;

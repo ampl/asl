@@ -763,7 +763,7 @@ ewalk2(Static *S, int *e)
 		e += 2;
 		goto top;
 
-	  case OPRETB:
+	  case nOPRETB:
 		++e;
 		goto top;
 

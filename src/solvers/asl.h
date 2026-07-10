@@ -244,43 +244,43 @@ Edagpars {
 	int want_derivs_;
 	int ihd_limit_;
 	int solve_code_;
-	real (*Objval)		(ASL*, int nobj, real *X, fint *nerror);
-	real (*Objval_nomap)	(ASL*, int nobj, real *X, fint *nerror);
-	void (*Objgrd)		(ASL*, int nobj, real *X, real *G, fint *nerror);
-	void (*Objgrd_nomap)	(ASL*, int nobj, real *X, real *G, fint *nerror);
-	void (*Conval)		(ASL*, real *X, real *R, fint *nerror);
-	void (*Jacval)		(ASL*, real *X, real *J, fint *nerror);
-	real (*Conival)		(ASL*, int ncon, real *X, fint *nerror);
-	real (*Conival_nomap)	(ASL*, int ncon, real *X, fint *nerror);
-	void (*Congrd)		(ASL*, int nc, real *X, real *G, fint *nerror);
-	void (*Congrd_nomap)	(ASL*, int nc, real *X, real *G, fint *nerror);
-	void (*Hvcomp)		(ASL*, real *hv, real *p, int no, real *ow, real *y);
-	void (*Hvcomp_nomap)	(ASL*, real *hv, real *p, int no, real *ow, real *y);
-	void (*Hvcompe)		(ASL*, real *hv, real *p, int no, real *ow, real *y, fint*);
-	void (*Hvcompe_nomap)	(ASL*, real *hv, real *p, int no, real *ow, real *y, fint*);
-	void (*Hvcompd)	(ASL*, real *hv, real *p, int co);
-	void (*Hvcompde)	(ASL*, real *hv, real *p, int co, fint*);
-	varno_t (*Hvcomps)	(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z);
-	varno_t (*Hvcompse)	(ASL*, real *hv, real *p, int co, varno_t nz, varno_t *z, fint*);
-	void (*Hvinit)		(ASL*, int hid_limit, int nobj, real *ow, real *y);
-	void (*Hvinit_nomap)	(ASL*, int hid_limit, int nobj, real *ow, real *y);
-	void (*Hvinite)		(ASL*, int hid_limit, int nobj, real *ow, real *y, fint*);
-	void (*Hvinite_nomap)	(ASL*, int hid_limit, int nobj, real *ow, real *y, fint*);
+	real (*Objval)		(ASL*, int nobj, const real *X, fint *nerror);
+	real (*Objval_nomap)	(ASL*, int nobj, const real *X, fint *nerror);
+	void (*Objgrd)		(ASL*, int nobj, const real *X, real *G, fint *nerror);
+	void (*Objgrd_nomap)	(ASL*, int nobj, const real *X, real *G, fint *nerror);
+	void (*Conval)		(ASL*, const real *X, real *R, fint *nerror);
+	void (*Jacval)		(ASL*, const real *X, real *J, fint *nerror);
+	real (*Conival)		(ASL*, int ncon, const real *X, fint *nerror);
+	real (*Conival_nomap)	(ASL*, int ncon, const real *X, fint *nerror);
+	void (*Congrd)		(ASL*, int nc, const real *X, real *G, fint *nerror);
+	void (*Congrd_nomap)	(ASL*, int nc, const real *X, real *G, fint *nerror);
+	void (*Hvcomp)		(ASL*, real *hv, const real *p, int no, const real *ow, const real *y);
+	void (*Hvcomp_nomap)	(ASL*, real *hv, const real *p, int no, const real *ow, const real *y);
+	void (*Hvcompe)		(ASL*, real *hv, const real *p, int no, const real *ow, const real *y, fint*);
+	void (*Hvcompe_nomap)	(ASL*, real *hv, const real *p, int no, const real *ow, const real *y, fint*);
+	void (*Hvcompd)	(ASL*, real *hv, const real *p, int co);
+	void (*Hvcompde)	(ASL*, real *hv, const real *p, int co, fint*);
+	varno_t (*Hvcomps)	(ASL*, real *hv, const real *p, int co, varno_t nz, varno_t *z);
+	varno_t (*Hvcompse)	(ASL*, real *hv, const real *p, int co, varno_t nz, varno_t *z, fint*);
+	void (*Hvinit)		(ASL*, int hid_limit, int nobj, const real *ow, const real *y);
+	void (*Hvinit_nomap)	(ASL*, int hid_limit, int nobj, const real *ow, const real *y);
+	void (*Hvinite)		(ASL*, int hid_limit, int nobj, const real *ow, const real *y, fint*);
+	void (*Hvinite_nomap)	(ASL*, int hid_limit, int nobj, const real *ow, const real *y, fint*);
 	void (*Hesset)		(ASL*, int flags, int no, int nno, int nc, int nnc);
-	int  (*Lconval)		(ASL*, int ncon, real *X, fint *nerror);
-	int  (*Xknown)		(ASL*, real*, fint*);
-	void (*Duthes)		(ASL*, real *H, int nobj, real *ow, real *y);
-	void (*Duthes_nomap)	(ASL*, real *H, int nobj, real *ow, real *y);
-	void (*Duthese)		(ASL*, real *H, int nobj, real *ow, real *y, fint*);
-	void (*Duthese_nomap)	(ASL*, real *H, int nobj, real *ow, real *y, fint*);
-	void (*Fulhes)		(ASL*, real *H, fint LH, int no, real *ow, real *y);
-	void (*Fulhes_nomap)	(ASL*, real *H, fint LH, int no, real *ow, real *y);
-	void (*Fulhese)		(ASL*, real *H, fint LH, int no, real *ow, real *y, fint*);
-	void (*Fulhese_nomap)	(ASL*, real *H, fint LH, int no, real *ow, real *y, fint*);
-	void (*Sphes)		(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y);
-	void (*Sphes_nomap)	(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y);
-	void (*Sphese)		(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
-	void (*Sphese_nomap)	(ASL*, SputInfo**, real *H, int nobj, real *ow, real *y, fint*);
+	int  (*Lconval)		(ASL*, int ncon, const real *X, fint *nerror);
+	int  (*Xknown)		(ASL*, const real*, fint*);
+	void (*Duthes)		(ASL*, real *H, int nobj, const real *ow, const real *y);
+	void (*Duthes_nomap)	(ASL*, real *H, int nobj, const real *ow, const real *y);
+	void (*Duthese)		(ASL*, real *H, int nobj, const real *ow, const real *y, fint*);
+	void (*Duthese_nomap)	(ASL*, real *H, int nobj, const real *ow, const real *y, fint*);
+	void (*Fulhes)		(ASL*, real *H, fint LH, int no, const real *ow, const real *y);
+	void (*Fulhes_nomap)	(ASL*, real *H, fint LH, int no, const real *ow, const real *y);
+	void (*Fulhese)		(ASL*, real *H, fint LH, int no, const real *ow, const real *y, fint*);
+	void (*Fulhese_nomap)	(ASL*, real *H, fint LH, int no, const real *ow, const real *y, fint*);
+	void (*Sphes)		(ASL*, SputInfo**, real *H, int nobj, const real *ow, const real *y);
+	void (*Sphes_nomap)	(ASL*, SputInfo**, real *H, int nobj, const real *ow, const real *y);
+	void (*Sphese)		(ASL*, SputInfo**, real *H, int nobj, const real *ow, const real *y, fint*);
+	void (*Sphese_nomap)	(ASL*, SputInfo**, real *H, int nobj, const real *ow, const real *y, fint*);
 	fint (*Sphset)		(ASL*, SputInfo**, int nobj, int ow, int y, int uptri);
 	fint (*Sphset_nomap)	(ASL*, SputInfo**, int nobj, int ow, int y, int uptri);
 	} Edagpars;
@@ -1075,7 +1075,7 @@ QPinfo {
  extern char *obj_name_ASL(ASL*,int);
  extern int obj_prec(VOID);
  extern void obj_adj_ASL(ASL*);
- extern void obj_adj_xy_ASL(ASL *asl, real *x, real *x0, real *y);
+ extern void obj_adj_xy_ASL(ASL *asl, real *x, const real *x0, real *y);
  extern real objconst_ASL(ASL*,int);
  extern void objgrd_(fint *N, real *X, fint *NOBJ, real *G, fint *nerror);
  extern real objval_(fint *N, real *X, fint *NOBJ, fint *nerror);
@@ -1109,14 +1109,14 @@ QPinfo {
  extern char *var_name_nomap_ASL(ASL*,int,int*);
  extern void varscale_ASL(ASL*, int, real, fint*);
  extern void what_prog(VOID);
- extern void write_sol_ASL(ASL*, const char *msg, double *x, double *y, Option_Info*);
- extern int  write_solf_ASL(ASL*, const char *msg, double *x, double *y, Option_Info *,
+ extern void write_sol_ASL(ASL*, const char *msg, const double *x, const double *y, Option_Info*);
+ extern int  write_solf_ASL(ASL*, const char *msg, const double *x, const double *y, Option_Info *,
 			const char*);
- extern int  write_solfx_ASL(ASL*, const char *msg, double *x, double *y, Option_Info *,
+ extern int  write_solfx_ASL(ASL*, const char *msg, const double *x, const double *y, Option_Info *,
 			Fwrite, Fwrite, Fwrite, const char*);
- extern void wrsolw_(char *msg, fint *nmsg, real *x, real *y, fint *wantsol,
+ extern void wrsolw_(char *msg, fint *nmsg, const real *x, const real *y, fint *wantsol,
 			ftnlen msg_len);
- extern void wrtsol_(char *msg, fint *nmsg, real *x, real *y,
+ extern void wrtsol_(char *msg, fint *nmsg, const real *x, const real *y,
 			ftnlen msg_len);
  extern real xectim_(VOID);
  extern void xknowe_(real *x, fint *nerror);

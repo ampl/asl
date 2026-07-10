@@ -42,8 +42,8 @@ of or in connection with the use or performance of this software.
 extern "C" {
 #endif
 
-extern real conpival_nomap_ASL(ASL*, int, real*, fint*);
-extern void conpgrd_nomap_ASL(ASL*, int, real *, real*, fint*);
+extern real conpival_nomap_ASL(ASL*, int, const real*, fint*);
+extern void conpgrd_nomap_ASL(ASL*, int, const real *, real*, fint*);
 
 #define GAP_MAX 10
 

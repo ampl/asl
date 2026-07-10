@@ -25,7 +25,7 @@ extern "C" {
 #define funnelset(x) funnelset_ASL((ASL_fg*)asl, x)
 
  int
-xp1_check_ASL(ASL_pfg *asl, real *x)
+xp1_check_ASL(ASL_pfg *asl, const real *x)
 {
 	cexp *c, *c1, *ce;
 	expr *e;
@@ -120,7 +120,7 @@ xp1_check_ASL(ASL_pfg *asl, real *x)
 	}
 
  int
-xp1known_ASL(ASL *asl, real *x, fint *nerror)
+xp1known_ASL(ASL *asl, const real *x, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	int ij, rc;

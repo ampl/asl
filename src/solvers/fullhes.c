@@ -45,14 +45,15 @@ add_op(real *H, ograd *og0, real t, fint n)
 	}
 
  void
-fullhes_ASL(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
+fullhes_ASL(ASL *a, real *H, fint LH, int nobj, const real *ow, const real *y)
 {
 	/* full Hessian */
+	const real *owi;
 	int i, j, n, no, noe;
 	linarg *la, **lap, **lap1, **lape;
 	expr_v *v;
 	range *r, *r0;
-	real *Hi, *Hj, *Hje, *cscale, *owi, *s, *si, t, t1;
+	real *Hi, *Hj, *Hje, *cscale, *s, *si, t, t1;
 	ograd *og, *og1;
 	ps_func *p, *pe;
 	psg_elem *g, *ge;
@@ -159,7 +160,7 @@ fullhes_ASL(ASL *a, real *H, fint LH, int nobj, real *ow, real *y)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-fullhese_ASL(ASL *asl, real *H, fint LH, int nobj, real *ow, real *y, fint *nerror)
+fullhese_ASL(ASL *asl, real *H, fint LH, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 

@@ -448,7 +448,7 @@ hv_back1(ASL_fgh *asl, cde *d)
 #undef asl
 
  void
-hv2comp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y0)
+hv2comp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const real *y0)
 	/* p = direction */
 	/* y = Lagrange multipliers */
 	/* hv = result */
@@ -456,10 +456,11 @@ hv2comp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y0)
 	ASL_fgh *asl;
 	cde *d, *d0;
 	cexp *c, *ce;
+	const real *y, *ye;
 	expr *e;
 	expr_v *x, *xe;
 	int n, no, noe;
-	real *cscale, t, *vscale, *y, *ye, yi;
+	real *cscale, t, *vscale, yi;
 
 	ASL_CHECK(a, ASL_read_fgh, "hv2comp");
 	asl = (ASL_fgh*)a;
@@ -576,7 +577,7 @@ hv2comp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y0)
 	}
 
  void
-hv2compd_ASL(ASL *a, real *hv, real *p, int co)
+hv2compd_ASL(ASL *a, real *hv, const real *p, int co)
 	/* p = direction */
 	/* hv = result */
 	/* co >= 0: behave like hv2comp_ASL with nobj = -1, ow = 0, y[i] = i == co ? 1. : 0. */
@@ -731,7 +732,7 @@ hv2compd_ASL(ASL *a, real *hv, real *p, int co)
 	}
 
  varno_t
-hv2comps_ASL(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
+hv2comps_ASL(ASL *a, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 	/* p = direction */
 	/* hv = result */
 	/* co >= 0: behave like hv2comp_ASL with nobj = -1, ow = 0, y[i] = i == co ? 1. : 0. */

@@ -70,6 +70,7 @@ hv_fwd(int *o, real *w, int *oend)	/* for determining sparsity */
 		case OPDIV01:
 		case OPMULT01:
 		case nOPPOW01:
+		case nOPsignpow01:
 		case nOPREM01:
 		case OP_atan201:
 			r = (Eresult*)(w + o[2]);
@@ -106,6 +107,7 @@ alignarg(more_OPLESS01:)
 		case OPMULT2:
 /*		case Hv_binaryLR:*/
 		case n_OPPOW2:
+		case n_OPsignpow2:
 		case OP_atan22:
 		case OPDIV2:
 		case nOPREM2:
@@ -134,6 +136,7 @@ alignarg(more_OPLESS2:)
 /*		case Hv_timesL:	*/
 /*		case Hv_unary:	*/
 		case OP_2POW1:
+		case OP_2signpow1:
 		case n_OPABS1:
 		case OP_acos1:
 		case OP_acosh1:
@@ -146,6 +149,7 @@ alignarg(more_OPLESS2:)
 		case OP_exp1:
 		case OP_log101:
 		case OP_log1:
+		case OP_logistic1:
 		case OP_sin1:
 		case OP_sinh1:
 		case OP_sqrt1:
@@ -161,6 +165,7 @@ alignarg(more_OPLESS2:)
 		case OPMULT10:
 		case nOPREM10:
 		case nOPPOW10:
+		case nOPsignpow10:
 		case OP_atan210:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -324,6 +329,7 @@ alignarg(more_func:)
 		case OPMINUS10:
 		case OPPLUS10:
 		case nOPPOW1i:
+		case nOPsignpow1i:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
 			r->dO = L->dO;
@@ -372,11 +378,13 @@ alignarg(more_func:)
 
 #ifdef X64_bit_pointers
 		case OPCPOW1align:
+		case OPCsignpow1align:
 			rp = (real*)&o[5];
 			goto more_OPCPOW1;
 #endif
 
 		case nOPCPOW1:
+		case nOPCsignpow1:
 			rp = (real*)&o[4];
 alignarg(more_OPCPOW1:)
 			r = (Eresult*)(w + o[2]);
@@ -450,7 +458,7 @@ hv_back1(int *o, real *w, int *oend)
 	for(;;) {
 		switch(*o) {
 		case OPRET:
-		case OPRETB:
+		case nOPRETB:
 			return;
 #ifdef X64_bit_pointers
 		case OPGOTOBalign:
@@ -463,6 +471,7 @@ hv_back1(int *o, real *w, int *oend)
 		case OPDIV01:
 		case nOPLESS01:
 		case nOPPOW01:
+		case nOPsignpow01:
 		case nOPREM01:
 		case OP_atan201:
 			r = (Eresult*)(w + o[2]);
@@ -473,6 +482,7 @@ hv_back1(int *o, real *w, int *oend)
 
 /*		case Hv_binaryLR: */
 		case n_OPPOW2:
+		case n_OPsignpow2:
 		case OP_atan22:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -528,6 +538,9 @@ hv_back1(int *o, real *w, int *oend)
 		case nOPCPOW1:
 		case nOPPOW10:
 		case nOPPOW1i:
+		case nOPCsignpow1:
+		case nOPsignpow10:
+		case nOPsignpow1i:
 		case OP_acos1:
 		case OP_acosh1:
 		case OP_asin1:
@@ -540,12 +553,14 @@ hv_back1(int *o, real *w, int *oend)
 		case OP_exp1:
 		case OP_log101:
 		case OP_log1:
+		case OP_logistic1:
 		case OP_sin1:
 		case OP_sinh1:
 		case OP_sqrt1:
 		case OP_tan1:
 		case OPtanh1:
 		case OP_2POW1:
+		case OP_2signpow1:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
 			L->adO += r->adO;

@@ -20,8 +20,8 @@ of or in connection with the use or performance of this software.
 
 #ifdef __cplusplus
  extern "C" {
- extern  real con2ival_nomap_ASL(ASL *a, int i, real *X, fint *nerror);
- extern void con2grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror);
+ extern  real con2ival_nomap_ASL(ASL *a, int i, const real *X, fint *nerror);
+ extern void con2grd_nomap_ASL(ASL *a, int i, const real *X, real *G, fint *nerror);
 	}
 #endif
 
@@ -37,7 +37,7 @@ INchk(ASL *asl, const char *who, int i, int ix)
 	}
 
  static real
-c2ival(ASL_fgh *asl, int i, real *X, fint *nerror)
+c2ival(ASL_fgh *asl, int i, const real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	expr *e;
@@ -75,7 +75,7 @@ c2ival(ASL_fgh *asl, int i, real *X, fint *nerror)
 	}
 
  static real
-Conival2(ASL_fgh *asl, int i, real *X, fint *nerror)
+Conival2(ASL_fgh *asl, int i, const real *X, fint *nerror)
 {
 	cgrad *gr;
 	int j1, kv, *vmi;
@@ -119,14 +119,14 @@ Conival2(ASL_fgh *asl, int i, real *X, fint *nerror)
 	}
 
  real
-con2ival_nomap_ASL(ASL *a, int i, real *X, fint *nerror)
+con2ival_nomap_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	INchk(a, "con2ival_nomap", i, a->i.n_con0);
 	return  Conival2((ASL_fgh*)a, i, X, nerror);
 	}
 
  real
-con2ival_ASL(ASL *a, int i, real *X, fint *nerror)
+con2ival_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	int *cm;
 
@@ -137,7 +137,7 @@ con2ival_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  int
-lcon2val_ASL(ASL *a, int i, real *X, fint *nerror)
+lcon2val_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	real f;
 
@@ -147,7 +147,7 @@ lcon2val_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  static void
-Congrd2(ASL_fgh *asl, int i, real *X, real *G, fint *nerror)
+Congrd2(ASL_fgh *asl, int i, const real *X, real *G, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	cde *d;
@@ -247,7 +247,7 @@ Congrd2(ASL_fgh *asl, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-con2grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+con2grd_nomap_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_fgh *asl;
 	static char who[] = "con2grd_nomap";
@@ -260,7 +260,7 @@ con2grd_nomap_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
 	}
 
  void
-con2grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+con2grd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_fgh *asl;
 	int *cm;

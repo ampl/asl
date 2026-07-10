@@ -121,7 +121,7 @@ f_OPPOW(expr *e A_ASL)
 		if (!L && R < 0.) {
 			errno_set(0);
 			if (want_deriv)
-				e->dL = e->dR = Infinity;
+				e->dL = e->dR = negInfinity;
 			return Infinity;
 			}
 #endif
@@ -1221,6 +1221,201 @@ f_OPNUMBEROF(expr *e A_ASL)
 			n++;
 		}
 	return n;
+	}
+
+ static real
+f_OP_logistic(expr *e A_ASL)
+{
+	U rv;
+	expr *e1;
+	real t, t1;
+
+	e1 = e->L.e;
+	t1 = exp(-(t = (*e1->op)(e1 K_ASL)));
+	if (errchk(rv)) {
+		errno_set(0);
+		rv.d = t > 0. ? 1. : 0.;
+		e->dL = 0.;
+		}
+	else {
+		t = 1. / (1. + t1);
+		e->dL = (t*t1) * t;
+		rv.d = t;
+		}
+	return rv.d;
+	}
+
+ static real
+f_OPsignpow(expr *e A_ASL)
+{
+	U rv;
+	expr *e1;
+	real L, La, R, s;
+
+	e1 = e->L.e;
+	L = La = (*e1->op)(e1 K_ASL);
+	s = 1.;
+	if (L < 0.) {
+		s = -1.;
+		La = -La;
+		}
+	e1 = e->R.e;
+	R = (*e1->op)(e1 K_ASL);
+	rv.d = mypow(La,R);
+	if (errchk(rv)) {
+#ifdef WANT_INFNAN
+		if (!L && R < 0.) {
+			errno_set(0);
+			if (want_deriv)
+				e->dL = e->dR = Infinity;
+			return Infinity;
+			}
+#endif
+		introuble2("signpow",L,R,1);
+		}
+	else
+		rv.d *= s;
+	if (want_deriv) {
+		if (La > 0.) {
+			e->dL = R * (rv.d/L);
+			e->dR = log(La) * rv.d;
+			}
+		else if (L != 0.) {
+#ifndef WANT_INFNAN
+ bad:
+#endif
+			introuble2("signpow'",L,R,2);
+			}
+		else {
+			if (R > 1.)
+				e->dL = e->dR = 0.;
+			else if (R == 1.) {
+				e->dL = s;
+				e->dR = 0.;
+				}
+			else
+#ifdef WANT_INFNAN
+				{
+				e->dL = Infinity;
+				e->dR = negInfinity;
+				}
+#else
+				goto bad;
+#endif
+			}
+		}
+	return rv.d;
+	}
+
+ static real
+f_OP1signpow(expr *e A_ASL)
+	/* f_OPsignpow for R = numeric constant */
+{
+	U rv;
+	expr *e1;
+	real L, La, R, s, xym1;
+
+	e1 = e->L.e;
+	L = La = (*e1->op)(e1 K_ASL);
+	s = 1.;
+	if (L < 0.) {
+		s = -1.;
+		La = -La;
+		}
+	R = e->dR; /* til 20160607, was ((expr_n *)e->R.e)->v; */
+	rv.d = mypow(La,R);
+	if (errchk(rv)) {
+#ifdef WANT_INFNAN
+		if (!L && R < 0.) {
+			errno_set(0);
+			e->dL = negInfinity;
+			return e->dL2 = Infinity;
+			}
+#endif
+		introuble2("signpow",L,R,1);
+		}
+	rv.d *= s;
+	if (want_deriv) {
+		if (L) {
+			xym1 = rv.d / L;
+			e->dL = R * xym1;
+			}
+		else if (R > 1.) {
+			e->dL = 0.;
+			}
+		/* R == 1. does not arise here */
+		else {
+#ifdef WANT_INFNAN
+			e->dL = Infinity;
+#else
+			introuble2("signpow'",L,R,2);
+#endif
+			}
+		}
+	return rv.d;
+	}
+
+ static real
+f_OP2signpow(expr *e A_ASL)
+	/* f_OPsignpow for R = 2 */
+{
+	expr *e1;
+	real L;
+
+	e1 = e->L.e;
+	L = (*e1->op)(e1 K_ASL);
+	if (L < 0.)
+		L = -L;
+	e->dL = L + L;
+	return L*L;
+	}
+
+ static real
+f_OPCsignpow(expr *e A_ASL)
+		/* f_OPsignpow for L = numeric constant */
+{
+	U rv;
+	expr *e1;
+	real L, L0, R, s;
+
+	e1 = e->R.e;
+	s = 1.;
+	L = L0 = e->L.en->v;
+	if (L < 0.) {
+		L = -L;
+		s = -1;
+		}
+	rv.d = mypow(L, R = (*e1->op)(e1 K_ASL));
+	if (errchk(rv)) {
+#ifdef WANT_INFNAN
+		if (!L && R < 0.) {
+			errno_set(0);
+			e->dR = e->dR2 = 0;
+			return Infinity;
+			}
+#endif
+		introuble2("signpow",L0,R,1);
+		}
+	if (want_deriv) {
+		if (L > 0.) {
+			if (e->dL == 1)
+				e->dL = log(L);	/* cache value */
+			e->dR = s * e->dL * rv.d;
+			}
+		else if (L == 0.)
+			e->dR = 0.;
+		else {
+#if defined(WANT_INFNAN) && defined(QNaN0)
+			union { unsigned int x[2]; real r; } u;
+			u.x[0] = QNaN0;
+			u.x[1] = QNaN1;
+			e->dR = e->dR2 = u.r;
+#else
+			introuble2("signpow'",L,R,2);
+#endif
+			}
+		}
+	return rv.d;
 	}
 
 #define f_OPATLEAST f_LE

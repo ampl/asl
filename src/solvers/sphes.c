@@ -1062,13 +1062,14 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 	}
 
  void
-sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
+sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, const real *ow, const real *y)
 {
 	/* sparse upper triangle of Hessian */
 
 	ASL_pfgh *asl;
 	Hesoprod *hop, *hop1, **otodo, **otodoi, **otodoj;
 	SputInfo *spi;
+	const real *owi, *y1;
 	expr_v *v;
 	fint *hr;
 	int i, j, k, kh, n, nlc0, no, noe, *ui;
@@ -1078,7 +1079,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
 	psg_elem *g, *ge;
 	range *r, *r0, **rp, **rtodo;
 	real *Hi, *H0, *H00;
-	real *cscale, *owi, *s, *si, t, t1, *vsc0, *vsc1, *vsc, *y1;
+	real *cscale, *s, *si, t, t1, *vsc0, *vsc1, *vsc;
 	size_t *hcs;
 	ssize_t *ulc, *uli;
 	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
@@ -1319,7 +1320,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, real *ow, real *y)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-sphese_ASL(ASL *asl, SputInfo **spi, real *H, int nobj, real *ow, real *y, fint *nerror)
+sphese_ASL(ASL *asl, SputInfo **spi, real *H, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 

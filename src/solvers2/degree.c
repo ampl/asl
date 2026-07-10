@@ -522,8 +522,12 @@ degree_ASL(ASL *asl, int co, void **pv)
 			rv = 0;
 			for(ge = f->ge; g < ge; ++g) {
 				o = g->o;
-				if (*o != OP2POW_g)
+				switch(*o) {
+				  case OP2POW_g:
+					break;
+				  default:
 					goto ret3;
+				  }
 				switch(o[3]) {
 					case OPRET:
 						break;

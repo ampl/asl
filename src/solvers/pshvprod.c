@@ -535,12 +535,13 @@ funnelhes(ASL_pfgh *asl)
 	}
 
  static void
-hvp0comp_ASL(ASL_pfgh *asl, real *hv, real *p, int nobj, real *ow, real *y)
+hvp0comp_ASL(ASL_pfgh *asl, real *hv, const real *p, int nobj, const real *ow, const real *y)
 	/* p = direction */
 	/* y = Lagrange multipliers */
 	/* hv = result */
 {
 	cexp *c, *c1, *ce;
+	const real *p1;
 	expr *e;
 	expr_v *v, *x, *x0, *xe;
 	int *dvsp0, i, i0, i1, n, nc, no, noe;
@@ -550,7 +551,7 @@ hvp0comp_ASL(ASL_pfgh *asl, real *hv, real *p, int nobj, real *ow, real *y)
 	ps_func *f, *f0;
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
-	real *cscale, t, t2, *p1;
+	real *cscale, t, t2;
 
 #ifdef IGNORE_BOGUS_WARNINGS
 	c1 = ce = 0;
@@ -758,13 +759,14 @@ dtmul(int n, real *x0, real *h, real *y0)
 	}
 
  void
-hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
+hvpcomp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const real *y)
 	/* p = direction */
 	/* y = Lagrange multipliers */
 	/* hv = result */
 {
 	ASL_pfgh *asl;
 	Ihinfo *ihi;
+	const real *owi;
 	expr_v *v;
 	int kp, kw, n, no, noe, ns, nv, *ui, *uie;
 	linarg *la, **lap, **lape;
@@ -772,7 +774,7 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
 	ps_func *ps, *pe;
 	psg_elem *g, *ge;
 	range *r;
-	real *cscale, *owi, t, t1, t2, *p0, *s, *w, *wi, *x;
+	real *cscale, t, t1, t2, *p0, *s, *w, *wi, *x;
 
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcomp");
 	if (a->i.Derrs)
@@ -951,7 +953,7 @@ hvpcomp_ASL(ASL *a, real *hv, real *p, int nobj, real *ow, real *y)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-hvpcompe_ASL(ASL *asl, real *hv, real *p, int nobj, real *ow, real *y, fint *nerror)
+hvpcompe_ASL(ASL *asl, real *hv, const real *p, int nobj, const real *ow, const real *y, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -967,7 +969,7 @@ hvpcompe_ASL(ASL *asl, real *hv, real *p, int nobj, real *ow, real *y, fint *ner
 	}
 
  void
-pshv_prod_ASL(ASL_pfgh *asl, range *r, int nobj, real *ow, real *y)
+pshv_prod_ASL(ASL_pfgh *asl, range *r, int nobj, const real *ow, const real *y)
 {
 	cexp *c;
 	expr *e;
@@ -1093,7 +1095,7 @@ funpset_ASL(ASL_pfgh *asl, funnel *f)
 	}
 
  void
-hvpcompd_ASL(ASL *a, real *hv, real *p, int co)
+hvpcompd_ASL(ASL *a, real *hv, const real *p, int co)
 	/* p = direction */
 	/* hv = result */
 	/* co >= 0: behave like hvpcomp_ASL with nobj = -1, ow = 0, y[i] = i == co ? 1. : 0. */
@@ -1346,7 +1348,7 @@ hvpcompd_ASL(ASL *a, real *hv, real *p, int co)
    similarly to the final nerror argument to objval_(), etc. */
 
  void
-hvpcompde_ASL(ASL *asl, real *hv, real *p, int co, fint *nerror)
+hvpcompde_ASL(ASL *asl, real *hv, const real *p, int co, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
@@ -1362,7 +1364,7 @@ hvpcompde_ASL(ASL *asl, real *hv, real *p, int co, fint *nerror)
 	}
 
  varno_t
-hvpcomps_ASL(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
+hvpcomps_ASL(ASL *a, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 	/* p = direction */
 	/* hv = result */
 	/* co >= 0: behave like hvpcomp_ASL with nobj = -1, ow = 0, y[i] = i == co ? 1. : 0. */
@@ -1654,7 +1656,7 @@ hvpcomps_ASL(ASL *a, real *hv, real *p, int co, varno_t nz, varno_t *z)
    similarly to the final nerror argument to objval_(), etc. */
 
  varno_t
-hvpcompse_ASL(ASL *asl, real *hv, real *p, int co, varno_t nz, varno_t *z, fint *nerror)
+hvpcompse_ASL(ASL *asl, real *hv, const real *p, int co, varno_t nz, varno_t *z, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 	varno_t rv;

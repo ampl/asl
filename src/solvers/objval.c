@@ -19,7 +19,7 @@ of or in connection with the use or performance of this software.
 #include "nlp.h"
 
  int
-x0_check_ASL(ASL_fg *asl, real *X)
+x0_check_ASL(ASL_fg *asl, const real *X)
 {
 	expr_v *V;
 	int *vm;
@@ -63,7 +63,7 @@ x0_check_ASL(ASL_fg *asl, real *X)
 	}
 
  int
-x1known_ASL(ASL *asl, real *X, fint *nerror)
+x1known_ASL(ASL *asl, const real *X, fint *nerror)
 {
 	Jmp_buf err_jmp0;
 	int ij, rc;
@@ -100,7 +100,7 @@ NNOBJ_chk(ASL *asl, int i, const char *who)
 	}
 
  real
-obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
+obj1val_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;
@@ -174,7 +174,7 @@ obj1val_ASL(ASL *a, int i, real *X, fint *nerror)
 	}
 
  void
-obj1grd_ASL(ASL *a, int i, real *X, real *G, fint *nerror)
+obj1grd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_fg *asl;
 	Jmp_buf err_jmp0;

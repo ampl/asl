@@ -656,7 +656,7 @@ nextopp(Static *S, int n)
 		if (S->dop == S->dop0) {
 			if (op == S->opfirst)
 				S->opfirst = op + 1;
-			*op++ = OPRETB;
+			*op++ = nOPRETB;
 			S->opprev = op;
 			op[1] = 1;
 			opnext = op + n;
@@ -786,6 +786,24 @@ new_expr(Static *S, int o, expr *L, expr *R)
 		rvc->R.e = 0;
 		rvc->c = ((expr_nv*)LR)->varno;
 		return (expr*)rvc;
+	  case OPsignpow:
+		if (R->op == f_OPNUM) {
+			if (((expr_nv *)R)->varno == S->two) {
+				o = f_OP2signpow;
+				R = 0;
+				break;
+				}
+			o = f_OP1signpow;
+			LR = R;
+			}
+		else if (L->op == f_OPNUM) {
+			o = f_OPCsignpow;
+			LR = L;
+			L = R;
+			}
+		else
+			break;
+		goto rvc_ret;
 	  case OP_atan2:
 		if (R->op == f_OPNUM) {
 			o = OPatan210;
@@ -3532,6 +3550,32 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		op[1] = rv;
 		op[2] = i;
 		break;
+	  case f_OP2signpow:
+		ia = 0;
+		i = ewalk(S, e->L.e, deriv ? &ia : 0, 0);
+		rv = wlast;
+		if (ia) {
+			op = nextopp(S, 4);
+			op[0] = OP_2signpow1;
+			++op;
+			wlast = rv + 5;
+			if (ia > S->afirst)
+				free_a(S, ia);
+			if (!(ka = atop))
+				ka = new_a(S);
+			*deriv = ka;
+			new_derp(S, ia, ka, rv+4);
+			}
+		else {
+			if (!S->dop)
+				new_dop(S);
+			op = nextop(S, 3);
+			op[0] = OP_2signpow0;
+			wlast = rv + 1;
+			}
+		op[1] = rv;
+		op[2] = i;
+		break;
 	  case f_OP1POW:
 	  case f_OPCPOW:
 	  case OPPOW:
@@ -4421,6 +4465,87 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		op[2] = k;
 		strcpy((char*)(op+3), wd);
 		break;
+
+	  case OP_logistic:
+		k = OP_logistic0;
+		goto unop;
+
+	  case f_OP1signpow:
+	  case f_OPCsignpow:
+	  case OPsignpow:
+		if (!deriv) {
+			k = n_OPsignpow0;
+			goto mult0;
+			}
+		ia = ja = 0;
+		*deriv = 0;
+		i = ewalk(S, e->L.e, &ia, 0);
+		switch(k) {
+		  case f_OPCsignpow:
+			ja = ia;
+			j = i;
+			ia = 0;
+			i = ((exprc*)e)->c;
+			k = n_OPsignpow0;
+			break;
+		  case f_OP1signpow:
+			j = ((exprc*)e)->c;
+			goto more_OP1signpow;
+		  default:
+			j = 0;
+			k = n_OPsignpow0;
+			if (e->R.e)
+				j = ewalk(S, e->R.e, &ja, 0);
+		  }
+		if (!ja) {
+ more_OP1signpow:
+			if (j < 0) {
+				t = S->htvals_end[j];
+				rv = wlast;
+				if (!ia) {
+					if (!S->dop)
+						new_dop(S);
+					op = nextop(S, 6);
+					if (needalign(op,3)) {
+						k = OPCsignpow0align;
+						b = (real*)&op[4];
+						}
+					else {
+						k = nOPCsignpow0;
+						b = (real*)&op[3];
+						}
+					b[0] = t;
+					opnext = (int*)&b[1];
+					goto uret0cp;
+					}
+				if (ia > S->afirst)
+					free_a(S, ia);
+				if (!(ka = atop))
+					ka = new_a(S);
+				*deriv = ka;
+				new_derp(S, ia, ka, rv+4);
+				k2 = 6;
+				if (t == floor(t)) {
+					k = nOPsignpow1i;
+					goto bret3;
+					}
+				op = nextopp(S, 9);
+				if (needalign(op,4)) {
+					k = OPCsignpow0align;
+					b = (real*)&op[5];
+					}
+				else {
+					k = nOPCsignpow0;
+					b = (real*)&op[4];
+					}
+				b[0] = t;
+				opnext = (int*)&b[1];
+				goto uret3;
+				}
+			if (!ia)
+				goto bret0;
+			}
+		goto binop;
  default:
 		/*DEBUG*/fprintf(Stderr, "Bad k = %d in ewalk\n", k);
 		/*DEBUG*/exit(1);
@@ -4844,7 +4969,7 @@ cexp_walk(Static *S, int kc, int wantdb, int wantdc)
 	ewalk1(S, (expr*)ce->o.e, pia, &ce->o);
 	if (!ce->o.f && (o = ce->o.e) && o[0] == OPRET && (k = o[1]) >= 0) {
 		o = nextop(S, 6);
-		*o++ = OPRETB;
+		*o++ = nOPRETB;
 		o[0] = OPCOPY1;
 		o[1] = 1;
 		o[2] = 4*(S->dv0 + kc);
@@ -5215,6 +5340,7 @@ qwalk(Static *S, expr *e)
 		case 1:	/* unary */
 			switch(k) {
 			  case f_OPCPOW:
+			  case f_OPCsignpow:
 				if (qwalk(S, e->R.e))
 					return 3;
 				return 0;
@@ -5222,6 +5348,7 @@ qwalk(Static *S, expr *e)
 				e = e->L.e;
 				goto top;
 			  case f_OP2POW:
+			  case f_OP2signpow:
 				i = qwalk(S, e->L.e);
 				if (i < 2)
 					return i << 1;
@@ -5354,6 +5481,9 @@ ewalkg(Static *S, expr *e, int k1)
 	  case OP_asin:
 		k = OPasin_g;
 		break;
+	  case OP_logistic:
+		k = OP_logistic_g;
+		break;
 	  case OP_acosh:
 		k = OPacosh_g;
 		break;
@@ -5371,6 +5501,21 @@ ewalkg(Static *S, expr *e, int k1)
 		break;
 	  case f_OPCPOW:
 		k = OPCPOW_g;
+		op = nextop(S, 4);
+		op[3] = k1;
+		k1 = ((exprc*)e)->c;
+		goto have_op;
+	  case OP1signpow:
+		k = OP1signpow_g;
+		op = nextop(S, 4);
+		op[3] = ((exprc*)e)->c;
+		goto have_op;
+	  case f_OP2signpow:
+		k = OP2signpow_g;
+		wk_add(S->asl, &S->wk2, rv+2);
+		break;
+	  case f_OPCsignpow:
+		k = OPCsignpow_g;
 		op = nextop(S, 4);
 		op[3] = k1;
 		k1 = ((exprc*)e)->c;
@@ -5584,10 +5729,14 @@ co_walkloop(Static *S, ps_func *f, int n, cde *cd, char *c, ograd **o)
 		if (c) {
 			k = *o++ != 0;
 			for(g = f->g, ge = f->ge; g < ge; g++) {
-				if (g->g.e->op != f_OP2POW) {
+				switch(g->g.e->op) {
+				  case f_OP2POW:
+				  case f_OP2signpow:
+					break;
+				  default:
 					k = 3;
 					goto have_c;
-					}
+				  }
 				if (g->L)
 					k = 2;
 				for(b = g->pi.b, be = g->pi.be; b < be; b++) {
@@ -6345,10 +6494,12 @@ alignarg(more_plterm:)
 /*		case Hv_binaryR:*/
 #ifdef X64_bit_pointers
 		case OPCPOW1align:
-		bs = (real*)&o[5];
-		goto more_CPOW1;
+		case OPCsignpow1align:
+			bs = (real*)&o[5];
+			goto more_CPOW1;
 #endif
 		case nOPCPOW1:
+		case nOPCsignpow1:
 		bs = (real*)&o[4];
 alignarg(more_CPOW1:)
 			n += 6;
@@ -6358,6 +6509,8 @@ alignarg(more_CPOW1:)
 		case OPDIV10:
 		case nOPPOW01:
 		case nOPPOW10:
+		case nOPsignpow01:
+		case nOPsignpow10:
 		case nOPREM10:
 			n += 6;
 			o += 5;
@@ -6397,11 +6550,13 @@ alignarg(more_CPOW1:)
 		case OP_tan1:
 		case OPtanh1:
 		case OP_2POW1:
+		case OP_2signpow1:
 			n += 6;
 			o += 4;
 			break;
 
 		case nOPPOW1i:
+		case nOPsignpow1i:
 			n += 6;
 			o += 5;
 			break;
@@ -6415,6 +6570,7 @@ alignarg(more_CPOW1:)
 /*		case Hv_binaryLR: */
 		case OPDIV2:
 		case n_OPPOW2:
+		case n_OPsignpow2:
 		case OP_atan22:
 			n += 14;
 			o += 5;

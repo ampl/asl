@@ -223,15 +223,15 @@ ASL_fg {
  extern void com1eval_ASL(ASL_fg*, int, int);
  extern void comeval_ASL(ASL_fg*, int, int);
  extern void funnelset_ASL(ASL_fg*, funnel *);
- extern real obj1val(ASL*, int nobj, real *X, fint *nerror);
- extern void obj1grd(ASL*, int nobj, real *X, real *G, fint *nerror);
- extern void con1val(ASL*, real *X, real *F, fint *nerror);
- extern void jac1val(ASL*, real *X, real *JAC, fint *nerror);
- extern real con1ival(ASL*,int nc, real *X, fint *ne);
- extern void con1grd (ASL*, int nc, real *X, real *G, fint *nerror);
- extern int  lcon1val(ASL*,int nc, real *X, fint *ne);
- extern int x0_check_ASL(ASL_fg*, real *);
- extern int x1known(ASL*, real*, fint*);
+ extern real obj1val(ASL*, int nobj, const real *X, fint *nerror);
+ extern void obj1grd(ASL*, int nobj, const real *X, real *G, fint *nerror);
+ extern void con1val(ASL*, const real *X, real *F, fint *nerror);
+ extern void jac1val(ASL*, const real *X, real *JAC, fint *nerror);
+ extern real con1ival(ASL*,int nc, const real *X, fint *ne);
+ extern void con1grd (ASL*, int nc, const real *X, real *G, fint *nerror);
+ extern int  lcon1val(ASL*,int nc, const real *X, fint *ne);
+ extern int x0_check_ASL(ASL_fg*, const real *);
+ extern int x1known(ASL*, const real*, fint*);
 #ifdef __cplusplus
 	}
 #endif

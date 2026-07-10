@@ -1300,6 +1300,248 @@ eval1(int *o, EvalWorkspace *ew)
 		goto top;
 #endif
 
+	  case nOP_logistic0:
+		t = w[o[2]];
+		t1 = exp(-t);
+		if (errchk(rv)) {
+			errno_set(0);
+			t1 = t < 0. ? 0. : 1;
+			}
+		else
+			t1 = 1. / (1. + t1);
+		w[o[1]] = t1;
+		o += 3;
+		goto top;
+
+	  case nOP_logistic1:
+		t = w[o[2]];
+		t1 = exp(-t);
+		if (errchk(rv)) {
+			errno_set(0);
+			t = t < 0. ? 0. : 1.;
+			}
+		else
+			t = 1. / (1. + t1);
+		i = o[1];
+		if (wd)
+			w[i+1] = (t*t1) * t;
+		w[i] = t;
+		o += 3;
+		goto top;
+
+	  case nOPsignpow0:
+		R = w[o[3]];
+		i = o[1];
+		t0 = L = w[o[2]];
+		t = 1.;
+		if (L <= 0.) {
+			if (!L) {
+				if (R < 0.) {
+#ifdef WANT_INFNAN
+					errno_set(0);
+					return w[i] = Infinity;
+#else
+					introuble2("signpow",L,R,1);
+#endif
+					}
+				return w[i] = R ? 0. : 1.;
+				}
+			t = -1.;
+			t0 = -t0;
+			}
+		rv.d = w[i] = t*pow(t0, R);
+		if (errchk(rv))
+			introuble2("signpow",L,R,1);
+		o += 4;
+		goto top;
+
+	  case nOPsignpow1:
+		R = w[o[3]];
+		i = o[1];
+		t0 = L = w[o[2]];
+		t = 1.;
+		if (L <= 0.) {
+			if (!L) {
+				if (R < 0.) {
+#ifdef WANT_INFNAN
+					errno_set(0);
+					return w[i] = Infinity;
+#else
+					introuble2("signpow",L,R,1);
+#endif
+					}
+				return w[i] = R ? 0. : 1.;
+				}
+			t = -1.;
+			t0 = -t0;
+			}
+		rv.d = w[i] = t*pow(t0, R);
+		if (errchk(rv))
+			introuble2("signpow",L,R,1);
+		if (wd) {
+			if (t0 > 0.)
+				w[i+1] = R * (rv.d/L);
+			else if (L != 0.)
+				goto bad;
+			else {
+				if (R > 1.)
+					w[i+1] = 0.;
+				else if (R == 1.) {
+					w[i+1] = 1.;
+					}
+				else
+#ifdef WANT_INFNAN
+					w[i+1] = Infinity;
+#else
+					goto bad;
+#endif
+				}
+			}
+		o += 4;
+		goto top;
+
+	  case nOPsignpow2:
+		R = w[o[3]];
+		i = o[1];
+		t0 = L = w[o[2]];
+		t = 1.;
+		if (L <= 0.) {
+			if (!L) {
+				if (R < 0.) {
+#ifdef WANT_INFNAN
+					errno_set(0);
+					return w[i] = Infinity;
+#else
+					introuble2("signpow",L,R,1);
+#endif
+					}
+				return w[i] = R ? 0. : 1.;
+				}
+			t = -1.;
+			t0 = -t0;
+			}
+		rv.d = w[i] = t*pow(t0, R);
+		if (errchk(rv))
+			introuble2("signpow",L,R,1);
+		if (wd) {
+			if (t0 > 0.) {
+				t1 = log(t0);
+				w[i+1] = t1 * rv.d;
+				}
+			else if (L != 0.)
+				goto bad;
+			else {
+				if (R > 1.)
+					w[i+1] = 0.;
+				else if (R == 1.)
+					w[i+1] = 0.;
+				else
+#ifdef WANT_INFNAN
+					w[i+1] = negInfinity;
+#else
+					goto bad;
+#endif
+				}
+			}
+		o += 4;
+		goto top;
+
+	  case nOPsignpow3:
+		R = w[o[3]];
+		i = o[1];
+		t0 = L = w[o[2]];
+		t = 1.;
+		if (L <= 0.) {
+			if (!L) {
+				if (R < 0.) {
+#ifdef WANT_INFNAN
+					errno_set(0);
+					return w[i] = Infinity;
+#else
+					introuble2("signpow",L,R,1);
+#endif
+					}
+				return w[i] = R ? 0. : 1.;
+				}
+			t = -1.;
+			t0 = -t0;
+			}
+		rv.d = w[i] = t*pow(t0, R);
+		if (errchk(rv))
+			introuble2("signpow",L,R,1);
+		if (wd) {
+			if (t0 > 0.) {
+				t1 = log(t0);
+				w[i+1] = R * (rv.d/L);
+				w[i+2] = t1 * rv.d;
+				}
+			else if (L != 0.)
+				goto bad;
+			else {
+				if (R > 1.)
+					w[i+1] = w[i+2] = 0.;
+				else if (R == 1.) {
+					w[i+1] = 1.;
+					w[i+2] = 0.;
+					}
+				else
+#ifdef WANT_INFNAN
+					{
+					w[i+1] = Infinity;
+					w[i+2] = negInfinity;
+					}
+#else
+					goto bad;
+#endif
+				}
+			}
+		o += 4;
+		goto top;
+
+	  case nOPsignpow4:
+		R = w[o[3]];
+		/* R = constant integer */
+		i = o[1];
+		t0 = L = w[o[2]];
+		t = 1.;
+		if (L <= 0.) {
+			if (!L) {
+				if (R < 0.) {
+#ifdef WANT_INFNAN
+					errno_set(0);
+					return w[i] = Infinity;
+#else
+					introuble2("signpow",L,R,1);
+#endif
+					}
+				return w[i] = R ? 0. : 1.;
+				}
+			t = -1.;
+			t0 = -t0;
+			}
+		rv.d = w[i] = t*pow(t0, R);
+		if (errchk(rv))
+			introuble2("signpow",L,R,1);
+		if (wd) {
+			if (L != 0.)
+				w[i+1] = R * (rv.d/L);
+			else {
+				if (R > 1.)
+					w[i+1] = 0.;
+				else if (R == 1.) {
+					w[i+1] = 1.;
+					}
+				else
+#ifdef WANT_INFNAN
+					w[i+1] = Infinity;
+#else
+					goto bad;
+#endif
+				}
+			}
+		o += 4;
+		goto top;
+
 	  default:
 		fprintf(Stderr, "\nUnexpected opno %d in eval1_ASL()\n", *o);
 		fflush(Stderr);

@@ -143,7 +143,7 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 	int i, j, k, n, nr, ns, *o1, **pop, prec, sign, wd, wdf, z;
 	jb_st J;
 	plterm *p, **pp;
-	real L, R, *bs, rbuf[128], *rp, t, t0, t1, *w;
+	real L, R, *bs, rbuf[128], *rp, t, t0, t1, t2, *w;
 	tfinfo **ptfi, *tfi;
 	void **v;
 	static real Le10;
@@ -1781,13 +1781,12 @@ alignarg(more_plterm:)
 		bs = (real*)&o[3];
 alignarg(more_CPOW0:)
 		o1 = (int*)&bs[1];
-		wdf = 0;
+		wd = 0;
 		goto more_CPOW;
 	  case nOPCPOW1:
 		bs = (real*)&o[4];
 alignarg(more_CPOW1:)
 		o1 = (int*)&bs[1];
-		wdf = wd;
 		++o;
  more_CPOW:
 		L = w[o[2]];
@@ -1799,7 +1798,7 @@ alignarg(more_CPOW1:)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				r->O = r->dL2 = Infinity;
+				r->O = Infinity;
 				r->dL2 = negInfinity;
 				goto top;
 				}
@@ -1942,7 +1941,7 @@ alignarg(more_func1:)
 		o += 2;
 		goto top;
 
-	  case OPRETB:
+	  case nOPRETB:
 		++o;
 		goto top;
 
@@ -1973,6 +1972,498 @@ alignarg(more_func1:)
 	  case OPVARREF:
 		o += 3;
 		goto top;
+
+	  case OP_logistic0:
+		t1 = exp(t0 = -w[o[2]]);
+		if (errchk(rv)) {
+			if (t0 >= 0.)
+				introuble("logistic0",t0,1);
+			else
+				errno_set(0);
+			t1 = 0.;
+			}
+		else
+			t1 = 1. / (1. + t1);
+		w[o[1]] = t1;
+		o += 3;
+		goto top;
+
+	  case OP_logistic1:
+		t1 = exp(t0 = -w[o[3]]);
+		r = (Eresult*)(w + o[2]);
+		if (errchk(rv)) {
+			errno_set(0);
+			t = t0 > 0. ? 0. : 1.;
+			if (wd)
+				r->dL = r->dL2 = 0.;
+			}
+		else {
+			t = 1. / (1. + t1);
+			if (wd) {
+				r->dL = t2 = (t*t1) * t;
+				r->dL2 = t1*t*(t2+t2 - t);
+				}
+			}
+		r->O = t;
+		o += 4;
+		goto top;
+
+	  case OP_logistic_g:
+		g = (GOps*)(w + o[1]);
+		t = w[o[2]];
+		t1 = exp(-t);
+		if (errchk(rv)) {
+			errno_set(0);
+			if (wd)
+				g->dL = g->dL2 = 0.;
+			g->O = t < 0. ? 0. : 1.;
+			}
+		else {
+			g->O = t = 1. / (1. + t1);
+			if (wd) {
+				g->dL = t2 = t*t * t1;
+				g->dL2 = t1*t*(t2+t2 - t);
+				}
+			}
+		o += 3;
+		goto top;
+
+	  case n_OPsignpow0:
+		R = w[o[3]];
+		i = o[1];
+		t0 = L = w[o[2]];
+		t = 1.;
+		if (L <= 0.) {
+			if (!L) {
+				if (R < 0.) {
+#ifdef WANT_INFNAN
+					errno_set(0);
+					return w[i] = Infinity;
+#else
+					introuble2("signpow",L,R,1);
+#endif
+					}
+				return w[i] = R ? 0. : 1.;
+				}
+			t = -1.;
+			t0 = -t0;
+			}
+		rv.d = w[o[1]] = t*pow(t0, R);
+		if (errchk(rv))
+			introuble2("signpow",L,R,1);
+		o += 4;
+		goto top;
+
+	  case OP1signpow_g:
+		t0 = L = w[o[2]];
+		R = w[o[3]];
+		g = (GOps*)(w + o[1]);
+		t = 1.;
+		if (L < 0.) {
+			t = -1.;
+			t0 = -t0;
+			}
+		rv.d = t*pow(t0, R);
+		o += 4;
+		if (errchk(rv)) {
+#ifdef WANT_INFNAN
+			if (!L && R < 0.) {
+				errno_set(0);
+				g->dL = negInfinity;
+				g->O = g->dL2 = Infinity;
+				goto top;
+				}
+#endif
+			introuble2("signpow",L,R,1);
+			}
+		g->O = rv.d;
+		if (wd) {
+			if (L) {
+				g->dL = R * (rv.d/L);
+				g->dL2 = (R - 1.) * g->dL / L;
+				}
+			else if (R > 1.) {
+				g->dL = 0.;
+				if (R >= 2.) {
+					g->dL2 = R > 2. ? 0. : 2.;
+					goto top;
+					}
+#ifdef WANT_INFNAN
+				e->dL2 = Infinity;
+#else
+				introuble2("signpow\"",L,R,3);
+#endif
+				}
+			else if (R == 1.) {
+				g->dL = t;
+				g->dL2 = 0.;
+				}
+			else if (R == 0.)
+				g->dL = g->dL2 = 0.;
+			else { /* 0 < R < 1 */
+#ifdef WANT_INFNAN
+				g->dL = t*Infinity;
+				g->dL2 = negInfinity;
+#else
+				goto badsignpowder;
+#endif
+				}
+			}
+		goto top;
+
+	  case nOPsignpow10:
+		t0 = L = w[o[3]];
+		R = w[o[4]];
+		t = 1.;
+		if (L < 0.) {
+			t = -1.;
+			t0 = -t0;
+			}
+		r = (Eresult*)(w + o[2]);
+		rv.d = t*pow(t0, R);
+		o += 5;
+		if (errchk(rv)) {
+#ifdef WANT_INFNAN
+			if (!L && R < 0.) {
+				errno_set(0);
+				r->dL = negInfinity;
+				r->O = r->dL2 = Infinity;
+				goto top;
+				}
+#endif
+			introuble2("signpow",L,R,1);
+			}
+		r->O = rv.d;
+		if (wd) {
+			if (L) {
+				r->dL = R * (rv.d/L);
+				r->dL2 = (R - 1.) * r->dL / L;
+				}
+			else if (R > 1.) {
+				r->dL = 0.;
+				if (R >= 2.) {
+					r->dL2 = R > 2. ? 0. : 2.;
+					goto top;
+					}
+#ifdef WANT_INFNAN
+				e->dL2 = Infinity;
+#else
+				introuble2("signpow\"",L,R,3);
+#endif
+				}
+			else if (R == 1.) {
+				r->dL = t;
+				r->dL2 = 0.;
+				}
+			else if (R == 0.)
+				r->dL = r->dL2 = 0.;
+			else { /* 0 < R < 1 */
+#ifdef WANT_INFNAN
+				r->dL = t*Infinity;
+				r->dL2 = negInfinity;
+#else
+				goto badsignpowder;
+#endif
+				}
+			}
+		goto top;
+
+	  case nOPsignpow01:
+		t0 = L = w[o[3]];
+		R = w[o[4]];
+		t = 1.;
+		if (L < 0.) {
+			t = -1.;
+			t0 = -t0;
+			}
+		r = (Eresult*)(w + o[2]);
+		r->O = rv.d = t*pow(t0, R);
+		o += 5;
+		if (errchk(rv)) {
+#ifdef WANT_INFNAN
+			if (!L && R < 0.) {
+				errno_set(0);
+				r->dL = negInfinity;
+				r->O = r->dL2 = Infinity;
+				goto top;
+				}
+#endif
+			goto badsignpow;
+			}
+		if (wd) {
+			if (t0 > 0.) {
+				r->dL = (t = log(t0)) * rv.d;
+				r->dL2 = t * r->dL;
+				}
+			else if (L != 0.)
+				goto badsignpowder;
+			else {
+				r->dL = r->dL2 = 0.;
+#ifndef WANT_INFNAM
+				if (R < 2.)
+					introuble2("signpow\"",L,R,3);
+#endif
+				}
+			}
+		goto top;
+
+	  case n_OPsignpow2:
+		t0 = L = w[o[3]];
+		R = w[o[4]];
+		t = 1.;
+		if (L < 0.) {
+			t = -1.;
+			t0 = -t0;
+			}
+		r = (Eresult*)(w + o[2]);
+		r->O = rv.d = t*pow(t0, R);
+		o += 5;
+		if (errchk(rv)) {
+#ifdef WANT_INFNAN
+			if (!L && R < 0.) {
+				errno_set(0);
+				if (wd) {
+					r->dL = r->dR = negInfinity;
+					r->dL2 = r->dLR = r->dR2 = Infinity;
+					}
+				r->O = Infinity;
+				goto top;
+				}
+#endif
+			introuble2("signpow",L,R,1);
+			}
+		if (wd) {
+			if (t0 > 0.) {
+				t1 = rv.d / L;
+				t = log(t0);
+				r->dL = R*t1;
+				r->dR = t * rv.d;
+				r->dL2 = (R - 1.) * (r->dL / L);
+				r->dLR = t1 * (1. + R*t);
+				r->dR2 = t * r->dR;
+				goto top;
+				}
+			r->dL = r->dR = r->dL2 = r->dLR = r->dR2 = 0.;
+			if (L != 0.) {
+ badsignpowder:
+				introuble2("signpow'",L,R,2);
+				break; /* not reached */
+				}
+			if (R > 1.) {
+				if (R == 2.)
+					r->dL2 = 2;
+				else if (R < 2.) {
+					r->dL2 = Infinity;
+#ifndef WANT_INFNAN
+					introuble2("signpow\"",L,R,3);
+#endif
+					}
+				goto top;
+				}
+			if (R == 1.)
+				r->dL = 1.;
+			else { /* 0 < R < 1 */
+#ifdef WANT_INFNAN
+				r->dL = Infinity;
+				r->dL2 = r->dLR = negInfinity;
+#else
+				goto badsignpowder;
+#endif
+				}
+			}
+		goto top;
+
+	  case nOPsignpow1i:
+		t0 = L = w[o[3]];
+		R = w[o[4]];
+		t = 1.;
+		if (L < 0.) {
+			t = -1.;
+			t0 = -t0;
+			}
+		r = (Eresult*)(w + o[2]);
+		r->O = rv.d = pow(L = w[o[3]], R = w[o[4]]);
+		o += 5;
+		/* R = constant integer */
+		if (errchk(rv)) {
+#ifdef WANT_INFNAN
+			if (!L && R < 0.) {
+				errno_set(0);
+				if (wd)
+					r->dL = r->dR = r->dL2 = r->dR2 = r->dLR = Infinity;
+				r->O = Infinity;
+				goto top;
+				}
+#endif
+			introuble2("pow",L,R,1);
+			}
+		if (wd) {
+			if (L != 0.) {
+				r->dL = R * (rv.d/L);
+				r->dL2 = (R - 1.) * r->dL / L;
+				}
+			else {
+				if (R > 1.)
+					r->dL = r->dL2 = 0.;
+				else /* R < 0 */
+#ifdef WANT_INFNAN
+					r->dL = r->dL2 = Infinity;
+#else
+					goto badsignpowder;
+#endif
+				}
+			}
+		goto top;
+
+	  case OP_2signpow0:
+		t = L = w[o[2]];
+		if (t < 0.)
+			t = -t;
+		w[o[1]] = t*L;
+		o += 3;
+		goto top;
+
+	  case OP_2signpow1:
+		t = L = w[o[3]];
+		if (t < 0.)
+			t = -t;
+		r = (Eresult*)(w + o[2]);
+		r->O = t*L;
+		r->dL = t + t;
+		o += 4;
+		goto top;
+
+	  case nOPCsignpow0:
+		bs = (real*)&o[3];
+alignarg(more_Csignpow0:)
+		o1 = (int*)&bs[1];
+		wd = 0;
+		goto more_Csignpow;
+
+	  case nOPCsignpow1:
+		bs = (real*)&o[4];
+alignarg(more_Csignpow1:)
+		o1 = (int*)&bs[1];
+		++o;
+ more_Csignpow:
+		t0 = L = w[o[2]];
+		t = 1.;
+		if (L < 0.) {
+			t = -1.;
+			t0 = -t0;
+			}
+		R = *bs;
+		r = (Eresult*)(w + o[1]);
+		o = o1;
+		rv.d = t*pow(t0, R);
+		if (errchk(rv)) {
+#ifdef WANT_INFNAN
+			if (!L && R < 0.) {
+				errno_set(0);
+				r->O = Infinity;
+				r->dL2 = negInfinity;
+				goto top;
+				}
+#endif
+			introuble2("signpow",L,R,1);
+			}
+		r->O = rv.d;
+		if (wd) {
+			if (L > 0.) {
+				t1 = rv.d / L;
+				r->dL = R*t1;
+				r->dL2 = (R - 1.) * (r->dL / L);
+				goto top;
+				}
+			r->dL = r->dL2 = 0.;
+			if (L != 0.)
+				goto badsignpowder;
+			if (R > 1.) {
+				if (R == 2.)
+					r->dL2 = 2;
+				else if (R < 2.) {
+					r->dL2 = Infinity;
+#ifndef WANT_INFNAN
+					introuble2("signpow\"",L,R,3);
+#endif
+					}
+				goto top;
+				}
+			if (R == 1.)
+				r->dL = 1.;
+			else { /* 0 < R < 1 */
+#ifdef WANT_INFNAN
+				r->dL = t*Infinity;
+				r->dL2 = negInfinity;
+#else
+				goto badsignpowder;
+#endif
+				}
+			}
+		r->O = rv.d;
+		goto top;
+
+	  case OP2signpow_g:
+		g = (GOps*)(w + o[1]);
+		t = L = w[o[2]];
+		if (t < 0.)
+			t = -t;
+		r = (Eresult*)(w + o[1]);
+		g->O = t*L;
+		g->dL = t + t;
+		o += 3;
+		goto top;
+
+	  case OPCsignpow_g:
+		g = (GOps*)(w + o[1]);
+		t0 = L = w[o[2]];
+		R = w[o[3]];
+		t = 1.;
+		if (L < 0.) {
+			t = -1.;
+			t0 = -t0;
+			}
+		g->O = rv.d = t*pow(L, R);
+		o += 4;
+		if (errchk(rv)) {
+#ifdef WANT_INFNAN
+			if (!L && R < 0.) {
+				errno_set(0);
+				g->dL = negInfinity;
+				g->O = g->dL2 = Infinity;
+				goto top;
+				}
+#endif
+ badsignpow:
+			introuble2("signpow",L,R,1);
+			break; /* not reached */
+			}
+		if (wd) {
+			if (t0 > 0.) {
+				g->dL = (t = log(t0)) * rv.d;
+				g->dL2 = t * g->dL;
+				}
+			else if (L != 0.)
+				goto badsignpowder;
+			else {
+				g->dL = g->dL2 = 0.;
+#ifndef WANT_INFNAM
+				if (R < 2.)
+					introuble2("pow\"",L,R,3);
+#endif
+				}
+			}
+		goto top;
+
+#ifdef X64_bit_pointers
+	  case OPCsignpow0align:
+		bs = (real*)&o[4];
+		goto more_Csignpow0;
+
+	  case OPCsignpow1align:
+		bs = (real*)&o[5];
+		goto more_Csignpow1;
+#endif
 
 	  default:
 		fprintf(Stderr, "\nUnexpected opno %d in eval2_ASL()\n", *o);
