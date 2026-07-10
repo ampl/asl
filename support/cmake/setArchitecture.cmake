@@ -148,7 +148,7 @@ function(getArchitectureFlags ARCH COMPILE_FLAGS LINK_FLAGS)
   if(NOT ((ARCH EQUAL 32) OR (ARCH EQUAL 64)))
     message(ERROR_CRITICAL "Please define the architecture")
   endif()
-  if(UNIX AND NOT CPUARCH MATCHES "arm")
+  if(UNIX AND (CPUARCH MATCHES "^(i386|x86_64)$" OR (CPUARCH MATCHES "ppc64" AND CMAKE_SYSTEM_NAME STREQUAL "AIX")))
     if(CPUARCH MATCHES "ppc64") # on AIX
       if(ARCH EQUAL 32)
         set(CCFLAG "")
