@@ -40,6 +40,9 @@ option(BUILD_DYNRT_LIBS "Build the libraries linked against the dynamic runtime 
 option(BUILD_MT_LIBS "Build the multithreaded library" OFF)
 option(BUILD_CPP "Build the cpp interface" OFF)
 option(BUILD_F2C "Build the f2c library" OFF)
+option(BUILD_ASL_LIB "Build ASL" ON)
+option(BUILD_ASL2_LIB "Build ASL2" ON)
+
 if (${CMAKE_VERSION} VERSION_LESS "3.9.0")
   option(USE_LTO "Use link time optimization" OFF)
 else()
@@ -371,36 +374,53 @@ set(ASL_SOURCES ${ASL_SOURCES} ${ASL_HEADERS})
 set(ASL2_SOURCES ${ASL2_SOURCES} ${ASL2_HEADERS})
 
 # Create ASL 1 
-createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
+if (BUILD_ASL_LIB)
+  createSingleASL(asl ${ASL_SOURCE_DIR} ASL_SOURCES)
+endif()
 
 # Create ASL 2
-set(ADDITIONALDEFS "")
-if(WIN32)
-   set(ADDITIONALDEFS NO_MBLK_LOCK )
+if (BUILD_ASL2_LIB)
+  set(ADDITIONALDEFS "")
+  if(WIN32)
+    set(ADDITIONALDEFS NO_MBLK_LOCK )
+  endif()
+  createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                      DEFINITIONS ${ADDITIONALDEFS})
 endif()
-createSingleASL(asl2 ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                    DEFINITIONS ${ADDITIONALDEFS})
+
 
 if(BUILD_LICCHECK_PRINT)
-  createSingleASL(asl-lc ${ASL_SOURCE_DIR} ASL_SOURCES 
+  if (BUILD_ASL_LIB)
+      createSingleASL(asl-lc ${ASL_SOURCE_DIR} ASL_SOURCES 
                         DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
-  createSingleASL(asl2-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+  endif()
+  if (BUILD_ASL2_LIB)
+      createSingleASL(asl2-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
                         DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
+  endif()
 endif()
 
 # Create libs with support for multiple threads
 if(BUILD_MT_LIBS)
   set(aslnames asl-mt asl2-mt)
-  createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES
-                              DEFINITIONS ALLOW_OPENMP)
-  createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                              DEFINITIONS ALLOW_OPENMP)
+  if (BUILD_ASL_LIB)
+    createSingleASL(asl-mt ${ASL_SOURCE_DIR} ASL_SOURCES
+                                DEFINITIONS ALLOW_OPENMP)
+  endif()
+  if (BUILD_ASL2_LIB)
+    createSingleASL(asl2-mt ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                                DEFINITIONS ALLOW_OPENMP)
+  endif()
 
   if(BUILD_LICCHECK_PRINT)
-    createSingleASL(asl-mt-lc ${ASL_SOURCE_DIR} ASL_SOURCES
-                            DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ALLOW_OPENMP)
-    createSingleASL(asl2-mt-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                            DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ALLOW_OPENMP)
+    if (BUILD_ASL_LIB)
+      createSingleASL(asl-mt-lc ${ASL_SOURCE_DIR} ASL_SOURCES
+                              DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ALLOW_OPENMP)
+    endif()
+    if (BUILD_ASL2_LIB)
+      createSingleASL(asl2-mt-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                              DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ALLOW_OPENMP)
+    endif()
     set(aslnames ${aslnames} asl-mt-lc asl2-mt-lc)
   endif()
 
@@ -419,33 +439,48 @@ if(MSVC AND BUILD_DYNRT_LIBS)
   # Create ASLs linked to dynamic runtime on windows
   # createSingleASL adds the appropriate public flags if the library name
   # matches "dynrt"
-  createSingleASL(asl-dynrt ${ASL_SOURCE_DIR} ASL_SOURCES)
-  createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                            DEFINITIONS ${ADDITIONALDEFS})
+  if (BUILD_ASL_LIB)
+      createSingleASL(asl-dynrt ${ASL_SOURCE_DIR} ASL_SOURCES)
+  endif()
+  if (BUILD_ASL2_LIB)
+      createSingleASL(asl2-dynrt ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                              DEFINITIONS ${ADDITIONALDEFS})
+  endif()
+
   if(BUILD_LICCHECK_PRINT)
-    createSingleASL(asl-dynrt-lc ${ASL_SOURCE_DIR} ASL_SOURCES
-                                DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
-    createSingleASL(asl2-dynrt-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                                DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
+      if (BUILD_ASL_LIB)
+          createSingleASL(asl-dynrt-lc ${ASL_SOURCE_DIR} ASL_SOURCES
+                                    DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION})
+      endif()
+      if (BUILD_ASL2_LIB)
+          createSingleASL(asl2-dynrt-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                                    DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
+      endif()
   endif()
 endif()
+
 if(BUILD_MCMODELLARGE)
- createSingleASL(asl2-large ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                               DEFINITIONS ${ADDITIONALDEFS})
- if(${ARCH} EQUAL 64)
- target_compile_options(asl2-large PUBLIC "-mcmodel=large")
- endif()
- if(BUILD_LICCHECK_PRINT)
- createSingleASL(asl2-large-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
-                               DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
- if(${ARCH} EQUAL 64)
-  target_compile_options(asl2-large-lc PUBLIC "-mcmodel=large")
- endif()
- endif()
+    if (BUILD_ASL2_LIB)
+        createSingleASL(asl2-large ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                                      DEFINITIONS ${ADDITIONALDEFS})
+        if(${ARCH} EQUAL 64)
+            target_compile_options(asl2-large PUBLIC "-mcmodel=large")
+        endif()
+    endif()
+
+    if(BUILD_LICCHECK_PRINT)
+        if(BUILD_ASL2_LIB)
+            createSingleASL(asl2-large-lc ${ASL2_SOURCE_DIR} ASL2_SOURCES
+                                          DEFINITIONS LICCHECKVERSION=${LICCHECKVERSION} ${ADDITIONALDEFS})
+            if(${ARCH} EQUAL 64)
+              target_compile_options(asl2-large-lc PUBLIC "-mcmodel=large")
+            endif()
+        endif()
+    endif()
 endif()
 
-# Cpp wrapper, only if explicitly enabled
-if(BUILD_CPP)
+# Cpp wrapper for ASL (1), only if explicitly enabled
+if(BUILD_CPP AND BUILD_ASL_LIB)
     set(ASLCPP_SRCDIR ${SRCDIR}/cpp)
     set(ASL_CPP_HEADERS ${ASLCPP_SRCDIR}/aslinterface.h)
     set(ASL_CPP_SOURCES ${ASLCPP_SRCDIR}/aslinterface.cc)
@@ -466,19 +501,24 @@ endif()
 endif()
 
 if(NOT ASL_SKIP_INSTALL)
-  install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd
-                ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
-                DESTINATION include/asl  COMPONENT asl) 
-  install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd
-                ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
-                DESTINATION include/asl2  COMPONENT asl)
-  install(TARGETS asl asl2 EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
-  if(BUILD_MT_LIBS)
-    install(TARGETS asl-mt asl2-mt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
+  if(BUILD_ASL_LIB)
+      install(FILES ${ASL_HEADERS} ${ASL_SOURCE_DIR}/opcode.hd ${ASL_SOURCE_DIR}/r_opn.hd
+                    ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
+                    DESTINATION include/asl  COMPONENT asl) 
   endif()
-  if(MSVC AND BUILD_DYNRT_LIBS)
-    install(TARGETS asl-dynrt asl2-dynrt EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
-  endif()
+  if(BUILD_ASL2_LIB)
+      install(FILES ${ASL2_HEADERS} ${ASL2_SOURCE_DIR}/opcode.hd ${ASL2_SOURCE_DIR}/r_opn.hd
+                    ${GENERATED_INCLUDE_DIR}/stdio1.h ${GENERATED_INCLUDE_DIR}/arith.h
+                    DESTINATION include/asl2  COMPONENT asl)
+   endif()
+  
+  set(asl_targets asl asl2 asl-mt asl2-mt asl-dynrt asl2-dynrt)
+  foreach(target ${asl_targets})
+    if(TARGET ${target})
+      install(TARGETS ${target} EXPORT ampl-asl-config DESTINATION lib COMPONENT asl)
+    endif()
+  endforeach()
+
   if(TARGET aslcpp)
       install(FILES ${ASL_CPP_HEADERS} DESTINATION include/aslcpp  COMPONENT asl) 
       install(TARGETS aslcpp EXPORT ampl-asl-config DESTINATION lib  COMPONENT asl)
