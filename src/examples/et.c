@@ -19,15 +19,15 @@ of or in connection with the use or performance of this software.
 #include "asl_pfgh.h"
 #ifdef _ASL_EW_
 #define EW(x) x
- typedef real (*Ffunc)(EvalWorkspace*,int nobj,real*X,fint*nerror);
- typedef void (*Gfunc)(EvalWorkspace*,int nobj,real*X,real*G,fint*ne);
+ typedef real (*Ffunc)(EvalWorkspace*,int nobj,const real*X,fint*nerror);
+ typedef void (*Gfunc)(EvalWorkspace*,int nobj,const real*X,real*G,fint*ne);
 #define FirstX ew->x0kind |= ASL_first_x
 #undef sputinfo
 #define sputinfo ew->Sputinfo
 #else
 #define EW(x)
- typedef real (*Ffunc)(ASL*,int nobj,real*X,fint*nerror);
- typedef void (*Gfunc)(ASL*,int nobj,real*X,real*G,fint*ne);
+ typedef real (*Ffunc)(ASL*,int nobj,const real*X,fint*nerror);
+ typedef void (*Gfunc)(ASL*,int nobj,const real*X,real*G,fint*ne);
 #define FirstX x0kind = ASL_first_x
 #endif
 
