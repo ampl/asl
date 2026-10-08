@@ -150,6 +150,7 @@ Historical rationale and planned changes beyond the documented build comments ne
 | CI build selections | [.github/workflows/cmake.yml](.github/workflows/cmake.yml) |
 | License notices | [LICENSE](LICENSE), [LICENSE.2](LICENSE.2), applicable source notices |
 | Agent working instructions | [AGENTS.md](AGENTS.md) |
+| Task lifecycle and recovery records | [TASK_RULES.md](TASK_RULES.md); repository-owned records under `docs/tasks/` when needed |
 
 ### 3.5 Change coordination
 
