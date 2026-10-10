@@ -130,7 +130,7 @@ file_kind(const char *name) /* 1 == regular file, 2 ==> directory; else 0 */
 #define SLASH '\\'
 char afdll[] = "\\amplfunc.dll";
 typedef HINSTANCE shl_t;
-#define dlopen(x,y) LoadLibrary(x)
+#define dlopen(x,y) LoadLibraryA(x)
 #define find_dlsym(a,b,c) (a = (Funcadd*)GetProcAddress(b,c))
 #define dlclose(x) FreeLibrary((HMODULE)x)
 #define NO_DLERROR
