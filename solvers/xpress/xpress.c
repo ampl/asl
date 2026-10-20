@@ -268,6 +268,7 @@ static int (XPRS_CC *MSEopt)(XPRSmipsolenum, XPRSprob, XPRSmipsolpool, mse_handl
 static XPRSmipsolenum mse;
 static XPRSmipsolpool msp;
 static int dualred, dupcol, nbest, npool;
+static int pooldups = -1;	/* XPRS_MSP_DUPLICATESOLUTIONSPOLICY, -1: unset */
 static char *poolstub;
 
  extern int XPRS_CC XPRSgetcalist(const int **field_header_ids, const char ***field_names, const int **field_type_flags);
@@ -1199,8 +1200,8 @@ static char
 		"Markowitz tolerance used when factoring the basis matrix\n\
 		default = 0.01",
 	matrixtol_desc[]	= "zero tolerance on matrix elements; default = 1e-9",
-	maxcuttime_desc[]	= "maximum time (CPU seconds) to spend generating cuts\n\
-		and reoptimizing; default = 0 ==> no limit",
+	maxcuttime_desc[]	= "maximum time (seconds, see cputime) to spend generating\n\
+		cuts and reoptimizing; default = 0 ==> no limit",
 	maxiis_desc[]		= "maximum number of Irreducible Infeasible Sets to find:\n\
 			-1 = no limit (default)\n\
 			 0 = none",
@@ -1551,15 +1552,7 @@ static char
 				and matches of rounded values of discrete\n\
 				variables\n\
 			3 = default: discard matches of rounded values of\n\
-				discrete variables\n"
-		"Rounding of discrete variables is affected by poolmiptol\n"
-		"and poolfeastol.",
-	poolfeastol_desc[] =
-		"Zero tolerance for discrete variables in the solution\n"
-		"pool (see poolstub); default = 1e-6.",
-	poolmiptol_desc[] =
-		"Error (nonintegrality) allowed in discrete variables\n"
-		"in the solution pool (see poolstub); default = 5e-6.",
+				discrete variables",
 	poolnbest_desc[] =
 		"Whether the solution pool (see poolstub) should contain\n"
 		"inferior solutions.  When poolnbest = n > 1, the\n"
@@ -2267,7 +2260,7 @@ static keyword keywds[]={
   KW("lpthreads",	set_int, XPRS_LPTHREADS,	lpthreads_desc),
   KW("markowitztol",	set_dbl, XPRS_MARKOWITZTOL, 	markowitztol_desc),
   KW("matrixtol",	set_dbl, XPRS_MATRIXTOL,	matrixtol_desc),
-  KW("maxcuttime",	set_int, XPRS_MAXCUTTIME,	maxcuttime_desc),
+  KW("maxcuttime",	set_dbl, XPRS_MAXCUTTIME,	maxcuttime_desc),
   KW("maxiis",		set_int, XPRS_MAXIIS,		maxiis_desc),
   KW("maxim",		set_known, set_maxim,		maxim_desc),
   KW("maximise",	set_known, set_maxim,		maxim_desc),
@@ -2293,7 +2286,7 @@ static keyword keywds[]={
   KW("maxslaves",	set_int, XPRS_MAXSLAVE,		maxslaves_desc),
 #endif
 #ifdef XPRS_MAXSTALLTIME
-  KW("maxstalltime", set_int, XPRS_MAXSTALLTIME, maxstalltime_desc),
+  KW("maxstalltime", set_dbl, XPRS_MAXSTALLTIME, maxstalltime_desc),
 #endif
   KW("maxtime",		set_int, XPRS_MAXTIME,		maxtime_desc),
   KW("minim",		set_known, set_minim,		minim_desc),
@@ -2367,7 +2360,7 @@ static keyword keywds[]={
   KW("objno",		I_val, &nobj,			"objective number (0=none, 1=first...)"),
   KW("objrep",		I_val, &objrep,			objrep_desc),
 #ifdef XPRS_OBJSCALEFACTOR
-  KW("objscalefactor",	set_dbl, XPRS_OBJSCALEFACTOR,	objscalefactor_desc),
+  KW("objscalefactor",	set_int, XPRS_OBJSCALEFACTOR,	objscalefactor_desc),
 #endif
   KW("optimalitytol",	set_dbl, XPRS_OPTIMALITYTOL,	optimalitytol_desc),
 #ifdef XPRS_OPTIMALITYTOLTARGET
@@ -2387,9 +2380,7 @@ static keyword keywds[]={
 #ifdef XPRS_MSP_SOLPRB_OBJ /*{*/
   KW("pooldualred",	I_val, &dualred,		pooldualred_desc),
   KW("pooldupcol",	I_val, &dupcol,			pooldupcol_desc),
-  KW("pooldups",	set_int, XPRS_MSP_DUPLICATESOLUTIONSPOLICY, pooldups_desc),
-  KW("poolfeastol",	set_dbl, XPRS_MSP_SOL_FEASTOL,	poolfeastol_desc),
-  KW("poolmiptol",	set_dbl, XPRS_MSP_SOL_MIPTOL,	poolmiptol_desc),
+  KW("pooldups",	I_val, &pooldups,		pooldups_desc),
   KW("poolnbest",	I_val, &nbest,			poolnbest_desc),
   KW("poolstub",	set_fln, &poolstub,		poolstub_desc),
 #endif /*}*/
@@ -2517,7 +2508,7 @@ static keyword keywds[]={
 #if XPVERSION >= 30 /*{*/
   KW("tunerdir",	set_fln, &tunerdir,		tunerdir_desc),
   KW("tunerhistory",	set_int, XPRS_TUNERHISTORY,	tunerhistory_desc),
-  KW("tunermaxtime",	set_int, XPRS_TUNERMAXTIME,	tunermaxtime_desc),
+  KW("tunermaxtime",	set_dbl, XPRS_TUNERMAXTIME,	tunermaxtime_desc),
   KW("tunermethod",	set_int, XPRS_TUNERMETHOD,	tunermethod_desc),
   KW("tunermethodfile",	set_fln, &tunermethodfile,	tunermethodfile_desc),
   KW("tunerpermute",	set_int, XPRS_TUNERPERMUTE,	tunerpermute_desc),
@@ -3915,6 +3906,8 @@ amplin(char *stub, char *argv[], dims *d)
 	if (ngents && poolstub) {
 		XPRS_msp_create(&msp);
 		XPRS_msp_probattach(msp, prob);
+		if (pooldups >= 0)
+			XPRS_msp_setintcontrol(msp, XPRS_MSP_DUPLICATESOLUTIONSPOLICY, pooldups);
 		if (nbest > 1) {
 			MSEopt = Optimise == XPRSmaxim ? XPRS_mse_maxim : XPRS_mse_minim;
 			Optimise = MSEsolve;
