@@ -1100,7 +1100,8 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 
  static char aggregate_desc[] = "Whether to use aggregation during Gurobi presolve:\n\
 			0 = no (sometimes reduces numerical errors)\n\
-			1 = yes (default).";
+			1 = yes (default)\n\
+			2 = aggressive.";
 
 #if GRB_VERSION_MAJOR >= 3 /*{*/
  static char ams_eps_desc[] = "Relative tolerance for reporting alternate MIP solutions\n\
@@ -1242,7 +1243,8 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			 3 = push primal vars first, finish with primal simplex\n\
 			 4 = push primal vars first, finish with dual simplex";
  static char crossoverbasis_desc[] = "strategy for initial basis construction during crossover:\n\
-			0 = favor speed (default)\n\
+			-1 = automatic choice (default)\n\
+			0 = favor speed\n\
 			1 = favor numerical stability.";
 #endif /*}*/
 
@@ -1294,7 +1296,8 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 			-1 = automatic choice (default)\n\
 			 0 = no cuts\n\
 			 1 = conservative cut generation\n\
-			 2 = aggressive cut generation"
+			 2 = aggressive cut generation\n\
+			 3 = very aggressive cut generation"
 			GRB_MAJ2("\n\t\t\t 3 = very aggressive cut generation.")
 		;
 
@@ -1348,8 +1351,11 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
  static char iismethod_desc[] = "Which method to use when finding an IIS (irreducible\n\
 		infeasible set of constraints, including variable bounds):\n\
 			-1 = automatic choice (default)\n\
-			 0 = often faster than method 1\n\
-			 1 = can find a smaller IIS than method 0.";
+			 0 = filtering: often faster, may give a larger IIS\n\
+			 1 = solve an LP resembling the dual (useful if faster)\n\
+			 2 = ignore bound constraints (faster; fails if bounds\n\
+			     are needed for infeasibility)\n\
+			 3 = for a MIP, the IIS of its infeasible LP relaxation.";
 #endif /*}*/
 
 #ifdef GRB_INT_PAR_INFPROOFCUTS
@@ -1436,12 +1442,13 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
  static char logfreq_desc[] = "Interval in seconds between log lines (default 5).";
 #ifdef GRB_INT_PAR_LPWARMSTART
  static char lpwarmstart_desc[] = "Controls how gurobi uses warm-start in LP optimization:\n\
+			-1 = automatic choice (default): 1, or 2 with PDHG\n\
 			0 = ignore information\n\
 			1 = use information to solve the original problem\n\
 			2 = use the (crushed) information to solve the\n\
 			    presolved problem.\n\
 		Note that if presolve is disabled, 1 prioritizes basis\n\
-		statuses, 2 prioritizes start vectors.  Default = 1.";
+		statuses, 2 prioritizes start vectors.  Default = -1.";
 #endif
  static char maxmipsub_desc[] = "Maximum number of nodes for RIMS heuristic to explore\n\
 		on MIP problems (default 500).";
@@ -1544,15 +1551,16 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 #ifdef GRB_INT_PAR_NLPHEUR /* 9.5 */
  static char nlpheur_desc[] = "Controls the NLP heuristic, affecting non-convex quadratic\n\
 		problems:\n\
-			 0 = Do not apply heuristic\n\
-			 1 = Apply heuristic (default).";
+			-1 = automatic choice (default)\n\
+			 0 = do not apply the heuristic\n\
+			 1-3 = apply it, increasingly aggressively.";
 #endif
 
 #if GRB_VERSION_MAJOR >= 4 /*{*/
  static char nodemethod_desc[] = "Algorithm used to solve relaxed MIP node problems:\n\
 			-1 = automatic choice (default)\n\
 			 0 = primal simplex\n\
-			 1 = dual simplex (default)\n\
+			 1 = dual simplex\n\
 			 2 = barrier.";
 #endif /*}*/
 
@@ -2008,11 +2016,11 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
 		results for all parameter sets on the efficient frontier.";
 
  static char tunetimelim_desc[] = "Time limit (in seconds) on tuning when tunebase\n\
-		is specified.  Default -1 ==> automatic choice of time limit.";
+		is specified.  Default = 86400 (24 hours).";
 
  static char tunetrials_desc[] = "Number of trials for each parameter set when tunebase\n\
 		is specified, each with a different random seed value.\n\
-		Default = 3.";
+		Default = 0 ==> automatic choice.";
 
 #endif /*}*/
 
@@ -2095,9 +2103,10 @@ sf_pf(Option_Info *oi, keyword *kw, char *v)
  static char presparsify_desc[] =
 		"Whether Gurobi's presolve should use its \"sparsify reduction\",\n\
 		which sometimes gives significant problem-size reductions:\n\
-			-1 = automatic choice\n\
+			-1 = automatic choice (default)\n\
 			 0 = no\n\
-			 1 = yes.";
+			 1 = yes for MIP problems\n\
+			 2 = yes for all problem types.";
 #endif
 
  static char quad_desc[] = "Whether simplex should use quad-precision:\n\
