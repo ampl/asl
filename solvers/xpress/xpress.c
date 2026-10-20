@@ -580,7 +580,7 @@ static char
 #ifdef XPRS_ALGAFTERNETWORK
 	algafternetwork_desc[] = "algorithm for final cleanup after the network simplex\n\
 		algorithm:\n\
-			1 = automatic choice (default)\n\
+			-1 = automatic choice (default)\n\
 			2 = dual simplex\n\
 			3 = primal simplex",
 #endif
@@ -734,7 +734,7 @@ static char
 #endif
 	,
 	barstepstop_desc[]	= "barrier method convergence tolerance: stop when\n\
-		step size <= barstepstop; default = 1e-10",
+		step size <= barstepstop; default = 1e-16",
 	barthreads_desc[]	= "number of threads used in the Newton Barrier algorithm;\n\
 		default = -1 (determined by \"threads\")",
 	bestbound_desc[] = "[no assignment] return suffix .bestbound for the best known\n\
@@ -865,7 +865,7 @@ static char
 			 2 = dual crossover first",
 #ifdef XPRS_CROSSOVERITERLIMIT
 	crossoveritlim_desc[] = "limit on crossover iterations after the barrier\n\
-		algorithm; default = 2147483645",
+		algorithm; default = 2147483647",
 #endif
 #ifdef XPRS_CROSSOVEROPS
 	crossoverops_desc[]	= "bit vector affecting crossover after the barrier\n\
@@ -973,18 +973,17 @@ static char
 		smallest eigvenalue is < -eigevnaltol; default = 1e-6",
 #ifdef XPRS_ELIMFILLIN
 	elimfillin_desc[]	= "maximum fillins allowed for a presolve elimination;\n\
-		default = 10.\n",
+		default = 7.\n",
 #endif
 	elimtol_desc[]		= "Markowitz tolerance for the elimination phase of\n\
 		XPRESS's presolve; default = 0.001",
-	etatol_desc[] =		"zero tolerance on eta elements; default varies with XPRESS\n\
-		version; default = 1e-12 or 1e-13 with some versions.\n\
-		Use etatol=? to see the current value.",
+	etatol_desc[] =		"zero tolerance on eta elements; default = 1e-13.",
 	feaspump_desc[]		= "whether to run the Feasibility Pump heuristic at the top\n\
 		node during branch-and-bound:  one of\n\
-			0 = no (default)\n\
+			-1 = automatic choice (default)\n\
+			0 = no\n\
 			1 = yes\n\
-			2 = only if other heurstics found no integer solution",
+			2 = only if other heuristics found no integer solution",
 #ifdef XPRS_FEASTOLPERTURB
 	feastol_perturb_desc[] = "how much a feasible primal basic solution is allowed to\n\
 		be perturbed when performing basis changes.  The tolerance\n\
@@ -1075,7 +1074,7 @@ static char
 		"deprecated:  no longer has any effect:\n\t\t"
 #endif
 		"maximum nodes at which to use heuristics during\n\
-		branch-and-bound tree search; default = 1000",
+		branch-and-bound tree search; default = -1",
 	heurroot_desc[]		= "bit vector controlling local search heuristics to apply at\n\
 		the root node:  sum of\n\
 			  1 = large-neighborhood search: may be slow, but may\n\
@@ -1153,10 +1152,12 @@ static char
 		"minimum simplex iterations before refactoring the basis:\n\
 		default = 3",
 	keepbasis_desc[]	= "basis choice for the next LP iteration:\n\
-			0 = ignore previous basis\n\
-			1 = use previous basis (default)\n\
-			2 = use previous basis only if the number of basic\n\
-				variables == number of constraints",
+			0 = ignore previous basis (default)\n\
+			1 = use previous basis\n\
+			2 = use previous basis only if it is valid for the\n\
+				current problem\n\
+			3 = use previous basis only if it is valid and\n\
+				numerically stable",
 	keepnrows_desc[]	=
 		"1 (default) if unconstrained rows are to be kept, else 0",
 	lazy_desc[]		=
@@ -1212,7 +1213,7 @@ static char
 		at most maximpliedbound (default 1e8) in absolute value",
 #endif
 	maxlocalbt_desc[]	= "max height above current node to look for a local backtrack\n\
-		candidate node; default = 1",
+		candidate node; default = -1 (automatic choice)",
 	maxmipsol_desc[]	= "maximum number of integer solutions to find:\n\
 			0 = no limit (default)",
 	maxnode_desc[]		=
@@ -1230,8 +1231,8 @@ static char
 			0 (default) = no limit",
 #endif
 #ifdef XPRS_MAXMEMORYSOFT
-	maxmemory_desc[]	= "limit (integer number of megabytes) on memory used:\n\
-			-1 = automatic choice (default)\n\
+	maxmemory_desc[]	= "soft limit (integer number of megabytes) on memory used:\n\
+			 0 = no limit (default)\n\
 			>0 = target megabytes of memory to use",
 #endif
 #ifdef XPRS_MAXMIPTASKS
@@ -1490,7 +1491,7 @@ static char
 		For a maximization problem, \"<=\" replaces \">=\".",
 #ifdef XPRS_OBJSCALEFACTOR
 	objscalefactor_desc[] = "Power of 2 (default 0) by which the objective is scaled.\n\
-		Nonzero objscalfactor values override automatic global\n\
+		Nonzero objscalefactor values override automatic global\n\
 		objective scaling.",
 #endif
 	optimalitytol_desc[]	= "tolerance on reduced cost; default = 1e-6",
@@ -1596,8 +1597,8 @@ static char
 #ifdef XPRS_PREBASISRED
 	prebasisred_desc[]	= "whether XPRESS's presolve should try to use a lattice basis\n\
 		reduction algorithm:\n\
-			-1 = automatic choice (default)\n\
-			 0 = no\n\
+			-1 = automatic choice\n\
+			 0 = no (default)\n\
 			 1 = yes.",
 #endif
 #ifdef XPRS_PREBNDREDCONE
@@ -1987,7 +1988,7 @@ static char
 #endif
 			".",
 	tunerthreads_desc[] =	"number of tuner threads to run in parallel:\n\
-		default -1 ==> automatic choice.\n\
+		-1 ==> automatic choice; default 1 (sequential).\n\
 		\"threads\" controls the number of threads for each solve.\n\
 		The product of threads and tunerthreads should not exceed\n\
 		the number of threads the system can run in parallel.",
@@ -2022,7 +2023,8 @@ static char
 		(if allowed by outlev):  sum of\n\
 			1 = regular summaries\n\
 			2 = report tree compression and output to nodefile\n\
-		default = 3",
+			4 = report progress of the tree file\n\
+		default = 7",
 #ifdef XPRS_TREEPRESOLVE
 	treepresolve_desc[] = "how much presolving to apply to nodes of the MIP\n\
 		branch-and-bound tree:\n\
@@ -2131,7 +2133,7 @@ static keyword keywds[]={
   KW("basisin",		set_fln, &startbasis,		"load initial basis from specified file"),
   KW("basisout",	set_fln,  &endbasis,		"save final basis to specified file"),
   KW("bestbound",	set_known, set_bestbound,	bestbound_desc),
-  KW("bigm",		set_dbl, XPRS_BIGM,		"infeasibility penalty; default = 1024"),
+  KW("bigm",		set_dbl, XPRS_BIGM,		"infeasibility penalty; default depends on the matrix"),
   KW("bigmmethod",	set_int, XPRS_BIGMMETHOD,	bigmmethod_desc),
   KW("branchchoice",	set_int, XPRS_BRANCHCHOICE,	branchchoice_desc),
   KW("branchdisj",	set_int, XPRS_BRANCHDISJ,	branchdisj_desc),

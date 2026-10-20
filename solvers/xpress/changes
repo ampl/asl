@@ -276,3 +276,12 @@ maxstalltime, mipcomponents, mipconcurnodes, mipconcursolves,
 miprestart, miprestartfactor, miprestartgaptol, netstalllimit,
 nodeprobingeffort, prefolding, siftpasses, siftpresolveops,
 siftswitch.  See the "xpress -=" output for details.
+
+20261020
+  xpress.c: fix the pooldups keyword (set on the solution pool object)
+and remove poolfeastol and poolmiptol, which never worked; objscalefactor
+is an integer control, maxcuttime, maxstalltime and tunermaxtime are
+double controls; new keywords timelimit (timelim), soltimelimit
+(maxtime is deprecated by XPRESS), concurrentthreads and lpthreads on
+CONCURRENTTHREADS; defaults in the keyword descriptions updated to
+XPRESS 9.8.1.  README.xpress: keyword listing regenerated.

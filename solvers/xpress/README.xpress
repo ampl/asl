@@ -131,7 +131,7 @@ algaftercrossover  algorithm for final cleanup after running the barrier
 
 algafternetwork    algorithm for final cleanup after the network simplex
                    algorithm:
-                        1 = automatic choice (default)
+                        -1 = automatic choice (default)
                         2 = dual simplex
                         3 = primal simplex
 
@@ -139,6 +139,12 @@ archconsistent     whether to force the same execution path to be
                    independent of the platform architecture:
                         0 = no (default)
                         1 = yes
+
+autocutting        whether to automatically decide if to generate cutting
+                   planes at local nodes (overriden by cutfreq):
+                        -1 = automatic (default)
+                         0 = disabled
+                         1 = enabled
 
 autoperturb        whether to introduce perturbations when the simplex method
                    encounters too many degenerate pivots:
@@ -211,6 +217,13 @@ barkernel          how the barrier algorithm weights centrality:
                                 from [+1, -barkernel].
                    Default = 1.
 
+barobjperturb      defines how the barrier perturbs the objective (default
+                   1e-6); values >0 let the optimizer decide if to perturb the
+                   objective, values <0 force the perturbation:
+                        n > 0 = automatic decison, scale n
+                            0 = turn off perturbation
+                        n < 0 = force perturbation by abs(n)
+
 barobjscale        how the barrier algorithm scales the objective:
                          -1 = automatic chocie (default)
                           0 = scale by the geometric mean of the objective
@@ -241,6 +254,11 @@ barpresolve        level of barrier-specific presolve effort:
 barprimalstop      barrier method convergence tolerance on
                    primal infeasibilities; default = 0 (automatic choice)
 
+barrefiter         maximum number of refinement iterations, helpful when the
+                   the solution is near to the optimum using barrier or crossover:
+                            0 = default
+                        n > 0 = perform n refinement iterations
+
 barreg             regularization to use with "barrier":
                         -1 = automatic choice (default with just "barrier")
                         Values >= 0 are the sum of:
@@ -261,7 +279,7 @@ barstart           choice of starting point for barrier method:
                             barrier algorithm.
 
 barstepstop        barrier method convergence tolerance: stop when
-                   step size <= barstepstop; default = 1e-10
+                   step size <= barstepstop; default = 1e-16
 
 barthreads         number of threads used in the Newton Barrier algorithm;
                    default = -1 (determined by "threads")
@@ -277,7 +295,7 @@ bestbound          [no assignment] return suffix .bestbound for the best known
                    variables or if an integer feasible solution has not yet
                    been found.
 
-bigm               infeasibility penalty; default = 1024
+bigm               infeasibility penalty; default depends on the matrix
 
 bigmmethod         0 = phase I/II, 1 = BigM method (default)
 
@@ -329,7 +347,21 @@ choleskyalg        type of Cholesky factorization used for barrier: sum of
 choleskytol        zero tolerance for Cholesky pivots in the
                    Newton Barrier algorithm; default = 1e-15
 
-concurrentthreads  synonym for lpthreads
+clamping           control adjustements of the returned solution values
+                    such that they are always within bounds:
+                        -1 ==> determined automatically
+                         0 ==> adjust primal solution to be within
+                               primal bounds (default)
+                         1 ==> adjust primal slack values to be within
+                               primal bounds
+                         2 ==> adjust dual solution to be within dual
+                               bounds
+                         3 ==> adjust reduced costs to be within dual
+                               bounds
+
+concurrentthreads  number of threads in concurrent LP solves:
+                        -1 = determine from "threads" keyword (default)
+                        n > 0 ==> use n threads
 
 conedecomp         whether to decompose regular and rotated cone constraints
                    having more than two elements and to use the result in an
@@ -383,7 +415,7 @@ crossover          whether to find a simplex basis after the barrier alg.:
                          2 = dual crossover first
 
 crossoveritlim     limit on crossover iterations after the barrier
-                   algorithm; default = 2147483645
+                   algorithm; default = 2147483647
 
 crossoverops       bit vector affecting crossover after the barrier
                    algorithm:  sum of
@@ -450,6 +482,7 @@ densecollimit      number of nonzeros above which a column is treated as dense
 deterministic      whether a MIP search should be deterministic:
                         0 = no
                         1 = yes (default)
+                        2 = yes, with opportunistic root LP solve
 
 dual               [no assignment] use the dual simplex algorithm
 
@@ -486,20 +519,19 @@ eigenvaltol        regard the matrix in a quadratic form as indefinite if its
                    smallest eigvenalue is < -eigevnaltol; default = 1e-6
 
 elimfillin         maximum fillins allowed for a presolve elimination;
-                   default = 10.
+                   default = 7.
 
 elimtol            Markowitz tolerance for the elimination phase of
                    XPRESS's presolve; default = 0.001
 
-etatol             zero tolerance on eta elements; default varies with XPRESS
-                   version; default = 1e-12 or 1e-13 with some versions.
-                   Use etatol=? to see the current value.
+etatol             zero tolerance on eta elements; default = 1e-13.
 
 feaspump           whether to run the Feasibility Pump heuristic at the top
                    node during branch-and-bound:  one of
-                        0 = no (default)
+                        -1 = automatic choice (default)
+                        0 = no
                         1 = yes
-                        2 = only if other heurstics found no integer solution
+                        2 = only if other heuristics found no integer solution
 
 feastol            zero tolerance on RHS; default = 1e-6
 
@@ -556,6 +588,14 @@ heureffort         factor affecting how much work local search heuristics
                    should expend.  Default = 1; higher values cause more
                    local searches over larger neighborhoods.
 
+heuremphasis       epmphasis for the heuristic search for branch and
+                   bound.  Setting it to 1 gets a gap quicker at the
+                   expense of time to optimality:
+                        -1 = default strategy
+                         0 = disable heuristics
+                         1 = focus on reducing the gap early
+                         2 = extremely aggressive heuristics
+
 heurforcespecobj   whether to use special objective heuristics on large
                    problems and even if an incumbant exists:
                         0 = no (default)
@@ -571,7 +611,7 @@ heurmaxsol         deprecated:  no longer has any effect:
 
 heurnodes          deprecated:  no longer has any effect:
                    maximum nodes at which to use heuristics during
-                   branch-and-bound tree search; default = 1000
+                   branch-and-bound tree search; default = -1
 
 heurroot           bit vector controlling local search heuristics to apply at
                    the root node:  sum of
@@ -600,13 +640,6 @@ heursearch         how often the local search heurstic should be run during
                          0 = never
                          n > 0 ==> every n nodes
 
-heurstrategy       heuristic strategy for branch and bound: one of
-                        -1 = automatic choice (default)
-                         0 = no heuristics
-                         1 = basic heuristics
-                         2 = enhanced heuristics
-                         3 = extensive heuristics
-
 heurthreads        number of threads for the root node of
                    branch-and-bound:
                         -1 = determined from "threads" keyword
@@ -630,6 +663,9 @@ indprelinbigm      largest "big M" value to use in converting indicator
                    constraints to regular constraints during XPRESS
                    presolve; default = 100.0
 
+inputtol           tolerance on input elements (default 0.0); any value v where
+                   abs(v) <= inputtol is treated as 0
+
 invertfreq         maximum simplex iterations before refactoring the basis:
                    -1 = automatic choice (default)
 
@@ -637,10 +673,12 @@ invertmin          minimum simplex iterations before refactoring the basis:
                    default = 3
 
 keepbasis          basis choice for the next LP iteration:
-                        0 = ignore previous basis
-                        1 = use previous basis (default)
-                        2 = use previous basis only if the number of basic
-                                variables == number of constraints
+                        0 = ignore previous basis (default)
+                        1 = use previous basis
+                        2 = use previous basis only if it is valid for the
+                                current problem
+                        3 = use previous basis only if it is valid and
+                                numerically stable
 
 keepnrows          1 (default) if unconstrained rows are to be kept, else 0
 
@@ -678,17 +716,15 @@ lplog              frequency of printing simplex iteration log; default = 100
 lpref_itlim        limit on simplex iterations used by the solution refiner
                    (see refineops); default = -1 ==> automatic choice
 
-lpthreads          number of threads in concurrent LP solves:
-                        -1 = determine from "threads" keyword (default)
-                        n > 0 ==> use n threads
+lpthreads          synonym for concurrentthreads
 
 markowitztol       Markowitz tolerance used when factoring the basis matrix
                    default = 0.01
 
 matrixtol          zero tolerance on matrix elements; default = 1e-9
 
-maxcuttime         maximum time (CPU seconds) to spend generating cuts
-                   and reoptimizing; default = 0 ==> no limit
+maxcuttime         maximum time (seconds, see cputime) to spend generating
+                   cuts and reoptimizing; default = 0 ==> no limit
 
 maxiis             maximum number of Irreducible Infeasible Sets to find:
                         -1 = no limit (default)
@@ -704,13 +740,13 @@ maximpliedbound    when preprocessing MIP problems, only use computed bounds
                    at most maximpliedbound (default 1e8) in absolute value
 
 maxlocalbt         max height above current node to look for a local backtrack
-                   candidate node; default = 1
+                   candidate node; default = -1 (automatic choice)
 
 maxlogscale        max log2 of factors used in scaling; must be >= 0 and
                    <= 64; default 64
 
-maxmemory          limit (integer number of megabytes) on memory used:
-                        -1 = automatic choice (default)
+maxmemory          soft limit (integer number of megabytes) on memory used:
+                         0 = no limit (default)
                         >0 = target megabytes of memory to use
 
 maxmemoryhard      hard limit (integer number of megabytes) on memory
@@ -721,7 +757,7 @@ maxmipsol          maximum number of integer solutions to find:
                         0 = no limit (default)
 
 maxmiptasks        maximum tasks to run in parallel during a MIP solve:
-                        -1 ==> use mipthreads
+                           -1 ==> use mipthreads
                         n > 0 ==> at most n tasks running at once
                    For maxmiptasks > 0, branch-and-bound nodes are solved in a
                    deterministic way, but the barrier algorithm (if used) may
@@ -732,7 +768,15 @@ maxnode            maximum number of MIP nodes to explore; default = 2147483647
 maxpagelines       maximum output lines between page breaks in logfile;
                    default = 23
 
-maxtime            limit on solution time:  for maxtime=n (an integer),
+maxstalltime       maximum time in seconds that the Optimizer will continue to
+                   search for improving solution after finding a new incumbent:
+                            0 ==> no limit (default)
+                        n > 0 ==> stop after n seconds without a
+                                  new incumbent (no effet before
+                                  the first has been found
+
+maxtime            deprecated by XPRESS; use timelimit and soltimelimit.
+                   Limit on solution time:  for maxtime=n (an integer),
                         n < 0 ==> stop LP or MIP search after -n seconds
                         n = 0 ==> no time limit (default)
                         n > 0 ==> for MIP problems, stop after n seconds
@@ -755,6 +799,23 @@ mipabsstop         stop MIP search if abs(MIPOBJVAL - BESTBOUND) <= mipabsstop
 
 mipaddcutoff       amount to add to the objective function of the best integer
                    solution found to give the new MIP cutoff; default -1e-5
+
+mipcomponents      determines whether disconnected components in a MIP should
+                   be solved as separate MIPs:
+                        -1 ==> automatic (default)
+                         0 ==> disable
+                         1 ==> enable
+
+mipconcurnodes     node limit to choose the winning solve when concurrent
+                   solves are enabled:
+                           -1 ==> automatic (default)
+                        n > 0 ==> number of nodes to complete
+
+mipconcursolves    select the number of concurrent solves to start for a MIP:
+                           -1 ==> enabled, the number of concurrent solves
+                                  depends on mipthreads
+                         0, 1 ==> disabled (default)
+                        n > 1 ==> number of concurrent solves = n
 
 mipdualreductions  kinds of dual reductions allowed during branch and bound:
                         0 ==> none
@@ -798,12 +859,15 @@ mipops             MIP solver options:  one of
                         8 = suppress aggressive dual perturbations
 
 mippresolve        MIP presolve done at each node: sum of
-                         1 = reduced-cost fixing
-                         2 = logical preprocessing of binary variables
-                         4 = ignored; replaced by "preprobing"
-                         8 = allow changing continuous-variable bounds
-                        16 = allow dual reductions
-                        32 = use objective function
+                            1 = reduced-cost fixing
+                            2 = logical preprocessing of binary variables
+                            4 = ignored; replaced by "preprobing"
+                            8 = allow changing continuous-variable bounds
+                           16 = allow dual reductions
+                           32 = allow global tightening of the problem
+                           64 = use objective function
+                          128 = allow restarting
+                          256 = allow use of symmetry
                    default = -1 (automatic choice)
 
 miprampup          whether to limit the number of parallel tasks
@@ -821,6 +885,20 @@ miprelcutoff       fraction of best integer solution found to add to MIP
 miprelstop         stop MIP search if
                    abs(MIPOBJVAL - BESTBOUND) < miprelstop * abs(BESTBOUND);
                    default = 0.0001
+
+miprestart         MIP: control strategy for in-tree restarts:
+                   -1 = determined automatically (default)
+                    0 = disable in-tree restarts
+                    1 = normal aggressiveness
+                    2 = higher aggressiveness
+
+miprestartfactor   MIP: fine tune initial conditions to trigger an in-tree
+                   restart; values > 1 increase the aggressiveness, < 1
+                   decrease it (default 1.0)
+
+miprestartgaptol   MIP: initial gap threshold to delay in-tree restart;
+                   the restart is delayed if the relative gap is below the
+                   threshold (default 0.02)
 
 mipstart           synonym for mipstartvalue
 
@@ -854,18 +932,17 @@ miqcpalg           algorithm for solving mixed-integer problems with quadratic
                          0 = barrier algorithm during branch and bound
                          1 = outer approximations during branch and bound
 
+netstalllimit      limit the number of degenerate pivots of the network
+                   simplex algorithmm before switching to primal or dual:
+                           -1 ==> automatic
+                            0 ==> no limit
+                        n > 0 ==> limit to n iterations
+
 network            [no assignment] try to find and exploit an embedded network
 
-nodefilebias       deprecated and ignored:
-                   a value between 0 and 1 (inclusive) that influences
-                   operations when "treememlimit" (on how much of the
-                   branch-and-bound tree should be kept in memory) has
-                   been exceeded:
-                          0 ==> compress every node before writing anything to
-                                the "nodefile";
-                          1 ==> write nodes to the "nodefile" immediately;
-                   values between 0 and 1 give intermediate behavior;
-                   default = 0.5
+nodeprobingeffort  effort put into probing during branch and bound; the
+                   number is used as a multiplier on the default amount of
+                   work.  Set to 0 to disable node probing; default 1.
 
 nodeselection      next MIP node control:
                         1 = local first:  choose among descendant and sibling
@@ -896,7 +973,7 @@ objrep             Whether to replace
                    For a maximization problem, "<=" replaces ">=".
 
 objscalefactor     Power of 2 (default 0) by which the objective is scaled.
-                   Nonzero objscalfactor values override automatic global
+                   Nonzero objscalefactor values override automatic global
                    objective scaling.
 
 optimalitytol      tolerance on reduced cost; default = 1e-6
@@ -931,11 +1008,6 @@ penalty            minimum absolute penalty variable coefficient;
 permuteseed        seed for the random-number generator used by prepermute;
                    default = 1
 
-perturb            perturbation factor if autoperturb is set to 1;
-                   0 = default = automatic choice.
-                   Deprecated; overridden by primalperturb and dualperturb,
-                   which should be used instead of perturb.
-
 pivottol           zero tolerance for pivots; default = 1e-9
 
 pooldualred        Whether to suppress removal of dominated solutions (via
@@ -958,14 +1030,6 @@ pooldups           How poolstub should handle duplicate solutions:
                                 variables
                         3 = default: discard matches of rounded values of
                                 discrete variables
-                   Rounding of discrete variables is affected by poolmiptol
-                   and poolfeastol.
-
-poolfeastol        Zero tolerance for discrete variables in the solution
-                   pool (see poolstub); default = 1e-6.
-
-poolmiptol         Error (nonintegrality) allowed in discrete variables
-                   in the solution pool (see poolstub); default = 5e-6.
 
 poolnbest          Whether the solution pool (see poolstub) should contain
                    inferior solutions.  When poolnbest = n > 1, the
@@ -997,8 +1061,8 @@ preanalyticcenter  whether to compute and use analytic centers while solving
 
 prebasisred        whether XPRESS's presolve should try to use a lattice basis
                    reduction algorithm:
-                        -1 = automatic choice (default)
-                         0 = no
+                        -1 = automatic choice
+                         0 = no (default)
                          1 = yes.
 
 prebndredcone      for MIP problems, whether to use cone constraints to
@@ -1054,6 +1118,12 @@ preduprow          how XPRESS's presolve should deal with duplicate rows
                          1 = remove duplicate rows identical in all variables
                          2 = like 1 but allowing simple penalty variables
                          3 = like 1 but allowing more complex penalty variables
+
+prefolding         choose if folding aggregate continuous column in an
+                   equitable partition:
+                        -1 = automatic choiche (default)
+                         0 = disabled
+                         1 = enabled
 
 preimplications    whether XPRESS's presolve should use implication
                    structures to remove redundant rows:
@@ -1122,6 +1192,14 @@ pricingalg         primal simplex pricing method:
                          1 = Devex pricing
 
 primal             [no assignment] use the primal simplex algorithm
+
+primalops          primal simplex options:  sum of
+                        1 = 2^0 = aggressive dj scaling
+                        2 = 2^1 = conventional dj scaling
+                        4 = 2^2 = reluctant switching back to partial pricing
+                        8 = 2^3 = dynamic switching between cheap and expensive pricing
+                        default = all of the above; if bits 0 and 1 are the same (both on or
+                        both off), choose dj scaling automatically
 
 primalperturb      Factor by which to possibly perturb the problem in the
                    dual primal algorithm.  If >= 0, overrides "perturb".
@@ -1268,10 +1346,29 @@ sifting            when using dual simplex, whether to enable sifting,
                          0 = no
                          1 = yes
 
+siftpasses         how quickly we allow the worker problems to grow during the
+                   sifting algorithm; large values might reduce the number of
+                   iterations but increase the solve time for each.  Default 4.
+
+siftpresolveops    presolve operations for solving the subproblems during
+                   sifting:
+                         -1 = use presolveops value (default)
+                        > 0 = use this value
+
+siftswitch         determines which algoorithm to use during sifting
+                           -1 ==> dual simplex
+                            0 ==> barrier
+                        n > 0 ==> barrier if the number of dual
+                                  infeasibilities > n else dual simplex
+
 sleeponthreadwait  whether threads should sleep while awaiting work:
                         0 = no (busy-wait)
                         1 = yes (sleep; may add overhead)
                    default = -1 (automatic choice)
+
+soltimelimit       limit on solution time (seconds, see cputime) once a
+                   feasible MIP solution has been found; default = 1e20
+                   (no limit).  See also timelimit.
 
 sos                whether to use explicit SOS information; default 1 ==> yes
 
@@ -1289,6 +1386,14 @@ symmetry           amount of effort to detect symmetry in MIP problems:
 threads            default number of threads to use:
                         -1 = automatic choice (based on hardware)
                          n > 0 ==> use n threads
+
+timelim            synonym for timelimit
+
+timelimit          limit on solution time (seconds, see cputime) for LP
+                   and MIP solves; default = 1e20 (no limit).  For MIP
+                   problems, soltimelimit can stop the search earlier once a
+                   feasible solution has been found.  Replaces the deprecated
+                   maxtime.
 
 timing             [no assignment] give timing statistics
 
@@ -1332,7 +1437,8 @@ treeoutlev         how much to report about branch-and-bound trees
                    (if allowed by outlev):  sum of
                         1 = regular summaries
                         2 = report tree compression and output to nodefile
-                   default = 3
+                        4 = report progress of the tree file
+                   default = 7
 
 tunerdir           directory for tuner results; specifying tunerdir causes
                    the XPRESS tuner to solve the problem several times
@@ -1385,7 +1491,7 @@ tunertarget        what to measure to compare two problem solutions
                          9 = best integer solution only.
 
 tunerthreads       number of tuner threads to run in parallel:
-                   default -1 ==> automatic choice.
+                   -1 ==> automatic choice; default 1 (sequential).
                    "threads" controls the number of threads for each solve.
                    The product of threads and tunerthreads should not exceed
                    the number of threads the system can run in parallel.
@@ -1416,243 +1522,3 @@ writeprob          Name of file to which the problem is written
                         .mps = MPS file;
                         .lp = LP file.
 
-----------------------------------------------
-Mappings of keywords to Xpress parameter names
-==============================================
-
-For the possible convenience of readers of the Xpress-Optimizer
-Reference Manual, the following table shows the Xpress parameter names
-associated with the above keywords.
-
-        Keyword                 Xpress parameter
-
-        algaftercrossover       XPRS_ALGAFTERCROSSOVER
-        algafternetwork         XPRS_ALGAFTERNETWORK
-        autoperturb             XPRS_AUTOPERTURB
-        autoscaling             XPRS_AUTOSCALING
-        backtrack               XPRS_BACKTRACK
-        backtracktie            XPRS_BACKTRACKTIE
-        baralg                  XPRS_BARALG
-        barcores                XPRS_BARCORES
-        barcrash                XPRS_BARCRASH
-        bardualstop             XPRS_BARDUALSTOP
-        bargapstop              XPRS_BARGAPSTOP
-        bargaptarget            XPRS_BARGAPTARGET
-        barindeflimit           XPRS_BARINDEFLIMIT
-        bariterlimit            XPRS_BARITERLIMIT
-        barkernel               XPRS_BARKERNEL
-        barobjscale             XPRS_BAROBJSCALE
-        barorder                XPRS_BARORDER
-        barorderthreads         XPRS_BARORDERTHREADS
-        baroutput               XPRS_BAROUTPUT
-        barpresolve             XPRS_BARPRESOLVEOPS
-        barprimalstop           XPRS_BARPRIMALSTOP
-        barreg                  XPRS_BARREGULARIZE
-        barstart                XPRS_BARSTART
-        barstepstop             XPRS_BARSTEPSTOP
-        barthreads              XPRS_BARTHREADS
-        bigm                    XPRS_BIGM
-        bigmmethod              XPRS_BIGMMETHOD
-        branchchoice            XPRS_BRANCHCHOICE
-        branchdisj              XPRS_BRANCHDISJ
-        branchstruct            XPRS_BRANCHSTRUCTURAL
-        breadthfirst            XPRS_BREADTHFIRST
-        cachesize               XPRS_CACHESIZE
-        choleskyalg             XPRS_CHOLESKYALG
-        choleskytol             XPRS_CHOLESKYTOL
-        concurrentthreads       XPRS_LPTHREADS
-        conedecomp              XPRS_PRECONEDECOMP
-        convexitychk            XPRS_IFCHECKCONVEXITY
-        corespercpu             XPRS_CORESPERCPU
-        covercuts               XPRS_COVERCUTS
-        cpuplatform             XPRS_CPUPLATFORM
-        cputime                 XPRS_CPUTIME
-        crash                   XPRS_CRASH
-        crossover               XPRS_CROSSOVER
-        crossoveritlim          XPRS_CROSSOVERITERLIMIT
-        crossoverops            XPRS_CROSSOVEROPS
-        crossoverthreads        XPRS_CROSSOVERTHREADS
-        crossovertol            XPRS_CROSSOVERACCURACYTOL
-        cutdepth                XPRS_CUTDEPTH
-        cutfactor               XPRS_CUTFACTOR
-        cutfreq                 XPRS_CUTFREQ
-        cutselect               XPRS_CUTSELECT
-        cutstrategy             XPRS_CUTSTRATEGY
-        defaultalg              XPRS_DEFAULTALG
-        degradefactor           XPRS_DEGRADEFACTOR (withdrawn)
-        densecollimit           XPRS_DENSECOLLIMIT
-        deterministic           XPRS_DETERMINISTIC
-        dualgradient            XPRS_DUALGRADIENT
-        dualize                 XPRS_DUALIZE
-        dualizeops              XPRS_DUALIZEOPS
-        dualperturb             XPRS_DUALPERTURB
-        dualstrategy            XPRS_DUALSTRATEGY
-        dualthreads             XPRS_DUALTHREADS
-        eigenvaltol             XPRS_EIGENVALUETOL
-        elimfillin              XPRS_ELIMFILLIN
-        elimtol                 XPRS_ELIMTOL
-        etatol                  XPRS_ETATOL
-        feaspump                XPRS_FEASIBILITYPUMP
-        feastol                 XPRS_FEASTOL
-        feastol_perturb         XPRS_FEASTOLPERTURB
-        feastol_target          XPRS_FEASTOLTARGET
-        globalfilemax           XPRS_MAXGLOBALFILESIZE
-        globalloginterval       XPRS_GLOBALFILELOGINTERVAL
-        gomcuts                 XPRS_GOMCUTS
-        hdive_rand              XPRS_HEURDIVERANDOMIZE
-        hdive_rounding          XPRS_HEURDIVESOFTROUNDING
-        hdive_speed             XPRS_HEURDIVESPEEDUP
-        hdive_strategy          XPRS_HEURDIVESTRATEGY
-        heurdepth               XPRS_HEURDEPTH
-        heureffort              XPRS_HEURSEARCHEFFORT
-        heurforcespecobj        XPRS_HEURFORCESPECIALOBJ
-        heurfreq                XPRS_HEURFREQ
-        heurmaxsol              XPRS_HEURMAXSOL
-        heurnodes               XPRS_HEURNODES
-        heurroot                XPRS_HEURSEARCHROOTSELECT
-        heurrootcutfreq         XPRS_HEURSEARCHROOTCUTFREQ
-        heursearch              XPRS_HEURSEARCHFREQ
-        heurstrategy            XPRS_HEURSTRATEGY
-        heurthreads             XPRS_HEURTHREADS
-        heurtree                XPRS_HEURSEARCHTREESELECT
-        indlinbigm              XPRS_INDLINBIGM
-        indprelinbigm           XPRS_INDPRELINBIGM
-        invertfreq              XPRS_INVERTFREQ
-        invertmin               XPRS_INVERTMIN
-        keepbasis               XPRS_KEEPBASIS
-        keepnrows               XPRS_KEEPNROWS
-        lnpbest                 XPRS_LNPBEST
-        lnpiterlimit            XPRS_LNPITERLIMIT
-        localchoice             XPRS_LOCALCHOICE
-        lpfolding               XPRS_LPFOLDING
-        lpiterlimit             XPRS_LPITERLIMIT
-        lplog                   XPRS_LPLOG
-        lpref_itlim             XPRS_LPREFINEITERLIMIT
-        lpthreads               XPRS_LPTHREADS
-        markowitztol            XPRS_MARKOWITZTOL
-        matrixtol               XPRS_MATRIXTOL
-        maxcuttime              XPRS_MAXCUTTIME
-        maxiis                  XPRS_MAXIIS
-        maximpliedbound         XPRS_MAXIMPLIEDBOUND
-        maxlocalbt              XPRS_MAXLOCALBACKTRACK
-        maxlogscale             XPRS_MAXSCALEFACTOR
-        maxmemory               XPRS_MAXMEMORYSOFT
-        maxmemoryhard           XPRS_MAXMEMORYHARD
-        maxmipsol               XPRS_MAXMIPSOL
-        maxmiptasks             XPRS_MAXMIPTASKS
-        maxnode                 XPRS_MAXNODE
-        maxpagelines            XPRS_MAXPAGELINES
-        maxslaves               XPRS_MAXSLAVE (withdrawn)
-        maxtime                 XPRS_MAXTIME
-        mipabscutoff            XPRS_MIPABSCUTOFF
-        mipabsstop              XPRS_MIPABSSTOP
-        mipaddcutoff            XPRS_MIPADDCUTOFF
-        mipdualreductions       XPRS_MIPDUALREDUCTIONS
-        mipkappafreq            XPRS_MIPKAPPAFREQ
-        miplog                  XPRS_MIPLOG
-        mipops                  XPRS_QSIMPLEXOPS
-        mippresolve             XPRS_MIPPRESOLVE
-        miprampup               XPRS_MIPRAMPUP
-        miprefiterlim           XPRS_MIPREFINEITERLIMIT
-        miprelcutoff            XPRS_MIPRELCUTOFF
-        miprelstop              XPRS_MIPRELSTOP
-        mipstop                 XPRS_MIPTERMINATIONMETHOD
-        miptarget               XPRS_MIPTARGET (withdrawn)
-        mipthreads              XPRS_MIPTHREADS
-        miptol                  XPRS_MIPTOL
-        miptoltarget            XPRS_MIPTOLTARGET
-        miqcpalg                XPRS_MIQCPALG
-        nodefilebias            XPRS_GLOBALFILEBIAS
-        nodeselection           XPRS_NODESELECTION
-        objscalefactor          XPRS_OBJSCALEFACTOR
-        optimalitytol           XPRS_OPTIMALITYTOL
-        opttol_target           XPRS_OPTIMALITYTOLTARGET
-        outputtol               XPRS_OUTPUTTOL
-        penalty                 XPRS_PENALTY
-        permuteseed             XPRS_PREPERMUTESEED
-        perturb                 XPRS_PERTURB
-        pivottol                XPRS_PIVOTTOL
-        pooldups                XPRS_MSP_DUPLICATESOLUTIONSPOLICY
-        poolfeastol             XPRS_MSP_SOL_FEASTOL
-        poolmiptol              XPRS_MSP_SOL_MIPTOL
-        ppfactor                XPRS_PPFACTOR
-        preanalyticcenter       XPRS_PREANALYTICCENTER
-        prebasisred             XPRS_PREBASISRED
-        prebndredcone           XPRS_PREBNDREDCONE
-        prebndredquad           XPRS_PREBNDREDQUAD
-        precoefelim             XPRS_PRECOEFELIM
-        precomponents           XPRS_PRECOMPONENTS
-        preconvertsep           XPRS_PRECONVERTSEPARABLE
-        predomcol               XPRS_PREDOMCOL
-        predomrow               XPRS_PREDOMROW
-        preduprow               XPRS_PREDUPROW
-        preimplications         XPRS_PREIMPLICATIONS
-        prelindep               XPRS_PRELINDEP
-        preobjcutdetect         XPRS_PREOBJCUTDETECT
-        prepermute              XPRS_PREPERMUTE
-        preprobing              XPRS_PREPROBING
-        presolve                XPRS_PRESOLVE
-        presolvemaxgrow         XPRS_PRESOLVEMAXGROW
-        presolveops             XPRS_PRESOLVEOPS
-        presolvepasses          XPRS_PRESOLVEPASSES
-        pricingalg              XPRS_PRICINGALG
-        primalops               XPRS_PRIMALOPS
-        primalperturb           XPRS_PRIMALPERTURB
-        primalunshift           XPRS_PRIMALUNSHIFT
-        pseudocost              XPRS_PSEUDOCOST
-        pseudocost_ud           XPRS_HISTORYCOSTS
-        qccuts                  XPRS_QCCUTS
-        qcrootalg               XPRS_QCROOTALG
-        quadunshift             XPRS_QUADRATICUNSHIFT
-        refineops               XPRS_REFINEOPS
-        relaxtreemem            XPRS_RELAXTREEMEMORYLIMIT
-        relpivottol             XPRS_RELPIVOTTOL
-        repairindefq            XPRS_REPAIRINDEFINITEQ
-        resourcestrategy        XPRS_RESOURCESTRATEGY
-        rootpresolve            XPRS_ROOTPRESOLVE
-        sbbest                  XPRS_SBBEST
-        sbeffort                XPRS_SBEFFORT
-        sbestimate              XPRS_SBESTIMATE
-        sbiterlimit             XPRS_SBITERLIMIT
-        sbselect                XPRS_SBSELECT
-        scaling                 XPRS_SCALING
-        sifting                 XPRS_SIFTING
-        sleeponthreadwait       XPRS_SLEEPONTHREADWAIT
-        sosreftol               XPRS_SOSREFTOL
-        symmetry                XPRS_SYMMETRY
-        tempbounds              XPRS_TEMPBOUNDS (withdrawn)
-        threads                 XPRS_THREADS
-        trace                   XPRS_TRACE
-        treecompress            XPRS_TREECOMPRESSION
-        treecovercuts           XPRS_TREECOVERCUTS
-        treecuts                XPRS_TREECUTSELECT
-        treegomcuts             XPRS_TREEGOMCUTS
-        treememlimit            XPRS_TREEMEMORYLIMIT
-        treememtarget           XPRS_TREEMEMORYSAVINGTARGET
-        treeoutlev              XPRS_TREEDIAGNOSTICS
-        treepresolve            XPRS_TREEPRESOLVE (withdrawn)
-        tunerhistory            XPRS_TUNERHISTORY
-        tunermaxtime            XPRS_TUNERMAXTIME
-        tunermethod             XPRS_TUNERMETHOD
-        tunerpermute            XPRS_TUNERPERMUTE
-        tunertarget             XPRS_TUNERTARGET
-        tunerthreads            XPRS_TUNERTHREADS
-        varselection            XPRS_VARSELECTION
-
------------------------
-Use with a FICO license
-=======================
-
-Normally the xpress program uses AMPL's licensing system, but
-(starting with version 20181224) it will also work with a license file
-provided by FICO when that file is specified in shell variable XPRESS.
-
-*************************
-
-If you have questions about or find bugs with this stuff,
-please contact:
-
-     David M. Gay
-     dmg@ampl.com
-
-Last updated 2 August 2021.
