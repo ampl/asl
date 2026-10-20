@@ -1257,7 +1257,8 @@ static char
 			          new incumbent (no effet before\n\
 			          the first has been found",
 #endif
-	maxtime_desc[]		= "limit on solution time:  for maxtime=n (an integer),\n\
+	maxtime_desc[]		= "deprecated by XPRESS; use timelimit and soltimelimit.\n\
+		Limit on solution time:  for maxtime=n (an integer),\n\
 			n < 0 ==> stop LP or MIP search after -n seconds\n\
 			n = 0 ==> no time limit (default)\n\
 			n > 0 ==> for MIP problems, stop after n seconds\n\
@@ -1265,6 +1266,18 @@ static char
 				  otherwise continue until a feasible\n\
 				  solution has been found.",
 	minim_desc[]		= "[no assignment] force minimization of the objective",
+#ifdef XPRS_SOLTIMELIMIT
+	soltimelimit_desc[]	= "limit on solution time (seconds, see cputime) once a\n\
+		feasible MIP solution has been found; default = 1e20\n\
+		(no limit).  See also timelimit.",
+#endif
+#ifdef XPRS_TIMELIMIT
+	timelimit_desc[]	= "limit on solution time (seconds, see cputime) for LP\n\
+		and MIP solves; default = 1e20 (no limit).  For MIP\n\
+		problems, soltimelimit can stop the search earlier once a\n\
+		feasible solution has been found.  Replaces the deprecated\n\
+		maxtime.",
+#endif
 	mipabscutoff_desc[]	=
 		"initial MIP cutoff:  ignore MIP nodes with objective values\n\
 		worse than mipabscutoff; default = 1e40 for minimization,\n\
@@ -2130,7 +2143,11 @@ static keyword keywds[]={
 #ifdef XPRS_CLAMPING
   KW("clamping",	set_int, XPRS_CLAMPING,	clamping_desc),
 #endif
-  KW("concurrentthreads", set_int, XPRS_LPTHREADS,	"synonym for lpthreads"),
+#ifdef XPRS_CONCURRENTTHREADS
+  KW("concurrentthreads", set_int, XPRS_CONCURRENTTHREADS, lpthreads_desc),
+#elif defined(XPRS_LPTHREADS)
+  KW("concurrentthreads", set_int, XPRS_LPTHREADS,	lpthreads_desc),
+#endif
 #ifdef XPRS_PRECONEDECOMP
   KW("conedecomp",	set_int, XPRS_PRECONEDECOMP,	conedecomp_desc),
 #endif
@@ -2257,7 +2274,11 @@ static keyword keywds[]={
 #ifdef XPRS_LPREFINEITERLIMIT
   KW("lpref_itlim",	set_int, XPRS_LPREFINEITERLIMIT, lpref_itlim_desc),
 #endif
-  KW("lpthreads",	set_int, XPRS_LPTHREADS,	lpthreads_desc),
+#ifdef XPRS_CONCURRENTTHREADS
+  KW("lpthreads",	set_int, XPRS_CONCURRENTTHREADS, "synonym for concurrentthreads"),
+#elif defined(XPRS_LPTHREADS)
+  KW("lpthreads",	set_int, XPRS_LPTHREADS,	"synonym for concurrentthreads"),
+#endif
   KW("markowitztol",	set_dbl, XPRS_MARKOWITZTOL, 	markowitztol_desc),
   KW("matrixtol",	set_dbl, XPRS_MATRIXTOL,	matrixtol_desc),
   KW("maxcuttime",	set_dbl, XPRS_MAXCUTTIME,	maxcuttime_desc),
@@ -2483,6 +2504,9 @@ static keyword keywds[]={
 #ifdef XPRS_SLEEPONTHREADWAIT
   KW("sleeponthreadwait", set_int, XPRS_SLEEPONTHREADWAIT, sleeponthreadwait_desc),
 #endif
+#ifdef XPRS_SOLTIMELIMIT
+  KW("soltimelimit",	set_dbl, XPRS_SOLTIMELIMIT,	soltimelimit_desc),
+#endif
   KW("sos",		I_val, &sos,			sos_desc),
   KW("sos2",		I_val, &sos2,			sos2_desc),
   KW("sosreftol",	set_dbl, XPRS_SOSREFTOL,	sosreftol_desc),
@@ -2493,6 +2517,10 @@ static keyword keywds[]={
   KW("tempbounds",	set_int, XPRS_TEMPBOUNDS,	tempbounds_desc),
 #endif
   KW("threads",		set_int, XPRS_THREADS,		threads_desc),
+#ifdef XPRS_TIMELIMIT
+  KW("timelim",		set_dbl, XPRS_TIMELIMIT,	"synonym for timelimit"),
+  KW("timelimit",	set_dbl, XPRS_TIMELIMIT,	timelimit_desc),
+#endif
   KW("timing",		set_known, set_timing,		"[no assignment] give timing statistics"),
   KW("trace",		set_int, XPRS_TRACE,		trace_desc),
   KW("treecompress",	set_int, XPRS_TREECOMPRESSION,	treecompress_desc),
