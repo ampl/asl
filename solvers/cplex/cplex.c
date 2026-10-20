@@ -238,7 +238,7 @@ mint_val[32] = {
 	/* set_mipstval */	{0, 7, 1},
 	/* set_namernd */	{0, 1, 0},
 	/* set_sos */		{0, 1, 1},
-	/* set_mipcuts */	{-1, 2, 0},
+	/* set_mipcuts */	{-1, 3, 0},
 	/* set_round */		{0, 15, 1},
 	/* set_rays */		{0, 3, 3},
 	/* set_mipbasis */	{-1, 1, -1},
@@ -1106,10 +1106,32 @@ sf_mint(Option_Info *oi, keyword *kw, char *v)
 #ifdef CPX_PARAM_ZEROHALFCUTS
 			,CPX_PARAM_ZEROHALFCUTS
 #endif
+#ifdef CPX_PARAM_BQPCUTS
+			,CPX_PARAM_BQPCUTS
+#endif
+#ifdef CPX_PARAM_LOCALIMPLBD
+			,CPX_PARAM_LOCALIMPLBD
+#endif
+#ifdef CPX_PARAM_MCFCUTS
+			,CPX_PARAM_MCFCUTS
+#endif
+#ifdef CPX_PARAM_NODECUTS
+			,CPX_PARAM_NODECUTS
+#endif
+#ifdef CPX_PARAM_RLTCUTS
+			,CPX_PARAM_RLTCUTS
+#endif
+#ifdef CPX_PARAM_LANDPCUTS
+			,CPX_PARAM_LANDPCUTS
+#endif
 			};
-		int f;
-		for(f = 0; f < sizeof(op)/sizeof(int); f++)
-			CPXsetintparam(Env, op[f], t);
+		int f, t1, z[3];
+		for(f = 0; f < sizeof(op)/sizeof(int); f++) {
+			t1 = t;
+			if (!CPXinfointparam(Env, op[f], z, z+1, z+2) && t1 > z[2])
+				t1 = z[2];
+			CPXsetintparam(Env, op[f], t1);
+			}
 		}
 		break;
 #endif
@@ -2189,8 +2211,7 @@ cutsfactor_desc[] =
 		    1, 2 = ever more aggressive use.",
 	integrality_desc[] = "Amount by which an integer variable can differ\n\
 		from the nearest integer and still be considered\n\
-		feasible.  Default = 1e-5; must be in [1e-9, 0.5].\n\
-		(The upper bound was not enforced prior to CPLEX 11.)",
+		feasible.  Default = 1e-5; must be in [0, 0.5].",
 	intwarntol_desc[] = "Do not warn about perturbations to \"integer\"\n\
 		variables to make them integers when the maximum\n\
 		perturbation is at most intwarntol (default 1e-9);\n\
@@ -2262,14 +2283,16 @@ cutsfactor_desc[] =
 		basis can be time consuming).",
 	mipcrossover_desc[] = "Crossover method used when using the barrier\n\
 		method for MIP subproblems:\n\
-		   -1 = no crossover\n\
 		    0 (default) = automatic choice\n\
 		    1 = primal\n\
-		    2 = dual.",
-	mipcuts_desc[] = "Sets all ten of cliques, covers, disjcuts,\n\
+		    2 = dual.\n\
+		To skip crossover, use solutiontype=2.",
+	mipcuts_desc[] = "Sets all of cliques, covers, disjcuts,\n\
 		flowcuts, flowpathcuts, fraccuts, gubcuts,\n\
-		impliedcuts, mircuts and zerohalfcuts to the\n\
-		specified value.",
+		impliedcuts, mircuts, zerohalfcuts, bqpcuts,\n\
+		localimpliedcuts, mcfcuts, nodecuts, rltcuts and\n\
+		splitcuts to the specified value (3 is reduced\n\
+		to 2 for cut types accepting at most 2).",
 	mipdisplay_desc[] = "Frequency of displaying branch-and-bound\n\
 		information (for optimizing integer variables):\n\
 		   0 (default) = never\n\
@@ -2326,7 +2349,7 @@ cutsfactor_desc[] =
 #endif
 	mipsolutions_desc[] = "Stop branch-and-bound for integer variables\n\
 		after finding \"mipsolutions\" feasible solutions.\n\
-		Default = 2^31 - 1.",
+		Default = no limit.",
 	mipstart_desc[] = "Synonym for \"mipstartvalue\".",
 #if 0 /* old mipstartalg_desc; not sure when it change to the one for 12.6.1, given below */
 	mipstartalg_desc[] = "Which LP algorithm to use in solving the initial\n\
@@ -2431,7 +2454,7 @@ cutsfactor_desc[] =
 #endif
 	nodelim_desc[] = "Synonym for \"nodes\".",
 	nodes_desc[] = "Stop branch-and-bound for integer variables\n\
-		after \"nodes\" LP relaxations.  Default = 2^31 - 1;\n\
+		after \"nodes\" LP relaxations.  Default = no limit;\n\
 		nodes = 0 ==> complete processing at the root (create\n\
 		cuts, apply heuristics at root);\n\
 		1 ==> allow branching from root:  create but do not\n\
@@ -2461,13 +2484,13 @@ cutsfactor_desc[] =
 		polishafter_absmipgap.  Default 1e-6.",
 	polishafter_intsol_desc[] = "Start polishing integer solutions after the\n\
 		finding polishafter_intsol integer-feasible\n\
-		solutions.  Default 2^31 - 1.",
+		solutions.  Default: no limit.",
 	polishafter_mipgap_desc[] = "Start polishing integer solutions after the\n\
 		relative mixed-integer optimality gap is at most\n\
 		polishafter_mipgap.  Default 0.",
 	polishafter_nodes_desc[] = "Start polishing integer solutions after the\n\
 		processing polishafter_nodes nodes.\n\
-		Default 2^31 - 1.",
+		Default: no limit.",
 	polishafter_time_desc[] = "Start polishing integer solutions after finding\n\
 		at least one integer feasible solution and spending\n\
 		polishafter_time CPU seconds seeking integer\n\
@@ -2747,10 +2770,7 @@ cutsfactor_desc[] =
 			2 = dual simplex\n\
 			3 = network simplex\n\
 			4 = barrier\n\
-			5 = sifting (0 is used for MIQPs)\n\
-			6 = concurrent (dual, barrier and primal in\n\
-				opportunistic mode; dual and barrier in\n\
-				deterministic mode; 4 is used for MIPQs).\n\
+			5 = sifting (0 is used for MIQPs).\n\
 		Only 0 is allowed for MIQCPs.",
 #endif
 #ifdef CPX_PARAM_SYMMETRY
@@ -2852,7 +2872,7 @@ cutsfactor_desc[] =
 		barrier algorithm: higher values make the test\n\
 		for unbounded faces harder to satisfy.\n\
 		Default = 1e12.",
-	bariterlim_desc[] = "Maximum barrier iterations allowed (default 2^31 - 1).",
+	bariterlim_desc[] = "Maximum barrier iterations allowed (default: no limit).",
 	barobjrange_desc[] = "Limit on the absolute objective value before the\n\
 		barrier algorithm considers the problem unbounded.\n\
 		Default = 1e20.",
@@ -3076,7 +3096,7 @@ cutsfactor_desc[] =
 		value of integer parameter n.  This facility provides\n\
 		a way to modify integer parameters that have not (yet)\n\
 		been assigned a keyword.",
-	iterations_desc[] = "Limit on total LP iterations; default 2^31 - 1.",
+	iterations_desc[] = "Limit on total LP iterations; default: no limit.",
 	iterlim_desc[] = "Synonym for \"iterations\".",
 #ifdef Uselazy
 	lazy_desc[] = "Whether to recognize suffix .lazy on constraints\n\
@@ -3255,7 +3275,8 @@ cutsfactor_desc[] =
 		gives better performance than specifying just \"dual\",\n\
 		but sometimes \"dual predual=1\" is still better.",
 	prelinear_desc[] = "Whether CPLEX's presolve should do full reductions\n\
-		or only linear ones.  Default = 1 = full.",
+		or only linear ones.  Default = 1 = full.\n\
+		Deprecated by CPLEX; use prereformulations instead.",
 #ifdef CPX_PARAM_PREPASS
 	prepass_desc[] = "Limit on number of CPLEX presolve passes.\n\
 		Default = -1 = decide limit automatically.",
@@ -3277,9 +3298,13 @@ cutsfactor_desc[] =
 	presolve_desc[] = "0 or 1 (default 1): Whether to run CPLEX's presolve\n\
 		algorithm.",
 	presolvedual_desc[] = "Synonym for \"predual\".",
-	presolvenode_desc[] = "-1, 0, or 1 (default 0): Whether to run CPLEX's\n\
-		presolve at each node of the MIP branch-and-bound\n\
-		tree: -1 = no; 1 = yes; 0 = automatic choice.",
+	presolvenode_desc[] = "Whether to run CPLEX's presolve at each node\n\
+		of the MIP branch-and-bound tree:\n\
+		   -1 = no\n\
+		    0 = automatic choice (default)\n\
+		    1 = yes\n\
+		    2 = probing on integer-infeasible variables\n\
+		    3 = aggressive node probing.",
 #ifdef CPXPARAM_Preprocessing_SOS1Reform
 	presos1reformulations_desc[] = "Control the reformulation of SOS of type 1:\n\
 		  -1 = no reformulation\n\
@@ -3434,11 +3459,8 @@ cutsfactor_desc[] =
 #ifdef CPX_PARAM_THREADS
 	threads_desc[] = "Default maximum number of threads for any of\n\
 		the parallel CPLEX optimizers (limited also\n\
-		by licensing).  Default = 1 prior to CPLEX 11,\n\
-		or 0 (use maximum threads available) starting\n\
-		with CPLEX 11.  May be overridden, prior to\n\
-		CPLEX 11, by more specific limits, such as\n\
-		barthreads or mipthreads.",
+		by licensing).  Default = 0 (use the maximum\n\
+		number of threads available).",
 #endif
 	time_desc[] = "Time limit in seconds; default = 1e75.",
 	timelimit_desc[] = "Synonym for \"time\".",
@@ -3622,8 +3644,8 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 #ifdef CPLEX_MIP
 	{ "bbinterval",	sf_int,		VP CPX_PARAM_BBINTERVAL, bbinterval_desc },
 #ifdef CPXPARAM_Benders_Strategy
-	{ "benders_feascut_tol", sf_dbl,VP CPXPARAM_Benders_Tolerances_feasibilitycut, benders_feascut_desc },
-	{ "benders_optcut_tol",	sf_dbl,	VP CPXPARAM_Benders_Tolerances_optimalitycut, benders_optcut_desc },
+	{ "benders_feascut_tol", sf_dbl,VP CPXPARAM_Benders_Tolerances_FeasibilityCut, benders_feascut_desc },
+	{ "benders_optcut_tol",	sf_dbl,	VP CPXPARAM_Benders_Tolerances_OptimalityCut, benders_optcut_desc },
 	{ "benders_strategy", sf_int,	VP CPXPARAM_Benders_Strategy, benders_strategy_desc },
 	{ "benders_worker", sf_int, VP CPXPARAM_Benders_WorkerAlgorithm, benders_worker_desc },
 	{ "bendersopt", sf_known,	VP set_benders, bendersopt_desc },
@@ -3940,7 +3962,7 @@ uxxxstart_desc[] = "Whether to read .xxx files to resume an\n\
 #endif
 #ifdef CPXPARAM_Preprocessing_SOS1Reform
 	 { "presos1reform", sf_int, VP CPXPARAM_Preprocessing_SOS1Reform, presos1reformulations_desc },
-	 { "presos2reform", sf_int, VP CPXPARAM_Preprocessing_SOS1Reform, presos2reformulations_desc },
+	 { "presos2reform", sf_int, VP CPXPARAM_Preprocessing_SOS2Reform, presos2reformulations_desc },
 #endif
 	{ "prestats",	sf_mint,	VP set_prestats, prestats_desc },
 #ifdef CPX_TUNE_TILIM

@@ -1142,3 +1142,10 @@ and prereformulations that control various aspects of reformulations.
 Renamed submipstart to submipstartalg.
 Added parameter finalmipalg to control the algorithm used in the solution
 of the final LP after solving a MIP problem
+
+20261020
+  cplex.c: fix presos2reform (it set the SOS1 reformulation parameter);
+mipcuts also sets bqpcuts, localimpliedcuts, mcfcuts, nodecuts, rltcuts
+and splitcuts; documentation fixes for mipcrossover (no -1), submipstartalg
+(no 6), presolvenode (values 2 and 3), limit defaults, integrality range,
+threads; prelinear marked deprecated.  README.cplex regenerated.
