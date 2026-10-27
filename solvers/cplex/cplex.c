@@ -1655,7 +1655,7 @@ MOkwval {
 	} MOkwval;
 
  static MOkwval *first_MOkw, **pnext_MOkw = &first_MOkw;
- static int *indobj, *mopriority, nmo, nmopri, *objind, *pri0;
+ static int *indobj, *mopriority, nmo, nmopri, *objind, *pri0, *slotobj;
  static real *moabstol, *momem, *moreltol, *moweight;
  static struct paramset **mopars;
 
@@ -1664,23 +1664,28 @@ Optimizemo(CPXCENVptr env, cpxlp *cpx)
 {
 	int i, j, k, no, nz, ono, *vn;
 	ograd *og;
-	real *c;
+	real *c, w;
 
 	if ((i = CPXsetnumobjs(Env, cpx, no = nmo)))
 		badret("CPXsetnumobjs", i, 1);
 	ono = obj_no;
-	if ((i = objind[ono]) > 0) {
-		j = indobj[i];
-		k = indobj[0];
-		indobj[0] = j;
-		indobj[i] = k;
-		objind[j] = 0;
-		objind[k] = i;
-		}
+	/* slotobj[i] = the objective in CPLEX's multiobjective slot i: slot 0 */
+	/* holds the objective already loaded (ono) if it is one of them, the */
+	/* others follow in priority order.  objind (sorted by priority) maps */
+	/* positions to objectives, indobj objectives to positions, and */
+	/* mopriority positions to priority levels, so objective j has level */
+	/* mopriority[indobj[j]]. */
+	slotobj = (int*)M1alloc(no*sizeof(int));
+	k = 0;
+	if (indobj[ono] >= 0)
+		slotobj[k++] = ono;
+	for(i = 0; i < no; ++i)
+		if ((j = objind[i]) != ono)
+			slotobj[k++] = j;
 	c = (real*)M1alloc(n_var*(sizeof(real) + sizeof(int)));
 	vn = (int*)(c + n_var);
 	i = 0;
-	if (indobj[0] == ono) {
+	if (slotobj[0] == ono) {
 #ifndef NAN
 		/* CPX_NO_OFFSET_CHANGE is #defined as NAN, so we construct a NaN */
 		/* using constants in arith.h. */
@@ -1691,19 +1696,22 @@ Optimizemo(CPXCENVptr env, cpxlp *cpx)
 #define CPX_NO_OFFSET_CHANGE u.d
 #endif
 		if ((k = CPXmultiobjchgattribs(env, cpx, 0, CPX_NO_OFFSET_CHANGE,
-				moweight[ono], mopriority[ono], moabstol[ono],
+				moweight[ono], mopriority[indobj[ono]], moabstol[ono],
 				moreltol[ono], obj_name(ono))))
 			badret("CPXmultiobjchgattribs", k, 1);
 		i = 1;
 		}
 	for(; i < no; ++i) {
-		j = indobj[i];
+		j = slotobj[i];
 		for(nz = 0, og = Ograd[j]; og; og = og->next) {
 			c[nz] = og->coef;
 			vn[nz++] = og->varno;
 			}
-		if ((k = CPXmultiobjsetobj(env, cpx, i, nz, vn, c, objconst(j), moweight[j],
-				mopriority[i], moabstol[j], moreltol[j], obj_name(j))))
+		/* CPLEX uses the sense of the problem for all objectives, */
+		/* so an objective of the opposite sense gets a negated weight. */
+		w = objtype[j] == objtype[ono] ? moweight[j] : -moweight[j];
+		if ((k = CPXmultiobjsetobj(env, cpx, i, nz, vn, c, objconst(j), w,
+				mopriority[indobj[j]], moabstol[j], moreltol[j], obj_name(j))))
 			badret("CPXmultiobjsetobj", k, 1);
 		}
 	return CPXmultiobjopt(env, cpx, (const struct paramset * const*)mopars);
@@ -1772,7 +1780,11 @@ MOkwf(char *key, fint klen)
 		.objweight values are provided, 1. is assumed for all.\n\
 		Similarly, if no .objpriority values are given, 1 is\n\
 		assumed for all.  For .objreltol and .objabstol, if\n\
-		no values are given, all are assumed to be 0."
+		no values are given, all are assumed to be 0.\n\
+		Algorithm keywords dualopt and primalopt select the LP\n\
+		method for each objective; other algorithm keywords\n\
+		are ignored.  For MIP problems, no basis or dual values\n\
+		are returned (mipbasis and endbasis are ignored)."
 		;
 
  static int
@@ -5886,6 +5898,17 @@ amplin(ASL *asl, cpxlp **pcpx, FILE **nl, dims *d, int *nelqp, int *nintp, char 
 		}
 #endif /*CPX_PARAM_FEASOPTMODE*/
 #ifndef NO_MOkwf /*{*/
+	if (no > 1 && multiobj && obj_no >= 0 && Optimize) {
+		/* An LP algorithm chosen by keyword applies to each level */
+		/* of the multiobjective solve; others cannot be honored. */
+		if (Optimize == CPXdualopt)
+			CPXsetintparam(Env, CPX_PARAM_LPMETHOD, CPX_ALG_DUAL);
+		else if (Optimize == CPXprimopt)
+			CPXsetintparam(Env, CPX_PARAM_LPMETHOD, CPX_ALG_PRIMAL);
+		else if (Optimize != CPXlpopt)
+			printf("Ignoring the chosen algorithm for multiobj.\n");
+		Optimize = 0;
+		}
 	if (no > 1 && multiobj && obj_no >= 0 && !Optimize) {
 		Optimize = Optimizemo;
 		method = 1;
@@ -8089,6 +8112,15 @@ QualityInfo {
 				}
 			if (endbas)
 				mipbasis = 1;
+#ifndef NO_MOkwf
+			if (Optimize == Optimizemo && mipbasis) {
+				/* The fixed-integer LP solved for the basis would */
+				/* replace the multiobjective solution. */
+				if (endbas)
+					Bpf(&B, "Ignoring endbasis for MIP with multiobj.\n");
+				mipbasis = 0;
+				}
+#endif
 			needsol = 0;
 			if ((i = CPXgetmipx(Env, cpx, x, 0, n-1))) {
 				fprintf(Stderr,
@@ -8278,18 +8310,17 @@ QualityInfo {
 		if (Optimize == Optimizemo) {
 			maxobjlen = 0;
 			for(i = 0; i < nmo; ++i) {
-				objlen = strlen(obj_name(indobj[i]));
+				objlen = strlen(obj_name(slotobj[i]));
 				if (maxobjlen < objlen)
 					maxobjlen = objlen;
 				}
 			++maxobjlen;
 			Bpf(&B, "; %d objectives:\n", nmo);
 			for(i = 0; i < nmo; ++i) {
-				k = objind[i];
-				if ((j = CPXmultiobjgetobjval(Env, cpx, k, &obj)))
+				if ((j = CPXmultiobjgetobjval(Env, cpx, i, &obj)))
 					badret("CPXmultiobjgetobjval", j, 1);
 				g_fmtop(buf, obj);
-				Bpf(&B, "\t%-*s= %s\n", maxobjlen, obj_name(indobj[k]), buf);
+				Bpf(&B, "\t%-*s= %s\n", maxobjlen, obj_name(slotobj[i]), buf);
 				}
 			Bpf(&B, "Blended objective value%s:\n", nmopri == 1 ? "" : "s");
 			for(i = nmopri; i > 0; --i) {

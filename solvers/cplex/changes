@@ -1149,3 +1149,15 @@ mipcuts also sets bqpcuts, localimpliedcuts, mcfcuts, nodecuts, rltcuts
 and splitcuts; documentation fixes for mipcrossover (no -1), submipstartalg
 (no 6), presolvenode (values 2 and 3), limit defaults, integrality range,
 threads; prelinear marked deprecated.  README.cplex regenerated.
+
+20261027
+  cplex.c: fixes for multiobj=1: .objpriority values went to the wrong
+objectives unless the objectives were declared in increasing priority
+order (the reported objective values were mixed up too); objectives
+whose sense differs from that of the current objective were optimized
+in the wrong direction; an algorithm keyword such as dualopt silently
+disabled multiobjective optimization (now dualopt and primalopt select
+the LP method of each objective, other algorithm keywords are ignored
+with a message); multiobjective MIP problems returned no solution
+(error 1200 from CPXmultiobjgetobjval), so mipbasis and endbasis are
+now ignored for them.  README.cplex updated.

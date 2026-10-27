@@ -845,6 +845,10 @@ multiobj               whether to do multi-objective optimization:
                        Similarly, if no .objpriority values are given, 1 is
                        assumed for all.  For .objreltol and .objabstol, if
                        no values are given, all are assumed to be 0.
+                       Algorithm keywords dualopt and primalopt select the LP
+                       method for each objective; other algorithm keywords
+                       are ignored.  For MIP problems, no basis or dual values
+                       are returned (mipbasis and endbasis are ignored).
 
 nameround              Whether to mangle variable and constraint names
                        by turning [ and ] into ( and ), respectively:
