@@ -422,7 +422,10 @@ suf_sos_ASL(ASL *asl, int flags, int *nsosnz_p, char **sostype_p,
 		if ((i = *v) && !(i & 2)) {
 			j = sosbeg[i>>4]++;
 			sosref[j] = sufref[k = v - v0];
-			sosind[j] = k + f;
+			/* renumber like the columns: removed binaries may */
+			/* precede variables of other sets, e.g. the SOS1 sets */
+			/* AMPL generates for interval-union domains */
+			sosind[j] = (zv ? zv[k] : k) + f;
 			}
 	if (nsos1)
 		for(i = 0; i <= nsos; i++)

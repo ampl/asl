@@ -3489,3 +3489,11 @@ Add support for
 and
 	signpow(x,y) = sign(x)*|x|^y
 when these functions do not appear in amplfunc.dll. 
+
+20261027
+  suf_sos.c (solvers and solvers2):  renumber the members of the SOS
+sets that AMPL generates (suffixes .sos and .sosref) after removing the
+binary variables of SOS2 sets for piecewise-linear terms.  When such
+binaries preceded variables of another generated set, e.g., the SOS1 sets
+for variables with interval-union domains, the set members had wrong
+column numbers (Gurobi: "GRBaddsos failed"; faults with CPLEX, Xpress).
