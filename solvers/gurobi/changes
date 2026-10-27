@@ -472,3 +472,9 @@ default), tunetimelimit (default 86400), tunetrials (default 0 =
 automatic), aggregate (2 = aggressive), cuts (3 = very aggressive),
 iismethod (methods 0 to 3), nlpheur (-1 default, levels 1 to 3),
 nodemethod (default is -1), presparsify (1 = MIP only, 2 = all).
+
+20261027
+  gurobi.c:  with multiobj=1, objectives whose sense differs from that
+of the current objective were optimized in the wrong direction; their
+.objweight is now negated when passed to Gurobi.  The message for a
+negative .objweight named the wrong objective.

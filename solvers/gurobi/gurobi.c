@@ -4836,7 +4836,7 @@ main(int argc, char **argv)
 			for(i = i1 = 0; i < no; ++i) {
 				if ((t = objwt[operm[i]]) < 0.) {
 					badretfmt(564, "%s.objweight = %.g is negative.\n",
-						obj_name(i), objwt[i]);
+						obj_name(operm[i]), t);
 					rc = 1;
 					goto bailout;
 					}
@@ -4908,14 +4908,22 @@ main(int argc, char **argv)
 			if ((t = objconst(i1)) && GRBsetdblattr(mdl, "ObjNCon", t))
 				failed(env, "GRBsetdblattr(\"ObjNCon\")");
 			}
-		if (objpri || objabs || objrel || objwt) {
+		/* Gurobi uses the sense of the model for all objectives, */
+		/* so an objective of the opposite sense gets a negated weight. */
+		for(i = i2 = 0; i < no; ++i)
+			if (objtype[operm[i]] != objtype[objno1])
+				i2 = 1;
+		if (objpri || objabs || objrel || objwt || i2) {
 			for(i = 0; i < no; ++i) {
 				if (GRBsetintparam(env, GRB_INT_PAR_OBJNUMBER, i))
 					failed(env, "GRBsetintparam(\"ObjNumber\")");
 				i1 = operm[i];
 				if (objpri && GRBsetintattr(mdl, "ObjNPriority", objpri[i1]))
 					failed(env, "GRBsetintattr(\"ObjNPriority\")");
-				if (objwt && GRBsetdblattr(mdl, "ObjNWeight", objwt[i1]))
+				t = objwt ? objwt[i1] : 1.;
+				if (objtype[i1] != objtype[objno1])
+					t = -t;
+				if ((objwt || i2) && GRBsetdblattr(mdl, "ObjNWeight", t))
 					failed(env, "GRBsetdbkattr(\"ObjNWeight\")");
 				if (objabs && GRBsetdblattr(mdl, "ObjNAbsTol", objabs[i1]))
 					failed(env, "GRBsetdbkattr(\"ObjNAbsTol\")");
