@@ -37,7 +37,7 @@ NNOBJ_chk(ASL *asl, int i, const char *who)
 obj2val_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	ASL_fgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cde *d;
 	expr *e1;
 	int ij, j1, kv, *vmi;
@@ -46,6 +46,7 @@ obj2val_ASL(ASL *a, int i, const real *X, fint *nerror)
 
 	NNOBJ_chk(a, i, "obj2val");
 	asl = (ASL_fgh*)a;
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
@@ -103,7 +104,7 @@ obj2val_ASL(ASL *a, int i, const real *X, fint *nerror)
 			f += X[gr->varno] * gr->coef;
 	  }
  done:
-	err_jmp = 0;
+	err_jmp = Jsave;
 	return f;
 	}
 
@@ -111,7 +112,7 @@ obj2val_ASL(ASL *a, int i, const real *X, fint *nerror)
 obj2grd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_fgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cde *d;
 	fint ne0;
 	int ij, j, *vmi, xksave, *z;
@@ -125,6 +126,7 @@ obj2grd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 	if (!want_derivs)
 		No_derivs_ASL(who);
 	ne0 = -1;
+	Jsave = err_jmp;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
@@ -191,5 +193,5 @@ obj2grd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 			G[i] = Adjoints[i];
 			}
  done:
-	err_jmp = 0;
+	err_jmp = Jsave;
 	}

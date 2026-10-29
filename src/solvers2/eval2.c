@@ -2825,7 +2825,7 @@ conpval_ew_ASL(EvalWorkspace *ew, const real *X, real *F, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cgrad *gr, **gr0;
 	int *c1, *cm, i, j, j1, je, kv, nc1, *o, *vmi;
 	ps_func *p, *p0;
@@ -2834,11 +2834,14 @@ conpval_ew_ASL(EvalWorkspace *ew, const real *X, real *F, fint *nerror)
 
 	asl = (ASL_pfgh*)(a = ew->asl);
 	ASL_CHECK(a, ASL_read_pfgh, "conpval");
+	Jsave = ew->err_jmpw;
 	if (nerror && *nerror >= 0) {
 		ew->err_jmpw = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
-		if ((*nerror = i))
+		if ((*nerror = i)) {
+			ew->err_jmpw = Jsave;
 			return;
+			}
 		}
 	ew->wantderiv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -2917,7 +2920,7 @@ conpval_ew_ASL(EvalWorkspace *ew, const real *X, real *F, fint *nerror)
 		*F++ = f;
 		}
 	ew->x0kind |= ASL_have_conval;
-	ew->err_jmpw = 0;
+	ew->err_jmpw = Jsave;
 	}
 
  void
@@ -2925,7 +2928,7 @@ jacpval_ew_ASL(EvalWorkspace *ew, const real *X, real *G, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cgrad *gr, **gr0, *gr1;
 	fint ne0;
 	int *cm, i, i1, j, k, *vmi;
@@ -2940,11 +2943,14 @@ jacpval_ew_ASL(EvalWorkspace *ew, const real *X, real *G, fint *nerror)
 		No_derivs_ASL(who);
 	ne0 = -1;
 	s = ew->derps;
+	Jsave = ew->err_jmpw;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		ew->err_jmpw = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
-		if ((*nerror = i))
+		if ((*nerror = i)) {
+			ew->err_jmpw = Jsave;
 			return;
+			}
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	++ew->stats.jacval;
@@ -2960,8 +2966,10 @@ jacpval_ew_ASL(EvalWorkspace *ew, const real *X, real *G, fint *nerror)
 			}
 		else
 			conpval_ew_ASL(ew,X,0,nerror);
-		if (ne0 >= 0 && *nerror)
+		if (ne0 >= 0 && *nerror) {
+			ew->err_jmpw = Jsave;
 			return;
+			}
 		}
 	nx = ew->nxval;
 	gr0 = asl->i.Cgrad0;
@@ -3017,7 +3025,7 @@ jacpval_ew_ASL(EvalWorkspace *ew, const real *X, real *G, fint *nerror)
 			for(; gr; gr = gr->next)
 				G[gr->goff] = s[gr->varno];
 		}
-	ew->err_jmpw = 0;
+	ew->err_jmpw = Jsave;
 	}
 
  int
@@ -3052,7 +3060,7 @@ objpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	int *c1, ij, j1, kv, nc1, *o, *vmi;
 	ograd *gr;
 	ps_func *p;
@@ -3060,11 +3068,14 @@ objpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 
 	asl = (ASL_pfgh*)(a = ew->asl);
 	NNOBJ_chk(a, i, "objpval");
+	Jsave = ew->err_jmpw;
 	if (nerror && *nerror >= 0) {
 		ew->err_jmpw = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if ((*nerror = ij))
+		if ((*nerror = ij)) {
+			ew->err_jmpw = Jsave;
 			return 0.;
+			}
 		}
 	ew->wantderiv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -3121,7 +3132,7 @@ objpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 		for(; gr; gr = gr->next)
 			f += X[gr->varno] * gr->coef;
 	  }
-	ew->err_jmpw = 0;
+	ew->err_jmpw = Jsave;
 	return f;
 	}
 
@@ -3130,7 +3141,7 @@ objpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	ASL *a;
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	fint ne0;
 	int ij, j, *vmi, *z;
 	ograd *gr, *gr0;
@@ -3144,11 +3155,14 @@ objpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 		No_derivs_ASL(who);
 	p = asl->P.ops + i;
 	ne0 = -1;
+	Jsave = ew->err_jmpw;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		ew->err_jmpw = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if ((*nerror = ij))
+		if ((*nerror = ij)) {
+			ew->err_jmpw = Jsave;
 			return;
+			}
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	++ew->stats.objgrd;
@@ -3164,8 +3178,10 @@ objpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 			}
 		else
 			objpval_ew_ASL(ew, i, X, nerror);
-		if (ne0 >= 0 && *nerror)
+		if (ne0 >= 0 && *nerror) {
+			ew->err_jmpw = Jsave;
 			return;
+			}
 		}
 	if (ew->Derrs)
 		deriv_errchk_ASL(ew, -(i+1), 1, 2);
@@ -3188,8 +3204,10 @@ objpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 	if (p->g)
 		addgr(ew, p);
 	ew->noxgval[i] = ew->nxval;
-	if (!G)
+	if (!G) {
+		ew->err_jmpw = Jsave;
 		return;
+		}
 	if (zerograds) {	/* sparse gradients */
 		z = zerograds[i];
 		while((j = *z++) >= 0)
@@ -3221,7 +3239,7 @@ objpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 			i = gr->varno;
 			G[i] = s[i];
 			}
-	ew->err_jmpw = 0;
+	ew->err_jmpw = Jsave;
 	}
 
  static void
@@ -3239,17 +3257,20 @@ INchk(ASL *asl, const char *who, int i, int ix)
 cpval(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 {
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	int L, *c1, nc, nc1, *o;
 	ps_func *p;
 	real f;
 
 	asl = (ASL_pfgh*)ew->asl;
+	Jsave = ew->err_jmpw;
 	if (nerror && *nerror >= 0) {
 		ew->err_jmpw = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
-		if ((*nerror = L))
+		if ((*nerror = L)) {
+			ew->err_jmpw = Jsave;
 			return 0.;
+			}
 		}
 	ew->wantderiv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -3281,7 +3302,7 @@ cpval(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 		f = 0.;
  done:
 	ew->ncxval[i] = ew->nxval;
-	ew->err_jmpw = 0;
+	ew->err_jmpw = Jsave;
 	return f;
 	}
 
@@ -3372,7 +3393,7 @@ lconpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 Congrdp(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cgrad *gr, *gr0;
 	fint ne0;
 	int i0, j, *vmi;
@@ -3380,11 +3401,14 @@ Congrdp(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 	real *s, *vscale;
 
 	ne0 = -1;
+	Jsave = ew->err_jmpw;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		ew->err_jmpw = &err_jmp0;
 		i0 = setjmp(err_jmp0.jb);
-		if ((*nerror = i0))
+		if ((*nerror = i0)) {
+			ew->err_jmpw = Jsave;
 			return;
+			}
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	++ew->stats.conigrd;
@@ -3403,8 +3427,10 @@ Congrdp(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 			}
 		else
 			conpival_ew_ASL(ew,i,X,nerror);
-		if (ne0 >= 0 && *nerror)
+		if (ne0 >= 0 && *nerror) {
+			ew->err_jmpw = Jsave;
 			return;
+			}
 		}
 	if (ew->Derrs)
 		deriv_errchk_ASL(ew, i, 1, 2);
@@ -3428,8 +3454,10 @@ Congrdp(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 	if (p->g)
 		addgr(ew, p);
 	ew->ncxgval[i] = ew->nxval;
-	if (!G)
+	if (!G) {
+		ew->err_jmpw = Jsave;
 		return;
+		}
 	vmi = 0;
 	if (asl->i.vmap)
 		vmi = get_vminv_ASL((ASL*)asl);
@@ -3479,7 +3507,7 @@ Congrdp(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 		while(i0 < i)
 			G[i0++] = 0;
 	  }
-	ew->err_jmpw = 0;
+	ew->err_jmpw = Jsave;
 	}
 
  void

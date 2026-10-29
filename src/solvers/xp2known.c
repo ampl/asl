@@ -137,13 +137,14 @@ xp_check_ASL(ASL_pfgh *asl, const real *x)
  int
 xp2known_ASL(ASL* asl, const real *X, fint *nerror)
 {
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	int ij, rc;
 
 	ASL_CHECK(asl, ASL_read_pfgh, "xp2known");
 	rc = 1;
 	if (asl->i.xknown_ignore)
 		goto ret;
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
@@ -155,7 +156,7 @@ xp2known_ASL(ASL* asl, const real *X, fint *nerror)
 	rc = xp_check_ASL((ASL_pfgh*)asl, X);
 	asl->i.x_known = 1;
  done:
-	err_jmp = 0;
+	err_jmp = Jsave;
  ret:
 	return rc;
 	}

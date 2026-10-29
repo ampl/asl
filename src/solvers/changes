@@ -3497,3 +3497,17 @@ binary variables of SOS2 sets for piecewise-linear terms.  When such
 binaries preceded variables of another generated set, e.g., the SOS1 sets
 for variables with interval-union domains, the set members had wrong
 column numbers (Gurobi: "GRBaddsos failed"; faults with CPLEX, Xpress).
+
+20261029
+  con1ival.c, con2ival.c, con2val.c, conpval.c, conval.c, obj2val.c,
+objval.c, xp1known.c, xp2known.c, and solvers2/eval1.c, eval2.c and
+xp2known.c:  the function and gradient evaluation routines now restore
+the error-recovery setting they found on entry rather than clearing it.
+This fixes exit(1), instead of the error being returned in *nerror, after
+a derivative error such as "can't evaluate sqrt'(0)" when jacval, congrd
+or objgrd was called with nerror pointing to a nonnegative value at a
+point where the function values were not yet known, and when one of the
+Hessian routines with an nerror argument (sphese, fullhese, duthese,
+hvinite, hvcompde, hvcompse) had to compute function values or gradients
+first.  After returning an error, these routines no longer leave the
+error-recovery setting pointing to their own jump buffer.

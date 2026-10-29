@@ -39,16 +39,19 @@ INchk(ASL *asl, const char *who, int i, int ix)
  static real
 c2ival(ASL_fgh *asl, int i, const real *X, fint *nerror)
 {
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	expr *e;
 	int ij, nc;
 	real f;
 
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if ((*nerror = ij))
+		if ((*nerror = ij)) {
+			err_jmp = Jsave;
 			return 0.;
+			}
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -70,7 +73,7 @@ c2ival(ASL_fgh *asl, int i, const real *X, fint *nerror)
 		e = con_de[i].e;
 	f = (*e->op)(e C_ASL);
 	asl->i.ncxval[i] = asl->i.nxval;
-	err_jmp = 0;
+	err_jmp = Jsave;
 	return f;
 	}
 
@@ -149,18 +152,21 @@ lcon2val_ASL(ASL *a, int i, const real *X, fint *nerror)
  static void
 Congrd2(ASL_fgh *asl, int i, const real *X, real *G, fint *nerror)
 {
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cde *d;
 	cgrad *gr, *gr1;
 	int i0, ij, j, *vmi, xksave;
 	real *Adjoints, *vscale;
 	size_t L;
 
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if ((*nerror = ij))
+		if ((*nerror = ij)) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known) {
@@ -174,8 +180,10 @@ Congrd2(ASL_fgh *asl, int i, const real *X, real *G, fint *nerror)
 		asl->i.x_known = 1;
 		con2ival_nomap_ASL((ASL*)asl,i,X,nerror);
 		asl->i.x_known = xksave;
-		if (nerror && *nerror)
+		if (nerror && *nerror) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	if (asl->i.Derrs)
 		deriv_errchk_ASL((ASL*)asl, i, 1, 2);
@@ -243,7 +251,7 @@ Congrd2(ASL_fgh *asl, int i, const real *X, real *G, fint *nerror)
 		while(i0 < i)
 			G[i0++] = 0;
 	  }
-	err_jmp = 0;
+	err_jmp = Jsave;
 	}
 
  void

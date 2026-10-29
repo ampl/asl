@@ -198,7 +198,7 @@ psgcomp(ASL_pfgh *asl, ps_func *f)
 conpval_ASL(ASL *a, const real *X, real *F, fint *nerror)
 {
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cgrad *gr, **gr0;
 	expr_n *en;
 	int *cm, i, j, j1, je, kv, *ncxval, nx, *vmi;
@@ -207,11 +207,14 @@ conpval_ASL(ASL *a, const real *X, real *F, fint *nerror)
 
 	ASL_CHECK(a, ASL_read_pfgh, "conpval");
 	asl = (ASL_pfgh*)a;
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
-		if ((*nerror = i))
+		if ((*nerror = i)) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -284,7 +287,7 @@ conpval_ASL(ASL *a, const real *X, real *F, fint *nerror)
 			f *= cscale[j];
 		*F++ = f;
 		}
-	err_jmp = 0;
+	err_jmp = Jsave;
 	x0kind |= ASL_have_conval;
 	}
 
@@ -292,7 +295,7 @@ conpval_ASL(ASL *a, const real *X, real *F, fint *nerror)
 jacpval_ASL(ASL *a, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cgrad *gr, **gr0, *gr1;
 	fint ne0;
 	int *cm, i, i1, j, k, nx, *vmi, xksave;
@@ -309,11 +312,14 @@ jacpval_ASL(ASL *a, const real *X, real *G, fint *nerror)
 	if (!want_derivs)
 		No_derivs_ASL(who);
 	ne0 = -1;
+	Jsave = err_jmp;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
-		if ((*nerror = i))
+		if ((*nerror = i)) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	co_index = j = n_conjac[0];
@@ -322,8 +328,10 @@ jacpval_ASL(ASL *a, const real *X, real *G, fint *nerror)
 		xksave = asl->i.x_known;
 		conpval_ASL(a,X,0,nerror);
 		asl->i.x_known = xksave;
-		if (ne0 >= 0 && *nerror)
+		if (ne0 >= 0 && *nerror) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	nx = asl->i.nxval;
 	Adjoints = adjoints;
@@ -392,7 +400,7 @@ jacpval_ASL(ASL *a, const real *X, real *G, fint *nerror)
 			for(; gr; gr = gr->next)
 				G[gr->goff] = Adjoints[gr->varno];
 		}
-	err_jmp = 0;
+	err_jmp = Jsave;
 	}
 
  int
@@ -426,7 +434,7 @@ NNOBJ_chk(ASL *asl, int i, const char *who)
 objpval_ASL(ASL *a, int i, const real *X, fint *nerror)
 {
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	expr_n *en;
 	int ij, j1, kv, *vmi;
 	ograd *gr;
@@ -435,11 +443,14 @@ objpval_ASL(ASL *a, int i, const real *X, fint *nerror)
 
 	NNOBJ_chk(a, i, "objpval");
 	asl = (ASL_pfgh*)a;
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if ((*nerror = ij))
+		if ((*nerror = ij)) {
+			err_jmp = Jsave;
 			return 0.;
+			}
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -489,7 +500,7 @@ objpval_ASL(ASL *a, int i, const real *X, fint *nerror)
 		for(; gr; gr = gr->next)
 			f += X[gr->varno] * gr->coef;
 	  }
-	err_jmp = 0;
+	err_jmp = Jsave;
 	return f;
 	}
 
@@ -497,7 +508,7 @@ objpval_ASL(ASL *a, int i, const real *X, fint *nerror)
 objpgrd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 {
 	ASL_pfgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	fint ne0;
 	int ij, j, *vmi, xksave, *z;
 	linarg *la;
@@ -513,11 +524,14 @@ objpgrd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 		No_derivs_ASL(who);
 	p = asl->P.ops + i;
 	ne0 = -1;
+	Jsave = err_jmp;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
-		if ((*nerror = ij))
+		if ((*nerror = ij)) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	co_index = -(i + 1);
@@ -528,8 +542,10 @@ objpgrd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 		asl->i.x_known = 1;
 		objpval_ASL(a, i, X, nerror);
 		asl->i.x_known = xksave;
-		if (ne0 >= 0 && *nerror)
+		if (ne0 >= 0 && *nerror) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	if (asl->i.Derrs)
 		deriv_errchk_ASL(a, -(i+1), 1, 2);
@@ -543,8 +559,10 @@ objpgrd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 	for(la = asl->P.lalist; la; la = la->lnext)
 		Adjoints[la->v->a] = 0.;
 	psderprop(asl, p);
-	if (!G)
+	if (!G) {
+		err_jmp = Jsave;
 		return;
+		}
 	for(la = asl->P.lalist; la; la = la->lnext)
 		if ((t = Adjoints[la->v->a])) {
 			gr = la->nz;
@@ -582,7 +600,7 @@ objpgrd_ASL(ASL *a, int i, const real *X, real *G, fint *nerror)
 			i = gr->varno;
 			G[i] = Adjoints[i];
 			}
-	err_jmp = 0;
+	err_jmp = Jsave;
 	}
 
  static void
@@ -599,18 +617,21 @@ INchk(ASL *asl, const char *who, int i, int ix)
  static real
 cpval(ASL_pfgh *asl, int i, const real *X, fint *nerror)
 {
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	expr *e;
 	expr_n *en;
 	int L, nc;
 	ps_func *p;
 	real f;
 
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
-		if ((*nerror = L))
+		if ((*nerror = L)) {
+			err_jmp = Jsave;
 			return 0.;
+			}
 		}
 	want_deriv = want_derivs;
 	errno = 0;	/* in case f77 set errno opening files */
@@ -636,7 +657,7 @@ cpval(ASL_pfgh *asl, int i, const real *X, fint *nerror)
 		}
  done:
 	asl->i.ncxval[i] = asl->i.nxval;
-	err_jmp = 0;
+	err_jmp = Jsave;
 	return f;
 	}
 
@@ -715,7 +736,7 @@ lconpval(ASL *a, int i, const real *X, fint *nerror)
  static void
 Congrdp(ASL_pfgh *asl, int i, const real *X, real *G, fint *nerror)
 {
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cgrad *gr, *gr0;
 	fint ne0;
 	int i0, j, *vmi, xksave;
@@ -727,11 +748,14 @@ Congrdp(ASL_pfgh *asl, int i, const real *X, real *G, fint *nerror)
 	real *Adjoints, t, *vscale;
 
 	ne0 = -1;
+	Jsave = err_jmp;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		i0 = setjmp(err_jmp0.jb);
-		if ((*nerror = i0))
+		if ((*nerror = i0)) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	errno = 0;	/* in case f77 set errno opening files */
 	if (!asl->i.x_known) {
@@ -745,8 +769,10 @@ Congrdp(ASL_pfgh *asl, int i, const real *X, real *G, fint *nerror)
 		asl->i.x_known = 1;
 		conpival_ASL((ASL*)asl,i,X,nerror);
 		asl->i.x_known = xksave;
-		if (ne0 >= 0 && *nerror)
+		if (ne0 >= 0 && *nerror) {
+			err_jmp = Jsave;
 			return;
+			}
 		}
 	if (asl->i.Derrs)
 		deriv_errchk_ASL((ASL*)asl, i, 1, 1);
@@ -768,8 +794,10 @@ Congrdp(ASL_pfgh *asl, int i, const real *X, real *G, fint *nerror)
 			}
 	b = p->b;
 	psderprop(asl, p);
-	if (!G)
+	if (!G) {
+		err_jmp = Jsave;
 		return;
+		}
 	while(b < be)
 		if ((U = (b++)->U) && (i = U->nintv)) {
 			lap = U->lap;
@@ -833,7 +861,7 @@ Congrdp(ASL_pfgh *asl, int i, const real *X, real *G, fint *nerror)
 		while(i0 < i)
 			G[i0++] = 0;
 	  }
-	err_jmp = 0;
+	err_jmp = Jsave;
 	}
 
  void

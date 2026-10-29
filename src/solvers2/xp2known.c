@@ -136,7 +136,7 @@ xp_check_ASL(EvalWorkspace *ew, const real *x)
 xp2known_ew_ASL(EvalWorkspace *ew, const real *X, fint *nerror)
 {
 	ASL *a;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	int ij, rc;
 
 	a = ew->asl;
@@ -144,6 +144,7 @@ xp2known_ew_ASL(EvalWorkspace *ew, const real *X, fint *nerror)
 	rc = 1;
 	if (ew->x0kind & ASL_xknown_ignore)
 		goto ret;
+	Jsave = ew->err_jmpw;
 	if (nerror && *nerror >= 0) {
 		ew->err_jmpw = &err_jmp0;
 		ij = setjmp(err_jmp0.jb);
@@ -154,7 +155,7 @@ xp2known_ew_ASL(EvalWorkspace *ew, const real *X, fint *nerror)
 	rc = xp_check_ASL(ew, X);
 	ew->x0kind |= ASL_x_known;
  done:
-	ew->err_jmpw = 0;
+	ew->err_jmpw = Jsave;
  ret:
 	return rc;
 	}
