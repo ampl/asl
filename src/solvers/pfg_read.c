@@ -4461,6 +4461,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			a->p.Jacval = jacpval_ASL;
 			a->p.Lconval= lconpval_ASL;
 			a->p.Hvcomp = a->p.Hvcomp_nomap = hvpcomp_ASL;
+			a->p.Hvcompe = a->p.Hvcompe_nomap = hvpcompe_ASL;
 			a->p.Hvcompd = hvpcompd_ASL;
 			a->p.Hvcompde = hvpcompde_ASL;
 			a->p.Hvcomps = hvpcomps_ASL;

@@ -775,7 +775,7 @@ Congrdp(ASL_pfgh *asl, int i, const real *X, real *G, fint *nerror)
 			}
 		}
 	if (asl->i.Derrs)
-		deriv_errchk_ASL((ASL*)asl, i, 1, 1);
+		deriv_errchk_ASL((ASL*)asl, i, 1, 2);
 	Adjoints = adjoints;
 	p = asl->P.cps + i;
 	p->nxval = asl->i.nxval;

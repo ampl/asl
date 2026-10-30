@@ -3511,3 +3511,14 @@ Hessian routines with an nerror argument (sphese, fullhese, duthese,
 hvinite, hvcompde, hvcompse) had to compute function values or gradients
 first.  After returning an error, these routines no longer leave the
 error-recovery setting pointing to their own jump buffer.
+
+  conpval.c:  congrd with pfgh_read now reports derivative errors such
+as "can't evaluate sqrt'(0)" (in *nerror or by exiting), as the other
+gradient routines do, instead of returning a zero gradient with no error.
+  xp2known.c:  xknown with pfgh_read set cv_index instead of co_index
+(as in xp1known.c and x2check.c), so a later evaluation error was
+reported as "Error evaluating "var =" definition -1" instead of naming
+the constraint or objective.
+  pfg_read.c:  pfgh_read now provides hvcompe (asl->p.Hvcompe).
+  asl.h:  macro fullhese called Fulhes instead of Fulhese (it did not
+compile); new macro sphese (as in solvers2/asl.h).
