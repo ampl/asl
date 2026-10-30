@@ -22,7 +22,7 @@ of or in connection with the use or performance of this software.
 con2val_ASL(ASL *a, const real *X, real *F, fint *nerror)
 {
 	ASL_fgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cde *d, *d0;
 	cgrad *gr, **gr0;
 	expr *e1;
@@ -31,6 +31,7 @@ con2val_ASL(ASL *a, const real *X, real *F, fint *nerror)
 
 	ASL_CHECK(a, ASL_read_fgh, "con2val");
 	asl = (ASL_fgh*)a;
+	Jsave = err_jmp;
 	if (nerror && *nerror >= 0) {
 		err_jmp = &err_jmp0;
 		i = setjmp(err_jmp0.jb);
@@ -103,14 +104,14 @@ con2val_ASL(ASL *a, const real *X, real *F, fint *nerror)
 		}
 	x0kind |= ASL_have_conval;
  done:
-	err_jmp = 0;
+	err_jmp = Jsave;
 	}
 
  void
 jac2val_ASL(ASL *a, const real *X, real *G, fint *nerror)
 {
 	ASL_fgh *asl;
-	Jmp_buf err_jmp0;
+	Jmp_buf err_jmp0, *Jsave;
 	cde *d, *d0;
 	cgrad *gr, **gr0, *gr1;
 	fint ne0;
@@ -124,6 +125,7 @@ jac2val_ASL(ASL *a, const real *X, real *G, fint *nerror)
 	if (!want_derivs)
 		No_derivs_ASL(who);
 	ne0 = -1;
+	Jsave = err_jmp;
 	if (nerror && (ne0 = *nerror) >= 0) {
 		err_jmp = &err_jmp0;
 		L = setjmp(err_jmp0.jb);
@@ -190,7 +192,7 @@ jac2val_ASL(ASL *a, const real *X, real *G, fint *nerror)
 				G[gr->goff] = Adjoints[gr->varno];
 		}
  done:
-	err_jmp = 0;
+	err_jmp = Jsave;
 	}
 
  int
