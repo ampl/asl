@@ -1187,7 +1187,7 @@ hvpcompd_ASL(ASL *a, real *hv, const real *p, int co)
 		if (no >= nlo)
 			return;
 		f = asl->P.ops + no;
-		if (asl->i.ncxval[no] != nx)
+		if (asl->i.noxval[no] != nx)
 			objpval_ASL(a, no, Lastx, 0);
 		if (f->ng && f->nxval != nx)
 			objpgrd_ASL(a, no, Lastx, 0, 0);
@@ -1456,7 +1456,7 @@ hvpcomps_ASL(ASL *a, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 		if (no >= nlo)
 			return 0;
 		f = asl->P.ops + no;
-		if (asl->i.ncxval[no] != nx)
+		if (asl->i.noxval[no] != nx)
 			objpval_ASL(a, no, Lastx, 0);
 		if (f->ng && f->nxval != nx)
 			objpgrd_ASL(a, no, Lastx, 0, 0);

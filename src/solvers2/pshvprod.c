@@ -2583,7 +2583,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		f = asl->P.cps + co;
 		if (ew->ncxval[co] != nx)
 			conpival_ew_ASL(ew, co, ew->Lastx, 0);
-		if (f->g && ew->ncxval[co] != nx)
+		if (f->g && ew->ncxgval[co] != nx)
 			conpgrd_ew_ASL(ew, co, ew->Lastx, 0, 0);
 		if ((s = asl->i.lscale))
 			t2 = s[co];
@@ -2613,9 +2613,9 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		if (no >= nlo)
 			return;
 		f = asl->P.ops + no;
-		if (ew->ncxval[no] != nx)
+		if (ew->noxval[no] != nx)
 			objpval_ew_ASL(ew, no, ew->Lastx, 0);
-		if (f->g && ew->noxval[no] != nx)
+		if (f->g && ew->noxgval[no] != nx)
 			objpgrd_ew_ASL(ew, no, ew->Lastx, 0, 0);
 		og = og0 = Ograd[no];
 		if ((s = asl->i.vscale)) {
@@ -2862,7 +2862,7 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 		f = asl->P.cps + co;
 		if (ew->ncxval[co] != nx)
 			conpival_ew_ASL(ew, co, ew->Lastx, 0);
-		if (f->g && ew->ncxval[co] != nx)
+		if (f->g && ew->ncxgval[co] != nx)
 			conpgrd_ew_ASL(ew, co, ew->Lastx, 0, 0);
 		if ((s = asl->i.lscale))
 			t2 = s[co];
@@ -2891,9 +2891,9 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 		if (no >= nlo)
 			return 0;
 		f = asl->P.ops + no;
-		if (ew->ncxval[no] != nx)
+		if (ew->noxval[no] != nx)
 			objpval_ew_ASL(ew, no, ew->Lastx, 0);
-		if (f->g && ew->noxval[no] != nx)
+		if (f->g && ew->noxgval[no] != nx)
 			objpgrd_ew_ASL(ew, no, ew->Lastx, 0, 0);
 		og = og0 = Ograd[no];
 		if ((vscale = asl->i.vscale)) {
