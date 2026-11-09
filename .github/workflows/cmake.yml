@@ -75,7 +75,7 @@ jobs:
             cc:p
             cmake:p
             ninja:p
-            ${{ matrix.msystem == 'CLANG64' && 'llvm-openmp:p' || '' }}
+            ${{ matrix.msystem == 'CLANG64' && 'llvm-openmp:p' || 'libgomp:p' }}
 
       - name: Configure CMake
         run: cmake -DCMAKE_BUILD_TYPE="${{env.BUILD_TYPE}}" -DBUILD_MT_LIBS=${{ matrix.mt }} -DBUILD_CPP=ON -B "${{github.workspace}}/build"
@@ -88,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        macos_version: [14, 15]
+        macos_version: [15, 26]
 
     steps:
       - name: Checkout
