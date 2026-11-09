@@ -17,12 +17,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ubuntu_version: [20.04, 22.04]
+        ubuntu_version: [22.04, 24.04]
         mt: [ON, OFF]
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
                      
     - name: Configure CMake
       run: cmake -DCMAKE_BUILD_TYPE="${{env.BUILD_TYPE}}" -DBUILD_MT_LIBS=${{ matrix.mt }} -DBUILD_CPP=ON -DBUILD_EXAMPLES=ON -DBUILD_F2C=ON -B "${{github.workspace}}/build" 
@@ -36,12 +36,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        win_version: [2019, 2022]
+        win_version: [2022, 2025]
         mt: [ON, OFF]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3   
+        uses: actions/checkout@v4   
 
       - name: Configure CMake
         run: cmake -DCMAKE_BUILD_TYPE="${{env.BUILD_TYPE}}" -DBUILD_MT_LIBS=${{ matrix.mt }} -DBUILD_CPP=ON -DBUILD_DYNRT_LIBS=ON -B "${{github.workspace}}/build" 
@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install MinGW-w64 packages
         uses: msys2/setup-msys2@v2
@@ -88,11 +88,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        macos_version: [11, 12]
+        macos_version: [14, 15]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install OpenMP
         run: brew install libomp        
