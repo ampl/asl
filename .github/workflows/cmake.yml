@@ -75,7 +75,7 @@ jobs:
             cc:p
             cmake:p
             ninja:p
-            openmp:p
+            ${{ matrix.msystem == 'CLANG64' && 'llvm-openmp:p' || '' }}
 
       - name: Configure CMake
         run: cmake -DCMAKE_BUILD_TYPE="${{env.BUILD_TYPE}}" -DBUILD_MT_LIBS=${{ matrix.mt }} -DBUILD_CPP=ON -B "${{github.workspace}}/build"
