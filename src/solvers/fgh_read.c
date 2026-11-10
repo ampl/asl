@@ -53,6 +53,7 @@ extern void con2grd_nomap_ASL(ASL*, int, const real *, real*, fint*);
 
  static expr *(*holread) ANSI((EdRead*));
  extern real f_OPCPOW ANSI((expr* A_ASL));
+ extern real f_OP1POW ANSI((expr* A_ASL));
 
  static ASL_fgh *asl;
 
@@ -450,6 +451,9 @@ eread(EdRead *R, int deriv)
 			rv = new_expr(k, L, eread(R, deriv), deriv);
 			rv->dL = 1.;
 			rv->dR = dvalue[k];	/* for PLUS, MINUS, REM */
+			if (rv->op == f_OP1POW)
+				/* f_OP1POW (rops2.c) takes its constant exponent from dR */
+				rv->dR = ((expr_n *)rv->R.e)->v;
 			return rv;
 
 		case 3:	/* vararg (min, max) */
