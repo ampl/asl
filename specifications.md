@@ -49,11 +49,12 @@ Validation fixtures should cover supported format/read modes, variable/constrain
 | Validation layer | Source | Scope and limitation |
 | --- | --- | --- |
 | Standalone build/variant checks | [CMakeLists.txt](CMakeLists.txt), [.github/workflows/cmake.yml](.github/workflows/cmake.yml) | CI builds selected platforms/variants; inspected workflow contains no numerical test execution. |
+| Numerical regression tests | [test](test), [test/README.md](test/README.md) | Optional CTest suite (`BUILD_ASL_TESTS`); not run by the CI workflow. |
 | Evaluation and derivative exercises | [src/examples](src/examples), including `evalchk` and `gjh` | Useful executable entry points; building examples is not proof that numerical cases ran. |
 | Caller/integration regressions | Public applications and solver-interface fixtures | Validate real model reads/evaluation/result output with explicit consumer settings; do not replace independent library checks. |
 | Proposed numerical regression suite | To be selected/organized by maintainers | Analytic/reference values, gradients, Jacobians, Hessian-related operations, sparsity/indexing, invalid inputs, and relevant variants. |
 
-No top-level CTest suite is registered in the inspected ASL CMake configuration. **Proposed:** record numerical tests separately from build checks and add reproducible cases for correctness fixes. Finite-difference checks can supplement analytic references on well-conditioned, smooth cases; discontinuities and domain boundaries need deliberate expectations and tolerances.
+Numerical regression tests are registered with CTest when the project is configured with `BUILD_ASL_TESTS=ON` ([test/README.md](test/README.md)): small `.nl` fixtures are evaluated through the `fg`, `fgh` and `pfgh` readers of `solvers` and the `fg` and `pfgh` readers of `solvers2`, comparing derivatives with finite differences and values between readers. The CI workflow does not run them yet. Add a fixture for each correctness fix. Finite-difference checks suit well-conditioned, smooth points; discontinuities and domain boundaries need deliberate expectations and tolerances.
 
 Logs and example output should diagnose read/evaluation failures without unnecessarily exposing confidential model contents. The core library is not an always-on service; availability/monitoring/backup obligations belong to applications that embed it.
 
@@ -106,7 +107,7 @@ To use ASL, include the headers for the chosen API family, link its compatible t
 
 For a concrete derivative-output workflow, build examples, place `gjh` on the executable search path, and follow [README.gjh](src/examples/README.gjh) with a valid AMPL model. It computes gradient/Jacobian/Hessian information and emits a file for inspection; this is evaluation, not optimization. Read the example's output to locate its generated file.
 
-The inspected standalone CMake project does not register CTest numerical tests. Validate changed evaluations using appropriate reference fixtures and example/client programs, and record commands, inputs, expected values, tolerances, and results. Do not report a successful build as a numerical test pass.
+Run the CTest suite (`-DBUILD_ASL_TESTS=ON`, then `ctest`) after changing readers or evaluators, and extend it for the changed behavior. Where it does not reach, validate using appropriate reference fixtures and example/client programs, and record commands, inputs, expected values, tolerances, and results. Do not report a successful build as a numerical test pass.
 
 ## 3. Design choices
 
