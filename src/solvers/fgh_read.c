@@ -1658,6 +1658,14 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
+				/* The owner must agree with the header: a zero owner */
+				/* for a variable counted as used by one constraint */
+				/* or objective (or the converse) would select the */
+				/* wrong expression array. */
+				if ((k >= a->i.n_var0 + combc + como) != (j != 0))
+					scream(R, ASL_readerr_corrupt,
+		"defined variable %d has owner %d, contrary to the header's common expression counts\n",
+						k, j);
 				if (k >= nvar0)
 					k += nvinc;
 				if (k < nv0 || k >= nv)
