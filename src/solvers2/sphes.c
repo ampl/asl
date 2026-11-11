@@ -587,13 +587,15 @@ alignarg(more_maxminlist:)
 					--opg1;
 					--mmp1;
 					if (mmp1->d >= 0) {
+						/* Every operand may be the selected one, */
+						/* also when the current direction does */
+						/* not reach it (L->dO == 0): the result's */
+						/* other uses give it cross terms. */
 						L = (Eresult*)(w + *opg1);
-						if (L->dO) {
-							L->aO += r->aO;
-							L->adO += r->adO;
-							if (mmp1->b)
-								hv_back1(mmp1->b, w, mmp1->f);
-							}
+						L->aO += r->aO;
+						L->adO += r->adO;
+						if (mmp1->b)
+							hv_back1(mmp1->b, w, mmp1->f);
 						}
 					}
 				}

@@ -695,6 +695,11 @@ hv_back(int *o, real *w, real aO0, real adO0)
 			o = cp->b;
 			continue;
 
+#ifdef X64_bit_pointers
+		/* same operand layout as n_OPPLTERM1: only the plterm */
+		/* pointer that follows is shifted for alignment */
+		case OP_PLTERM1align:
+#endif
 		case n_OPPLTERM1:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);
@@ -824,7 +829,6 @@ hv_back(int *o, real *w, real aO0, real adO0)
 
 		  case OPVARREF:
 		  case OP_PLTERM0align:
-		  case OP_PLTERM1align:
 			break;
 
 		  default:/*DEBUG*/
@@ -1245,6 +1249,11 @@ hfg_back(Ops *O, real *w)
 			o = cp->b;
 			continue;
 
+#ifdef X64_bit_pointers
+		/* same operand layout as n_OPPLTERM1: only the plterm */
+		/* pointer that follows is shifted for alignment */
+		case OP_PLTERM1align:
+#endif
 		case n_OPPLTERM1:
 			r = (Eresult*)(w + o[2]);
 			L = (Eresult*)(w + o[3]);

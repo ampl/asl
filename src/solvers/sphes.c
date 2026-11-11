@@ -228,8 +228,10 @@ hv_back(expr *e)
 				else {
 					e1 = d->e;
 					if (e1->op != f_OPNUM) {
-						e1->aO = e->aO;
-						e1->adO = e->adO;
+						/* a plain operand may have other uses, */
+						/* already propagated: accumulate */
+						e1->aO += e->aO;
+						e1->adO += e->adO;
 						}
 					}
 				}
@@ -239,8 +241,8 @@ hv_back(expr *e)
 			if (!((expr_if *)e)->Fe) {
 				e1 = ((expr_if *)e)->F;
 				if (e1->op != f_OPNUM) {
-					e1->aO = e->aO;
-					e1->adO = e->adO;
+					e1->aO += e->aO;
+					e1->adO += e->adO;
 					}
 				}
 			if ((e1 = ((expr_if *)e)->Te)) {
@@ -251,8 +253,8 @@ hv_back(expr *e)
 			else {
 				e1 = ((expr_if *)e)->T;
 				if (e1->op != f_OPNUM) {
-					e1->aO = e->aO;
-					e1->adO = e->adO;
+					e1->aO += e->aO;
+					e1->adO += e->adO;
 					}
 				}
 			if ((e1 = ((expr_if *)e)->Fe)) {

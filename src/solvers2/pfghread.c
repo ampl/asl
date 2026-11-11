@@ -4212,6 +4212,12 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				opg[2] = rv;
 				opg[3] = i;
 				cp0[0].b = opg;
+				/* A "then" branch without operations of its */
+				/* own (a plain variable): the forward Hessian */
+				/* pass must still start at this copy, or the */
+				/* result keeps a zero directional derivative. */
+				if (!cp0[0].f)
+					cp0[0].f = opg;
 				opg += 4;
 				}
 			else {

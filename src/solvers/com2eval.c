@@ -253,8 +253,10 @@ hv_back(expr *e)
 			else {
 				e1 = ((expr_va *)e)->val;
 				if (e1->op != f_OPNUM) {
-					e1->aO = e->aO;
-					e1->adO = e->adO;
+					/* a plain operand may have other uses, */
+					/* already propagated: accumulate */
+					e1->aO += e->aO;
+					e1->adO += e->adO;
 					}
 				}
 			break;
