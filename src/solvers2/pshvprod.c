@@ -2017,7 +2017,7 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real 
 		v->aO = v->adO = 0;
 		}
 #ifdef MULTIPLE_THREADS
-	if ((m = asl->P.hesvecth) <= 0 || (asl->P.sph_opts & 128))
+	if ((m = ASL_helper_threads(asl->P.hesvecth)) <= 0 || (asl->P.sph_opts & 128))
 		m = 0;
 	else {
 		nrng = asl->P.nran;
@@ -2154,7 +2154,9 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real 
 	x = w + n_var;
 	ns = 0;
 	for(ihi = asl->P.ihi1; ihi && (r = ihi->r); ihi = ihi->next) {
-		if (r->hest)
+		/* r->hest is a fixed offset here: the stored Hessian piece is current */
+		/* only if hvpinit_nc_ASL has filled it at this x (ihd <= ihdcur). */
+		if (r->hest && ihi->ihd <= ew->ihdcur)
 		    for(; r; r = r->rlist.prev) {
 			n = r->n;
 			nv = r->nv;

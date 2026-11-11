@@ -384,7 +384,7 @@ hvpinit_nc_ASL(EvalWorkspace *ew, int ndhmax, int nobj, const real *ow, const re
 	w = ew->w;
 	V = (Varval*)w;
 #ifdef MULTIPLE_THREADS
-	if ((m = asl->P.hesvecth) <= 0 || !(asl->P.sph_opts & 256))
+	if ((m = ASL_helper_threads(asl->P.hesvecth)) <= 0 || !(asl->P.sph_opts & 256))
 		m = 0;
 	else {
 		nrng = asl->P.nran;

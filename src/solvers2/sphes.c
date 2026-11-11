@@ -1664,7 +1664,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 		}
 #ifdef MULTIPLE_THREADS
 	nrng = asl->P.nran;
-	if ((m = asl->P.hessetupth) <= 0 || (asl->P.sph_opts & 5) || nrng <= 0) {
+	if ((m = ASL_helper_threads(asl->P.hessetupth)) <= 0 || (asl->P.sph_opts & 5) || nrng <= 0) {
 		m = 0;
 		hs0 = 0;
 		}
@@ -2237,7 +2237,7 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 	if (ew->x0kind & ASL_need_funnel)
 		funnelhes_ew_ASL(ew);
 #ifdef MULTIPLE_THREADS
-	if ((m = asl->P.hesevalth) < 1 || (asl->P.sph_opts & 8) || n <= 0) {
+	if ((m = ASL_helper_threads(asl->P.hesevalth)) < 1 || (asl->P.sph_opts & 8) || n <= 0) {
 		m = 0;
 		hs0 = 0;
 		}
@@ -2295,6 +2295,14 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 					tpi->ew = ewalloc3_ASL(asl,ew,1);
 				}
 			}
+		else
+			/* Reused helpers: tp is on this call's stack, and their */
+			/* workspaces must hold the values at the current x. */
+			for(i = 1; i < m; ++i) {
+				tpi = tp1 + i;
+				tpi->tp = &tp;
+				memcpy(tpi->ew->w, ew->w, asl->i.wlen);
+				}
 		}
 #endif
 	for(i = 0; i < n; i++) {

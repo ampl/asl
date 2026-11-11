@@ -417,6 +417,16 @@ tfinfo {
 	} tfinfo;
 
 #endif /* PSINFO_H0_included */
+/* Internal helper threads (hesevalth, hessetupth, hesvecth) need real OpenMP: */
+/* when ALLOW_OPENMP is defined but the compiler ignores "#pragma omp parallel", */
+/* the region runs once on the caller, where omp_get_thread_num() is the number */
+/* of the caller's own thread and can exceed the helper count. */
+#if defined(ALLOW_OPENMP) && !defined(_OPENMP)
+#define ASL_helper_threads(n) 0
+#else
+#define ASL_helper_threads(n) (n)
+#endif
+
 #ifdef PSHVREAD
  extern void duthes_ew_ASL(EvalWorkspace*, real *H, int nobj, const real *ow, const real *y);
  extern void duthese_ew_ASL(EvalWorkspace*, real *H, int nobj, const real *ow, const real *y, fint*);
