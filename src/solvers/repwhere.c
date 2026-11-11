@@ -219,18 +219,28 @@ deriv_errchk_ASL(ASL *asl, int coi, int n, int jv)
 {
 	DerivErrInfo *D;
 	DerrRecord *R, **Rp, **Rpe;
-	int k;
+	int dcoi, k;
 
+	/* D->R has nlc constraint slots followed by nlo objective slots; */
+	/* linear constraints and objectives (k >= nlc or k >= nlo) have none. */
 	D = asl->i.Derrs;
 	if ((k = coi) < 0) {
 		k = -(k + 1);
 		if (k >= nlo)
 			return;
+		if (n > nlo - k)
+			n = nlo - k;
 		k += nlc;
+		dcoi = -1;	/* objective i+1 is coi = -(i+2) */
 		}
-	else if (k >= nlc)
-		return;
-	for(Rp = D->R + k, Rpe = Rp + n; Rp < Rpe; ++Rp, ++coi)
+	else {
+		if (k >= nlc)
+			return;
+		if (n > nlc - k)
+			n = nlc - k;
+		dcoi = 1;
+		}
+	for(Rp = D->R + k, Rpe = Rp + n; Rp < Rpe; ++Rp, coi += dcoi)
 		if ((R = *Rp) && R->jv <= jv) {
 			jmp_check(err_jmp, R->jv);
 			co_index = coi;
