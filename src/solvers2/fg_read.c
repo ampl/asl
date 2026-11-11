@@ -1182,7 +1182,12 @@ eread(EdRead *R, uint *deriv, uint atop)
 						if (!(ka = atop))
 							ka = new_a(S);
 						*deriv = ka;
-						free_a(S, ka);
+						/* A cell of our own is lent to the */
+						/* remaining operands and reclaimed below; */
+						/* the caller's cell (atop, e.g. that of a */
+						/* defined variable) must stay reserved. */
+						if (ka != atop)
+							free_a(S, ka);
 						}
 					if (ia != ka)
 						new_derp(S, ia, ka, S->one);
@@ -1924,9 +1929,14 @@ cexp_read(EdRead *R, int kc, int nlin)
 			vr[2] = 0;
 			memcpy(vr+3, ci, nz0*sizeof(int));
 			if (nd > 3*nz0 || ncond0 != S->ncond) {
-				/* funnelkind 1 */
+				/* funnelkind 1: partials w.r.t. the direct */
+				/* operands, computed by dv_funnel().  This is */
+				/* required with conditionals (if, min, max): */
+				/* the derps after a run-time branch cannot be */
+				/* copied into the chains of the users, so */
+				/* without a funnel they were silently lost. */
 				vr[2] = 1;
-				/* no derpcopy(S, kc, nz0, nz0, ci); */
+				derpcopy(S, kc, nz0, nz0, ci, db);
 				}
 			/* else no funnel */
 			}
@@ -1983,7 +1993,7 @@ funnels(Static *S, cexp *cx0, cexp *cx1, int ginit)
 
 	asl = S->asl;
 	for(n = 0, cx = cx0; cx < cx1; ++cx) {
-		if ((vr = cx->vref) && vr[2] == 2)
+		if ((vr = cx->vref) && vr[2])
 			++n;
 		}
 	if (!n)
@@ -1991,7 +2001,7 @@ funnels(Static *S, cexp *cx0, cexp *cx1, int ginit)
 	asl->i.x0kindinit |= ginit;
 	t = rv = (cexp**)mem((n+1)*sizeof(cde*));
 	for(cx = cx0; cx < cx1; ++cx) {
-		if ((vr = cx->vref) && vr[2] == 2)
+		if ((vr = cx->vref) && vr[2])
 			*t++ = cx;
 		}
 	*t = 0;
