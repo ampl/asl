@@ -1232,6 +1232,7 @@ f_OP_logistic(expr *e A_ASL)
 
 	e1 = e->L.e;
 	t1 = exp(-(t = (*e1->op)(e1 K_ASL)));
+	rv.d = t1;	/* errchk tests the exp result (rv was unset) */
 	if (errchk(rv)) {
 		errno_set(0);
 		rv.d = t > 0. ? 1. : 0.;

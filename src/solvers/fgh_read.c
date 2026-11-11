@@ -581,25 +581,32 @@ eread(EdRead *R, int deriv)
 			a0 = lasta;
 			rvif->T = L = eread(R, deriv);
 			rvif->Te = last_e;
+			/* As in fg_read and pfg_read: each branch decides on its */
+			/* own whether it carries derivatives, and Tv, Fv are */
+			/* always set (derpadjust remaps them). */
 			j = 0;
-			if (L->op == f_OPNUM) {
+			if (L->op == f_OPNUM || L->a == nv1 || !deriv) {
 				rvif->dT = dsave;
 				rvif->Tv.i = nv1;
 				}
-			else if ((j = deriv))
+			else {
+				j = 1;
 				rvif->dT = new_relo(L, dsave, &rvif->Tv.i);
+				}
 			a1 = lasta;
 			lasta = a0;
 			last_d = dsave;
 			last_e = 0;
 			rvif->F = L = eread(R, deriv);
 			rvif->Fe = last_e;
-			if (L->op == f_OPNUM) {
+			if (L->op == f_OPNUM || L->a == nv1 || !deriv) {
 				rvif->dF = dsave;
 				rvif->Fv.i = nv1;
 				}
-			else if (j)
+			else {
+				j = 1;
 				rvif->dF = new_relo(L, dsave, &rvif->Fv.i);
+				}
 			if (lasta < a1)
 				lasta = a1;
 			last_d = dsave;

@@ -360,6 +360,7 @@ f_MAXLIST(expr *e0 A_ASL)
 		if (rv < t) {
 			rv = t;
 			d1 = d;
+			e2 = e1;	/* as in f_MINLIST: the Hessian uses e->val */
 			}
 		}
 	if ((D = e->R.D)) {
@@ -426,7 +427,7 @@ f_OP_tanh(expr *e A_ASL)
 		if (want_deriv)
 			e->dL = e->dL2 = 0.;
 		}
-	if (t <= -175.) {
+	else if (t <= -175.) {
 		rv.d = -1.;
 		if (want_deriv)
 			e->dL = e->dL2 = 0.;
@@ -1272,6 +1273,7 @@ f_OP_logistic(expr *e A_ASL)
 
 	e1 = e->L.e;
 	t1 = exp(-(t0 = (*e1->op)(e1 K_ASL)));
+	rv.d = t1;	/* errchk tests the exp result (rv was unset) */
 	if (errchk(rv)) {
 		errno_set(0);
 		t = t0 > 0. ? 1. : 0.;

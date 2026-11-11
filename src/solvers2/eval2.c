@@ -1411,13 +1411,15 @@ alignarg(more_if:)
 		goto top;
 	  case OPasinh_g:
 		t = t0 = w[o[2]];
-		rv.d = log(t + (t1 = sqrt(t0 = t*t + 1.)));
-		if ((sign = t < 0.)) {
+		/* Use |t| in the log: the signed form cancels for t < 0 */
+		/* and, negated below, gave asinh(|t|). */
+		if ((sign = t < 0.))
 			t = -t;
-			t0 = -t0;
-			}
+		rv.d = log(t + (t1 = sqrt(t0 = t*t + 1.)));
+		if (sign)
+			t0 = -t0;	/* sign of dL2 = -(t/t0)*dL */
 		if (errchk(rv))
-			introuble("asinh",t0,1);
+			introuble("asinh",sign ? -t : t,1);
 		if (sign)
 			rv.d = -rv.d;
 		g = (GOps*)(w + o[1]);
@@ -1428,13 +1430,15 @@ alignarg(more_if:)
 		goto top;
 	  case OP_asinh1:
 		t = t0 = w[o[3]];
-		rv.d = log(t + (t1 = sqrt(t0 = t*t + 1.)));
-		if ((sign = t < 0.)) {
+		/* Use |t| in the log: the signed form cancels for t < 0 */
+		/* and, negated below, gave asinh(|t|). */
+		if ((sign = t < 0.))
 			t = -t;
-			t0 = -t0;
-			}
+		rv.d = log(t + (t1 = sqrt(t0 = t*t + 1.)));
+		if (sign)
+			t0 = -t0;	/* sign of dL2 = -(t/t0)*dL */
 		if (errchk(rv))
-			introuble("asinh",t0,1);
+			introuble("asinh",sign ? -t : t,1);
 		if (sign)
 			rv.d = -rv.d;
 		r = (Eresult*)(w + o[2]);
@@ -1975,11 +1979,11 @@ alignarg(more_func1:)
 
 	  case OP_logistic0:
 		t1 = exp(t0 = -w[o[2]]);
+		rv.d = t1;	/* errchk tests the exp result (rv was unset) */
 		if (errchk(rv)) {
-			if (t0 >= 0.)
-				introuble("logistic0",t0,1);
-			else
-				errno_set(0);
+			/* exp overflow: logistic underflows to 0, */
+			/* as in the other logistic variants */
+			errno_set(0);
 			t1 = 0.;
 			}
 		else
@@ -1991,6 +1995,7 @@ alignarg(more_func1:)
 	  case OP_logistic1:
 		t1 = exp(t0 = -w[o[3]]);
 		r = (Eresult*)(w + o[2]);
+		rv.d = t1;	/* errchk tests the exp result (rv was unset) */
 		if (errchk(rv)) {
 			errno_set(0);
 			t = t0 > 0. ? 0. : 1.;
@@ -2012,6 +2017,7 @@ alignarg(more_func1:)
 		g = (GOps*)(w + o[1]);
 		t = w[o[2]];
 		t1 = exp(-t);
+		rv.d = t1;	/* errchk tests the exp result (rv was unset) */
 		if (errchk(rv)) {
 			errno_set(0);
 			if (wd)

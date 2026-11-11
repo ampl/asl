@@ -2077,7 +2077,9 @@ tlistgen(Static *S, ps_func *f)
 		if ((ci = b->ce)) {
 			cie = ci + *ci;
 			do {
-				if (!zc[i = nv0x + *++ci])
+				/* Count each common expression once: without */
+				/* the increment, repeats overflowed zci into zc. */
+				if (!zc[i = nv0x + *++ci]++)
 					zci[nzc++] = i;
 				}
 				while(ci < cie);

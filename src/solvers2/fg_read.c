@@ -956,7 +956,9 @@ eread(EdRead *R, uint *deriv, uint atop)
 				}
 			}
 		else if (j < 0 && S->htvals_end[j] == 2.) {
-			k = powops[0];
+			/* x^2 without derivatives: the 3-int op that pow2 */
+			/* emits (powops[0] is a 4-int op: read past it). */
+			k = powops[5];
 			goto pow2;
 			}
 		goto bret;
@@ -1381,6 +1383,16 @@ eread(EdRead *R, uint *deriv, uint atop)
 			op[0] = nOPIFnl1;
 			pop = (int**)&op[6];
 			pdb = (derpblock**)&pop[5];
+			if (!db1) {
+				/* Constant "then" branch: when it is taken, */
+				/* derivative propagation must continue with */
+				/* the derps that precede this "if" (a null */
+				/* block silently zeroed their contribution). */
+				db1 = (derpblock*)mem(sizeof(derpblock));
+				*db1 = dbsave;
+				if (!dbsave.nxt)
+					note_firstdb(S, db1);
+				}
 			pdb[0] = db1;
 			db1 = db;
 			if (ja) {

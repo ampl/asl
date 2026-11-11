@@ -361,9 +361,11 @@ getDR(ASL *asl, int jv)
 	if (!R) {
 		R = (DerrRecord*)(D->mblast - L);
 		D->mblast = (char*)R;
+		/* A reused record's slot is already in busy[], which */
+		/* has room for just one entry per slot. */
+		D->busy[D->nbusy++] = k;
 		}
 	D->R[k] = R;
-	D->busy[D->nbusy++] = k;
 	if ((R->dv = i = cv_index)) {
 		j = 0;
 		je = nlc + nlo;
@@ -371,7 +373,7 @@ getDR(ASL *asl, int jv)
 			if (i <= combc)
 				je = nlc;
 			else if (i <= ncom0)
-				j = combc;
+				j = nlc;	/* used only by objectives */
 			}
 		for(; j < je; ++j) {
 			if (!D->R[j]) {

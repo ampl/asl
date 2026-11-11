@@ -199,20 +199,29 @@ deriv_errchk_ASL(EvalWorkspace *ew, int coi, int n, int jv)
 	ASL *asl;
 	DerivErrInfo *D;
 	DerrRecord *R, **Rp, **Rpe;
-	int k;
+	int dcoi, k;
 
+	/* D->R has nlc constraint slots followed by nlo objective slots; */
+	/* linear constraints and objectives (k >= nlc or k >= nlo) have none. */
 	asl = ew->asl;
 	D = ew->Derrs;
 	if ((k = coi) < 0) {
 		k = -(k + 1);
 		if (k >= nlo)
 			return;
+		if (n > nlo - k)
+			n = nlo - k;
 		k += nlc;
+		dcoi = -1;	/* objective i+1 is coi = -(i+2) */
 		}
-	else if (k >= nlc)
-		return;
-	Rp = D->R + k;
-	for(Rp = D->R + k, Rpe = Rp + n; Rp < Rpe; ++Rp, ++coi)
+	else {
+		if (k >= nlc)
+			return;
+		if (n > nlc - k)
+			n = nlc - k;
+		dcoi = 1;
+		}
+	for(Rp = D->R + k, Rpe = Rp + n; Rp < Rpe; ++Rp, coi += dcoi)
 		if ((R = *Rp) && R->jv <= jv) {
 			jmp_check(ew->err_jmpw, R->jv);
 			if (ew == asl->i.Ew0)
@@ -347,9 +356,11 @@ getDR(EvalWorkspace *ew, int jv)
 	if (!R) {
 		R = (DerrRecord*)(D->mblast - L);
 		D->mblast = (char*)R;
+		/* A reused record's slot is already in busy[], which */
+		/* has room for just one entry per slot. */
+		D->busy[D->nbusy++] = k;
 		}
 	D->R[k] = R;
-	D->busy[D->nbusy++] = k;
 	if ((R->dv = i = ew->cv_index)) {
 		j = 0;
 		je = nlc + nlo;
@@ -357,7 +368,7 @@ getDR(EvalWorkspace *ew, int jv)
 			if (i <= combc)
 				je = nlc;
 			else if (i <= ncom0)
-				j = combc;
+				j = nlc;	/* used only by objectives */
 			}
 		for(; j < je; ++j) {
 			if (!D->R[j]) {

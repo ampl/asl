@@ -91,7 +91,7 @@ mypow_ASL(double x, double y) /* return x ^ y (exponentiation) */
 		if (!(i >>= 1))
 			break;
 		x *= x;
-		ex <<= 1;
+		ex += ex;	/* not <<=: ex may be negative */
 		if (x < .5)
 			{ x += x; ex -= 1; }
 		}

@@ -493,7 +493,10 @@ hv2comp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const rea
 		ye = y + n_con;
 		d = con_de;
 		for(y0 = 0; y < ye; y++, d++)
-			if ((e = d->ef) && *y) {
+			/* A nonlinear body may be a bare defined variable */
+			/* (no d->ef): it still needs the forward pass of */
+			/* the defined variables and the backward pass below. */
+			if (*y && ((e = d->ef) || d->e->op != f_OPNUM)) {
 				if (!y0) {
 					if (comc) {
 						c = cexpsc;
@@ -506,7 +509,8 @@ hv2comp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const rea
 					}
 				if (d->n_com1)
 					hv_fwd1(asl, d);
-				hv_fwd(e);
+				if (e)
+					hv_fwd(e);
 				}
 		}
 	for(; no < noe; no++)
@@ -528,10 +532,10 @@ hv2comp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const rea
 			e->adO = t;
 			hv_back(e);
 			}
-		else if ((e = d->e)->op != f_OPNUM) {
-			e->aO = 0;
-			e->adO = t;
-			}
+		else if ((e = d->e)->op != f_OPNUM)
+			/* bare defined variable, zeroed by hv_fwd0: */
+			/* accumulate, as other bodies may share it */
+			e->adO += t;
 		if (d->n_com1)
 			hv_back1(asl, d);
 		if (como)
@@ -546,8 +550,9 @@ hv2comp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const rea
 					yi *= *cscale++;
 				if (!(e = d0->ee)) {
 					if ((e = d0->e)->op != f_OPNUM) {
-						e->aO = 0;
-						e->adO = yi;
+						e->adO += yi;
+						if (d0->n_com1)
+							hv_back1(asl, d0);
 						}
 					}
 				else if ((e->adO = yi)) {

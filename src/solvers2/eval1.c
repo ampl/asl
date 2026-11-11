@@ -1303,6 +1303,7 @@ eval1(int *o, EvalWorkspace *ew)
 	  case nOP_logistic0:
 		t = w[o[2]];
 		t1 = exp(-t);
+		rv.d = t1;	/* errchk tests the exp result (rv was unset) */
 		if (errchk(rv)) {
 			errno_set(0);
 			t1 = t < 0. ? 0. : 1;
@@ -1316,9 +1317,11 @@ eval1(int *o, EvalWorkspace *ew)
 	  case nOP_logistic1:
 		t = w[o[2]];
 		t1 = exp(-t);
+		rv.d = t1;	/* errchk tests the exp result (rv was unset) */
 		if (errchk(rv)) {
 			errno_set(0);
 			t = t < 0. ? 0. : 1.;
+			t1 = 0.;	/* saturated: zero derivative, not 0*Inf */
 			}
 		else
 			t = 1. / (1. + t1);
