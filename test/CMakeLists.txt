@@ -8,8 +8,8 @@ file(MAKE_DIRECTORY ${ASL_TEST_OUT_DIR})
 
 # Checker executables and the readers each library provides.
 set(ASL_TEST_CONFIGS)
-function(aslTestChecker name lib)
-  add_executable(${name} derivcheck.c)
+function(aslTestChecker name lib source)
+  add_executable(${name} ${source})
   target_link_libraries(${name} PRIVATE ${lib})
   target_compile_definitions(${name} PRIVATE ${ARGN})
   if(UNIX)
@@ -19,13 +19,15 @@ function(aslTestChecker name lib)
 endfunction()
 
 if(BUILD_ASL_LIB)
-  aslTestChecker(derivcheck-asl asl)
+  aslTestChecker(derivcheck-asl asl derivcheck.c)
+  aslTestChecker(hvseq-asl asl hvseq.c)
   # pfg_read is left out: the solvers library does not install evaluation
   # routines for ASL_read_pfg ("objval called before fg_read").
   list(APPEND ASL_TEST_CONFIGS asl:fg asl:fgh asl:pfgh)
 endif()
 if(BUILD_ASL2_LIB)
-  aslTestChecker(derivcheck-asl2 asl2 DERIVCHECK_ASL2)
+  aslTestChecker(derivcheck-asl2 asl2 derivcheck.c DERIVCHECK_ASL2)
+  aslTestChecker(hvseq-asl2 asl2 hvseq.c)
   list(APPEND ASL_TEST_CONFIGS asl2:fg asl2:pfgh)
 endif()
 
@@ -58,6 +60,17 @@ function(aslDerivTests fixture)
   endforeach()
 endfunction()
 
+# One Hessian-vector product at each point of a sequence (pfgh_read): a
+# product computed with the Hessian of an earlier point is a mismatch.
+function(aslHvSeqTests fixture)
+  foreach(lib asl asl2)
+    if(TARGET hvseq-${lib})
+      add_test(NAME hvseq.${fixture}.${lib}-pfgh COMMAND hvseq-${lib}
+        ${ASL_TEST_NL_DIR}/${fixture})
+    endif()
+  endforeach()
+endfunction()
+
 # A reader must reject (or accept) a fixture when asked only to read it.
 function(aslReadTest fixture lib reader expectation)
   set(name read.${fixture}.${lib}-${reader})
@@ -85,5 +98,6 @@ foreach(file ${ASL_TEST_FIXTURES})
     endif()
   else()
     aslDerivTests(${fixture})
+    aslHvSeqTests(${fixture})
   endif()
 endforeach()
