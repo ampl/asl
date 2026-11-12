@@ -4542,7 +4542,9 @@ main(int argc, char **argv)
 				++nlnz;
 		for(i = k = 0; i < nqc; ++i) {
 			nelqc = mqpcheckv(-(i+1), 0, &v);
-			if (k < nelqc)
+			/* k is unsigned: a negative (error) return must not wrap it and
+			   shrink the allocation below; the loop further down reports it. */
+			if (nelqc > 0 && k < (CS_type)nelqc)
 				k = nelqc;
 			}
 		a1 = (real*)Malloc(nqc*sizeof(cgrad*) + nlnz*sizeof(cgrad)
