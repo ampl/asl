@@ -17,6 +17,11 @@ call orders (values first, derivatives first).
 `hvseq` reads each fixture with `pfgh_read` (both libraries), goes through 12
 points near the start point with a single `hvcomp` call at each, and then
 compares every product with central differences of the Lagrangian gradient.
+The points are kept strictly inside the variable bounds, the direction is
+scaled with the point, and the difference step is reduced where a bound is
+close. A point with an evaluation error is skipped; the test fails (exit
+status 4) when fewer than two points could be compared, and a non-finite
+product or difference is a mismatch.
 This finds Hessian-vector products computed with the Hessian of an earlier
 point, which `derivcheck` cannot see: it calls `hvcomp` once per variable at
 each of its two points.
