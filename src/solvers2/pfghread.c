@@ -2478,12 +2478,12 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	ASLTYPE *asl;
 	Elemtemp *bt;
 	expr *e, *e1, *e2;
-	int *cp, *cp0, *ce, *cee, i, j, j1, k, n, ncp, nzc2, *ov, *ove, *ui, *vr, *vre;
+	int *cp, *cp0, *ce, *cee, i, j, j1, k, kr, n, ncp, nzc2, *ov, *ove, *ui, *vr, *vre;
 	linarg **lap, **lap1;
 	linarg *tl;
 	ps_func *f;
 	psb_elem *b;
-	range *r;
+	range *r, *r0;
 	size_t len;
 	split_ce *cs;
 
@@ -2513,8 +2513,18 @@ termwalk(Static *S, expr **ep, PSfind *p)
 				}
 			}
 
-	r = (range *)S->_rnz;	/* scratch */
-	if ((ncp = nzc - k)) {
+	/* Scratch for the range, followed by the ncp+1 ints of cp0 and at */
+	/* most nv0x+1 ints of ui.  S->_rnz has room for them before zc1 */
+	/* only when ncp is small; the segments of split defined variables */
+	/* are not counted in its size.  Writing into zc1, which must stay */
+	/* zero, dropped variables from getgroup()'s g->ov. */
+	ncp = nzc - k;
+	r = r0 = (range *)S->_rnz;
+	kr = -1;
+	len = sizeof(range) + (ncp + nv0x + 2)*sizeof(int);
+	if ((char*)r0 + len > (char*)S->zc1)
+		r = r0 = (range *)new_mblk(kr = htcl(len));
+	if (ncp) {
 		zcsort(S, zc, zci+k, nv0x, ncp, -1 /*max_var*/);
 		cp = cp0 = (int*)(r+1);
 		i = k;
@@ -2620,6 +2630,8 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		  }
 		}
  done:
+	if (kr >= 0)
+		del_mblk(r0);
 	nzc = 0;
 	}
 

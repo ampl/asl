@@ -3529,3 +3529,10 @@ defined variables of a term that was merged into an element without
 any, e.g. the term -d in "minimize o: x^3 - d;" with d = (1.64 - x)^2.
 Hessian computations (sphes, fullhes, duthes, and hvcomp with the
 Hessian kept) then omitted the second derivatives of d.
+  pfg_read.c and solvers2/pfghread.c:  in small models with split
+defined variables (several nonlinear terms on different variables),
+pfgh_read wrote a temporary list past the end of its scratch area into
+an array that must stay zero, so a later group term (such as e^2 with
+e a defined variable) lost variables: wrong gradients, Jacobians and
+Hessians; in larger cases memory beyond the block could be overwritten.
+A larger temporary block is now used when the scratch area is too small.
