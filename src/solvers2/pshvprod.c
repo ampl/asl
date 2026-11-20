@@ -2327,6 +2327,10 @@ hvpcompe_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpcomp_ew_ASL(ew, hv, p, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -2793,6 +2797,10 @@ hvpcompde_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, fint *nerro
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpcompd_ew_ASL(ew, hv, p, co);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -3110,6 +3118,8 @@ hvpcompse_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz,
 	Jmp_buf **Jp, *Jsave, b;
 	varno_t rv;
 
+	if (!nerror)	/* as without nerror: an error ends the run */
+		return hvpcomps_ew_ASL(ew, hv, p, co, nz, z);
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;

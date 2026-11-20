@@ -142,6 +142,10 @@ duthese_ASL(ASL *asl, real *H, int nobj, const real *ow, const real *y, fint *ne
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		duthes_ASL(asl, H, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;

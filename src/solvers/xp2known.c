@@ -294,6 +294,10 @@ hvpinite_ASL(ASL *a, int ndhmax, int nobj, const real *ow, const real *y, fint *
 
 	ASL_CHECK(a, ASL_read_pfgh, "hvpinite");
 	asl = (ASL_pfgh*)a;
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpinit_ASL(a, ndhmax, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
