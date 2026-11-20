@@ -2582,10 +2582,11 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		b = f->pi.b + i;
 		while(k > 0)
 			zc[zci[--k]] = 0;
-		if ((cp = b->ce)
-		 && (*cp != ncp || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
-			/* fix up f->ce */
-			n = *cp;
+		cp = b->ce;
+		if (cp0 && (!cp || *cp != ncp
+			 || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
+			/* fix up f->ce; the element may have had none */
+			n = cp ? *cp : 0;
 			while(k < n)
 				zc[zci[k++] = *++cp] = 1;
 			for(n = 0; n < ncp; )

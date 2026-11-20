@@ -98,7 +98,9 @@ finite-difference step is 1e-5 (1 + |x|).
 
 `nl/*.nl` are text NL files; `models/*.mod` are the AMPL models they were
 written from with `option presolve 0, pl_linearize 0, auxfiles '';` and
-`write g<name>;`. The two `lg*.nl` files have no model source.
+`write g<name>;`. The two `lg*.nl` files have no model source;
+`dvmerge2.nl` is `dvmerge1.nl` with `x^3 + d` in place of `x^3 - d`, the
+power written first (AMPL writes `d` first).
 
 | Fixtures | Subject |
 |---|---|
@@ -128,6 +130,7 @@ written from with `option presolve 0, pl_linearize 0, auxfiles '';` and
 | `funnel1` | a defined variable shared by the constraints only, with a Hessian funnel |
 | `obj2max1` | a second objective with a defined variable holding a `max`: products for objective 0 must not visit it |
 | `elnd1`..`elnd5` | terms without derivatives (`min`/`max` of `floor`, `count`) next to other terms, also with defined variables (Hessian) |
+| `dvmerge1`, `dvmerge2` | a term without defined variables, then a term in the same variable with a defined variable of that function only: the merged element must keep the defined variable (Hessian) |
 | `dvsplit1` | a defined variable split into several terms, used nonlinearly and in a constraint (order of the backward pass) |
 | `p1`, `p4`, `p5`, `s1`, `t7`, `t9` | piecewise-linear terms inside nonlinear expressions |
 | `v1`, `v4`, `y1`, `y3`, `y4`, `q3` | defined variables holding `min`/`max`/`if`, single-use and shared |

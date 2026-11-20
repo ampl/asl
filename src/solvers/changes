@@ -3522,3 +3522,10 @@ the constraint or objective.
   pfg_read.c:  pfgh_read now provides hvcompe (asl->p.Hvcompe).
   asl.h:  macro fullhese called Fulhes instead of Fulhese (it did not
 compile); new macro sphese (as in solvers2/asl.h).
+
+20261121
+  pfg_read.c and solvers2/pfghread.c:  pfgh_read (and pfg_read) lost the
+defined variables of a term that was merged into an element without
+any, e.g. the term -d in "minimize o: x^3 - d;" with d = (1.64 - x)^2.
+Hessian computations (sphes, fullhes, duthes, and hvcomp with the
+Hessian kept) then omitted the second derivatives of d.
