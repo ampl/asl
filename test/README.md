@@ -132,6 +132,7 @@ power written first (AMPL writes `d` first).
 | `elnd1`..`elnd5` | terms without derivatives (`min`/`max` of `floor`, `count`) next to other terms, also with defined variables (Hessian) |
 | `dvmerge1`, `dvmerge2` | a term without defined variables, then a term in the same variable with a defined variable of that function only: the merged element must keep the defined variable (Hessian) |
 | `dvgroup1`, `dvgroup2` | a defined variable split into 2 (10) segments, in the objective and in a constraint next to a group term `e^2`: the scratch of `pfgh_read` must not overrun into the group's variable markers (`dvgroup1` overran in the solvers2 library only) |
+| `absdv1` | `abs` in a defined variable subtracted after a quotient and a constant: the adjoint cell of the argument of `abs` must be freed once (gradient, solvers2) |
 | `dvsplit1` | a defined variable split into several terms, used nonlinearly and in a constraint (order of the backward pass) |
 | `p1`, `p4`, `p5`, `s1`, `t7`, `t9` | piecewise-linear terms inside nonlinear expressions |
 | `v1`, `v4`, `y1`, `y3`, `y4`, `q3` | defined variables holding `min`/`max`/`if`, single-use and shared |

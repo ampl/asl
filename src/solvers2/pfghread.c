@@ -3274,10 +3274,9 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		rv = wlast;
 		k = n_OPABS0;
 		if (deriv && (ia = *deriv)) {
-			if (ia > S->afirst)
-				free_a(S, ia);
-			if (!(ja = atop))
-				ja = new_a(S);
+			/* uret1 frees ia and allocates ja; doing it here as */
+			/* well freed ia twice, so two later new_a() calls */
+			/* returned the same cell. */
 			k2 = 5;
 			goto uret1;
 			}

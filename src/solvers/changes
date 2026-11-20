@@ -3536,3 +3536,7 @@ an array that must stay zero, so a later group term (such as e^2 with
 e a defined variable) lost variables: wrong gradients, Jacobians and
 Hessians; in larger cases memory beyond the block could be overwritten.
 A larger temporary block is now used when the scratch area is too small.
+  solvers2/pfghread.c:  pfgh_read freed the adjoint cell of the argument
+of abs twice, so two later cells could coincide and gradients could be
+wrong, e.g. for "minimize o: (x/(2 + x^2) - 0.8) - d;" with
+d = abs(1.64 - x).
