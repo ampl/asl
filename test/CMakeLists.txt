@@ -29,6 +29,7 @@ if(BUILD_ASL2_LIB)
   aslTestChecker(derivcheck-asl2 asl2 derivcheck.c DERIVCHECK_ASL2)
   aslTestChecker(hvseq-asl2 asl2 hvseq.c)
   aslTestChecker(degcheck-asl2 asl2 degcheck.c)
+  aslTestChecker(sphcheck-asl2 asl2 sphcheck.c)
   list(APPEND ASL_TEST_CONFIGS asl2:fg asl2:pfgh)
 endif()
 
@@ -130,6 +131,14 @@ foreach(file ${ASL_TEST_FIXTURES})
       aslReadTest(${fixture} asl2 fg "${rejected}")
       aslReadTest(${fixture} asl2 pfgh "${rejected}")
     endif()
+  elseif(fixture MATCHES "^sphserr")
+    # An evaluation error at the start point, then sphsetup: it must return.
+    if(TARGET sphcheck-asl2)
+      add_test(NAME sphes1.${fixture}.asl2-pfgh COMMAND sphcheck-asl2
+        ${ASL_TEST_NL_DIR}/${fixture} e)
+      set_tests_properties(sphes1.${fixture}.asl2-pfgh PROPERTIES
+        PASS_REGULAR_EXPRESSION "then sphsetup: nnz=")
+    endif()
   elseif(fixture MATCHES "^skipall")
     # Every hvseq point has an evaluation error: hvseq must fail (exit 4).
     if(TARGET hvseq-asl2)
@@ -143,6 +152,10 @@ foreach(file ${ASL_TEST_FIXTURES})
     aslHvSeqTests(${fixture})
     if(TARGET degcheck-asl2)	# degree_ASL agrees with mqpcheckv
       add_test(NAME degree.${fixture}.asl2-pfgh COMMAND degcheck-asl2
+        ${ASL_TEST_NL_DIR}/${fixture})
+    endif()
+    if(TARGET sphcheck-asl2)	# sphes setting up inside the call
+      add_test(NAME sphes1.${fixture}.asl2-pfgh COMMAND sphcheck-asl2
         ${ASL_TEST_NL_DIR}/${fixture})
     endif()
   endif()

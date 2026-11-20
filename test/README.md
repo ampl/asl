@@ -78,6 +78,12 @@ are not visited (`dvfirst1`, `dvfirst2`, `zw2`).
 them. In the solvers library the modes other than `m` and `h` still give
 wrong products with defined variables and are not run.
 
+`sphcheck` (solvers2) evaluates the functions at the start point and calls
+`sphes` without `sphsetup`, so that `sphes` sets up its structure itself,
+then calls `sphes` again: both results must be equal. With the `sphserr*`
+fixtures it checks that `sphsetup` returns after an evaluation error at the
+current point.
+
 `degcheck` (solvers2) checks on every fixture that a function which
 `degree_ASL` calls quadratic is accepted by `mqpcheckv`: drivers that pass
 quadratic terms to the solver (Knitro) stop otherwise.
@@ -126,6 +132,8 @@ power written first (AMPL writes `d` first).
 | `funnel2` | a defined variable shared by the objectives only, with a Hessian funnel (mirror of `funnel1`) |
 | `zw2` | `dvfirst1` with a linear constraint: weights on the linear constraint only |
 | `skip1`, `skipall1` | evaluation errors at some (all) `hvseq` points: points are skipped; with none left, `hvseq` must fail |
+| `ifsphes1` | a single `if` whose branches both have derivatives: `sphes` after the evaluations, with an explicit or an implicit setup |
+| `sphserr1` | a shared defined variable that cannot be evaluated at the start point: `sphsetup` after the evaluation error |
 | `obj2max2` | as `obj2max1`, with both objectives on the same variables (one range): the range is visited, its defined variable of objective 1 is not |
 | `funnel1` | a defined variable shared by the constraints only, with a Hessian funnel |
 | `obj2max1` | a second objective with a defined variable holding a `max`: products for objective 0 must not visit it |
@@ -153,7 +161,8 @@ power written first (AMPL writes `d` first).
   (`hvseq` passes objective index 0): objectives 1 and later are not covered.
 - Known open defects of the solvers2 library, not covered by fixtures:
   - `sphes` and `fullhes` with an `if` (even a single one, e.g.
-    `minimize o: if y >= 0.3 then tanh(x) else sin(x*y);`) or with nested
+    `s.t. c: (if x > y then u*z*x*t else sin(x)) <= 100;` gives an
+    incomplete sparsity structure in the `then` branch) or with nested
     `min`/`max` give wrong values or crash;
   - `hvcomp` is wrong in some models with nested `min` in the objective
     next to a `min` in a constraint (right with `ihd_limit = 0`), and with

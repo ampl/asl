@@ -2791,7 +2791,9 @@ dv_used(ASL_pfgh *asl, ps_func *f, int *np, int *pfree)
 		/* f->pi.ce without segments, in a monotone order (the */
 		/* reader's compar1 order is decreasing): copy it in */
 		/* increasing order, O(n), without a sort.  Linarg cells */
-		/* (>= ncom + ndvspout) are left out. */
+		/* (>= ncom + ndvspout) are left out.  The reader's lists */
+		/* are strictly decreasing; the direction and repeat tests */
+		/* are defensive: otherwise the sorting path below is used. */
 		ce = f->pi.ce + 1;
 		nc = asl->P.ncom;
 		nce = nc + asl->P.ndvspout;
