@@ -4,15 +4,26 @@
  *   reader:   fg | fgh | pfg | pfgh
  *   seed:     0 = start point of the .nl file, k > 0 = k-th perturbed point
  *   order:    v = values before derivatives, g = derivatives first,
- *             r = read only, allowing logical constraints (reader tests)
+ *             r = read only, allowing logical constraints (reader tests),
+ *             e = expected evaluation errors: evaluate exactly at the
+ *                 start point (seed must be 0), values first, then again
+ *                 derivatives first after an evaluation at a nearby point
+ *                 (so that nothing cached for the start point is reused);
+ *                 the routines listed in "stub.err" must report an error
+ *                 (nonzero *nerror), all others must succeed
  *   dumpfile: receives all computed values, one "key i j value" per line
  *   reffile:  dump of another reader/library at the same point; function
- *             values, gradients and Jacobian entries must agree with it
+ *             values, gradients, Jacobian entries and the evaluation
+ *             errors must agree with it, record for record
  *
  * Gradients and Jacobians are compared with central differences of the
  * function values, Hessians (hvcomp, sphes, fullhes) with differences of
- * the Lagrangian gradient and with each other.  Evaluation errors at the
- * test point skip the affected comparisons.
+ * the Lagrangian gradient and with each other.  An evaluation error skips
+ * the comparisons of the routine that reported it; any error skips the
+ * Hessian checks.
+ * "stub.err": one "routine index" line per expected error, routine one of
+ * objval, objgrd (index = objective), conval, jacval (index 0); "#" starts
+ * a comment.
  * Exit status: 0 = consistent, 3 = mismatch, 2 = usage error.
  * Compile with -DDERIVCHECK_ASL2 for solvers2.
  */
@@ -25,9 +36,15 @@ static int nbad, nerr;
 static double worst;
 
 /* reference values from another reader */
-typedef struct { char key[16]; int i, j; double v; } RefVal;
+typedef struct { char key[16]; int i, j; double v; int seen; } RefVal;
 static RefVal *ref;
 static int nref;
+
+/* evaluation errors: expected ("stub.err", order e) and reported */
+typedef struct { char key[16]; int i; } ErrRec;
+#define MAXERR 64
+static ErrRec experr[MAXERR], goterr[MAXERR];
+static int nexperr, ngoterr, checkerr;
 
 static unsigned long long rs = 12345;
 static double rnd(void) {	/* uniform in (0,1) */
@@ -45,6 +62,7 @@ static void load_ref(const char *name) {
 		fprintf(stderr, "cannot open reference %s\n", name);
 		exit(2);
 	}
+	r.seen = 0;
 	while (fscanf(f, "%15s %d %d %lf", r.key, &r.i, &r.j, &r.v) == 4) {
 		if (nref >= cap)
 			ref = (RefVal*)realloc(ref, (cap = 2*cap + 64) * sizeof(RefVal));
@@ -53,16 +71,84 @@ static void load_ref(const char *name) {
 	fclose(f);
 }
 
-/* Hessian entries are not compared across readers: fg has none. */
+static void mismatch(const char *what, const char *key, int i, int j) {
+	if (++nbad <= 5)
+		fprintf(stderr, "  MISMATCH %s: %s[%d,%d]\n", what, key, i, j);
+	worst = 1.;
+}
+
+/* Every record (value, derivative or "*_err" evaluation error) must have a
+ * counterpart in the other reader's dump, and vice versa (see ref_unseen).
+ * Hessian entries are not compared across readers: fg has none. */
 static void cmp_ref(const char *key, int i, int j, double v) {
-	int k;
-	if (key[0] == 'H' || strchr(key, '_'))
+	int k, k1 = -1;
+	if (key[0] == 'H')
 		return;
-	for (k = 0; k < nref; ++k)
+	for (k = 0; k < nref; ++k)	/* a repeated record: next unseen copy */
 		if (ref[k].i == i && ref[k].j == j && !strcmp(ref[k].key, key)) {
-			cmp("other-reader", i, j, v, ref[k].v);
-			return;
+			k1 = k;
+			if (!ref[k].seen)
+				break;
 		}
+	if (k1 < 0) {
+		mismatch("not from the other reader", key, i, j);
+		return;
+	}
+	ref[k1].seen = 1;
+	cmp("other-reader", i, j, v, ref[k1].v);
+}
+
+/* records of the other reader that this one did not produce */
+static void ref_unseen(void) {
+	int k;
+	for (k = 0; k < nref; ++k)
+		if (ref[k].key[0] != 'H' && !ref[k].seen)
+			mismatch("only from the other reader", ref[k].key, ref[k].i,
+				ref[k].j);
+}
+
+static void load_experr(const char *stub) {
+	char name[1024], line[256], routine[16];
+	FILE *f;
+	int i;
+	snprintf(name, sizeof(name), "%s.err", stub);
+	if (!(f = fopen(name, "r"))) {
+		fprintf(stderr, "cannot open %s\n", name);
+		exit(2);
+	}
+	while (fgets(line, sizeof(line), f))
+		if (sscanf(line, "%11s %d", routine, &i) == 2 && routine[0] != '#'
+		 && nexperr < MAXERR) {
+			snprintf(experr[nexperr].key, 16, "%s_err", routine);
+			experr[nexperr++].i = i;
+		}
+	fclose(f);
+	checkerr = 1;
+}
+
+static int has_err(const ErrRec *e, int n, const char *key, int i) {
+	int k;
+	for (k = 0; k < n; ++k)
+		if (e[k].i == i && !strcmp(e[k].key, key))
+			return 1;
+	return 0;
+}
+
+/* compare the errors of one evaluation pass with the expected ones */
+static void check_errs(const char *pass) {
+	int k;
+	for (k = 0; k < nexperr; ++k)
+		if (!has_err(goterr, ngoterr, experr[k].key, experr[k].i)) {
+			fprintf(stderr, "  (%s)", pass);
+			mismatch("expected error not reported", experr[k].key,
+				experr[k].i, 0);
+		}
+	for (k = 0; k < ngoterr; ++k)
+		if (!has_err(experr, nexperr, goterr[k].key, goterr[k].i)) {
+			fprintf(stderr, "  (%s)", pass);
+			mismatch("unexpected error", goterr[k].key, goterr[k].i, 0);
+		}
+	ngoterr = 0;
 }
 
 static void put(const char *key, int i, int j, double v) {
@@ -70,6 +156,10 @@ static void put(const char *key, int i, int j, double v) {
 		fprintf(dump, "%s %d %d %.10g\n", key, i, j, v);
 	if (ref)
 		cmp_ref(key, i, j, v);
+	if (strstr(key, "_err") && ngoterr < MAXERR) {
+		strcpy(goterr[ngoterr].key, key);
+		goterr[ngoterr++].i = i;
+	}
 }
 
 static void cmp(const char *key, int i, int j, double a, double fd) {
@@ -135,21 +225,52 @@ static int lag_grad(int nobj, real *x, real *y, real *g, real *J) {
 	return 1;
 }
 
-static void values(real *x, real *f, real *c) {
+/* values at x; fok[i], *cok: objective i and the constraints evaluated */
+static void values(real *x, real *f, real *c, int *fok, int *cok) {
 	fint ne;
 	int i;
 	for (i = 0; i < n_obj; ++i) {
 		ne = 0;
 		f[i] = objval(i, x, &ne);
-		if (ne) { ++nerr; put("objval_err", i, 0, ne); }
+		fok[i] = !ne;
+		if (ne) { ++nerr; put("objval_err", i, 0, 1); }
 		else put("f", i, 0, f[i]);
 	}
+	*cok = 0;
 	if (n_con) {
 		ne = 0;
 		conval(x, c, &ne);
-		if (ne) { ++nerr; put("conval_err", 0, 0, ne); }
+		*cok = !ne;
+		if (ne) { ++nerr; put("conval_err", 0, 0, 1); }
 		else for (i = 0; i < n_con; ++i) put("c", i, 0, c[i]);
 	}
+}
+
+/* objective values and constraint bodies at a difference point */
+static void values_at(real *x, real *f, real *c, int *fok, int *cok) {
+	fint ne;
+	int i;
+	*fok = 1;
+	for (i = 0; i < n_obj; ++i) {
+		ne = 0;
+		f[i] = objval(i, x, &ne);
+		if (ne) *fok = 0;
+	}
+	*cok = 1;
+	if (n_con) {
+		ne = 0;
+		conval(x, c, &ne);
+		if (ne) *cok = 0;
+	}
+}
+
+/* Evaluate at a point near x, so that the next evaluation at x starts
+ * afresh instead of reusing the values ASL keeps for x. */
+static void leave_point(real *x, real *xp, real *f, real *c) {
+	int j, fok, cok;
+	for (j = 0; j < n_var; ++j)
+		xp[j] = x[j] + 1e-3 * (1. + fabs(x[j]));
+	values_at(xp, f, c, &fok, &cok);
 }
 
 static void derivs(real *x, real *G, real *J, int *gok, int *jok) {
@@ -160,7 +281,7 @@ static void derivs(real *x, real *G, real *J, int *gok, int *jok) {
 		ne = 0;
 		objgrd(i, x, G + i*n_var, &ne);
 		gok[i] = !ne;
-		if (ne) { ++nerr; put("objgrd_err", i, 0, ne); }
+		if (ne) { ++nerr; put("objgrd_err", i, 0, 1); }
 		else for (j = 0; j < n_var; ++j) put("g", i, j, G[i*n_var + j]);
 	}
 	*jok = 0;
@@ -168,7 +289,7 @@ static void derivs(real *x, real *G, real *J, int *gok, int *jok) {
 		ne = 0;
 		jacval(x, J, &ne);
 		*jok = !ne;
-		if (ne) { ++nerr; put("jacval_err", 0, 0, ne); }
+		if (ne) { ++nerr; put("jacval_err", 0, 0, 1); }
 		else for (i = 0; i < n_con; ++i)
 			for (cg = Cgrad[i]; cg; cg = cg->next)
 				put("J", i, cg->varno, J[cg->goff]);
@@ -179,7 +300,7 @@ int main(int argc, char **argv) {
 	FILE *nl;
 	fint ne;
 	cgrad *cg;
-	int hes, i, j, k, nobj, rd, seed, jok, *gok, haveh, nz;
+	int hes, i, j, k, nobj, rd, seed, jok, *gok, *fok, cok, haveh, nz;
 	real *x, *xp, *f, *c, *fp, *cp, *fm, *cm, *G, *J, *y, *H, *Hs, *hv, *p;
 	real *gp, *gm, *J2, h, t;
 	char order;
@@ -218,20 +339,35 @@ int main(int argc, char **argv) {
 	G = Malloc((n_obj + 1) * k);
 	J = Malloc(2 * (nzc + 1) * sizeof(real)); J2 = J + nzc + 1;
 	y = Malloc((n_con + 1) * sizeof(real));
-	gok = Malloc((n_obj + 1) * sizeof(int));
+	gok = Malloc(2 * (n_obj + 1) * sizeof(int)); fok = gok + n_obj + 1;
 	H = Malloc((size_t)n_var * k); Hs = Malloc((size_t)n_var * k);
 	hv = Malloc(4*k); p = hv + n_var; gp = p + n_var; gm = gp + n_var;
 	make_point(x, seed);
+	if (order == 'e') {	/* exactly the start point, maybe on a bound */
+		if (seed) {
+			fprintf(stderr, "order e needs seed 0\n");
+			return 2;
+		}
+		memcpy(x, X0, k);
+		load_experr(argv[1]);
+	}
 	for (i = 0; i < n_con; ++i)
 		y[i] = .5 + rnd();
 	nobj = n_obj > 0 ? 0 : -1;
 
-	if (order == 'v') {
-		values(x, f, c);
+	if (order == 'g') {
 		derivs(x, G, J, gok, &jok);
+		values(x, f, c, fok, &cok);
 	} else {
+		values(x, f, c, fok, &cok);
 		derivs(x, G, J, gok, &jok);
-		values(x, f, c);
+	}
+	if (checkerr) {	/* order e: both call orders must give the errors */
+		check_errs("values first");
+		leave_point(x, xp, fp, cp);
+		derivs(x, G, J, gok, &jok);
+		values(x, f, c, fok, &cok);
+		check_errs("derivatives first");
 	}
 
 	/* Hessian of the Lagrangian, column by column, then sparse and dense */
@@ -277,26 +413,23 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	/* finite differences */
-	if (!nerr && n_var <= 400)
+	/* finite differences, for each routine that evaluated without error */
+	if (n_var <= 400)
 	for (j = 0; j < n_var; ++j) {
-		int okp = 1, okm = 1, okgp = 0, okgm = 0;
+		int okfp, okfm, okcp, okcm, okgp = 0, okgm = 0;
 		h = 1e-5 * (1. + fabs(x[j]));
 		memcpy(xp, x, k);
 		xp[j] = x[j] + h;
-		for (i = 0; i < n_obj; ++i) { ne = 0; fp[i] = objval(i, xp, &ne); if (ne) okp = 0; }
-		if (n_con) { ne = 0; conval(xp, cp, &ne); if (ne) okp = 0; }
-		if (haveh && okp) okgp = lag_grad(nobj, xp, y, gp, J2);
+		values_at(xp, fp, cp, &okfp, &okcp);
+		if (haveh && okfp && okcp) okgp = lag_grad(nobj, xp, y, gp, J2);
 		xp[j] = x[j] - h;
-		for (i = 0; i < n_obj; ++i) { ne = 0; fm[i] = objval(i, xp, &ne); if (ne) okm = 0; }
-		if (n_con) { ne = 0; conval(xp, cm, &ne); if (ne) okm = 0; }
-		if (haveh && okm) okgm = lag_grad(nobj, xp, y, gm, J2);
-		if (!okp || !okm)
-			continue;
-		for (i = 0; i < n_obj; ++i)
-			if (gok[i])
-				cmp("objgrd", i, j, G[i*n_var + j], (fp[i] - fm[i]) / (2*h));
-		if (jok) {
+		values_at(xp, fm, cm, &okfm, &okcm);
+		if (haveh && okfm && okcm) okgm = lag_grad(nobj, xp, y, gm, J2);
+		if (okfp && okfm)
+			for (i = 0; i < n_obj; ++i)
+				if (gok[i])
+					cmp("objgrd", i, j, G[i*n_var + j], (fp[i] - fm[i]) / (2*h));
+		if (jok && okcp && okcm) {
 			for (i = 0; i < n_con; ++i) {
 				t = 0.;
 				for (cg = Cgrad[i]; cg; cg = cg->next)
@@ -310,11 +443,11 @@ int main(int argc, char **argv) {
 	}
 
 	/* back at x: values and Hessian must be reproduced (stale-state check) */
-	if (!nerr && n_var <= 400) {
+	if (n_var <= 400) {
 		for (i = 0; i < n_obj; ++i) {
 			ne = 0;
 			t = objval(i, x, &ne);
-			if (!ne) cmp("objval-again", i, 0, t, f[i]);
+			if (!ne && fok[i]) cmp("objval-again", i, 0, t, f[i]);
 			ne = 0;
 			objgrd(i, x, gp, &ne);
 			if (!ne && gok[i])
@@ -323,7 +456,7 @@ int main(int argc, char **argv) {
 		if (n_con) {
 			ne = 0;
 			conval(x, cp, &ne);
-			if (!ne) for (i = 0; i < n_con; ++i) cmp("conval-again", i, 0, cp[i], c[i]);
+			if (!ne && cok) for (i = 0; i < n_con; ++i) cmp("conval-again", i, 0, cp[i], c[i]);
 			ne = 0;
 			jacval(x, J2, &ne);
 			if (!ne && jok) for (i = 0; i < nzc; ++i) cmp("jacval-again", i, 0, J2[i], J[i]);
@@ -338,6 +471,8 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
+	if (ref)
+		ref_unseen();
 	if (dump)
 		fclose(dump);
 	printf("n=%d m=%d nlc=%d nlo=%d evalerrs=%d mismatches=%d worst=%.3g\n",
