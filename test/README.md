@@ -78,6 +78,10 @@ are not visited (`dvfirst1`, `dvfirst2`, `zw2`).
 them. In the solvers library the modes other than `m` and `h` still give
 wrong products with defined variables and are not run.
 
+`degcheck` (solvers2) checks on every fixture that a function which
+`degree_ASL` calls quadratic is accepted by `mqpcheckv`: drivers that pass
+quadratic terms to the solver (Knitro) stop otherwise.
+
 ## Running
 
 ```sh

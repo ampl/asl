@@ -28,6 +28,7 @@ endif()
 if(BUILD_ASL2_LIB)
   aslTestChecker(derivcheck-asl2 asl2 derivcheck.c DERIVCHECK_ASL2)
   aslTestChecker(hvseq-asl2 asl2 hvseq.c)
+  aslTestChecker(degcheck-asl2 asl2 degcheck.c)
   list(APPEND ASL_TEST_CONFIGS asl2:fg asl2:pfgh)
 endif()
 
@@ -140,6 +141,10 @@ foreach(file ${ASL_TEST_FIXTURES})
   else()
     aslDerivTests(${fixture})
     aslHvSeqTests(${fixture})
+    if(TARGET degcheck-asl2)	# degree_ASL agrees with mqpcheckv
+      add_test(NAME degree.${fixture}.asl2-pfgh COMMAND degcheck-asl2
+        ${ASL_TEST_NL_DIR}/${fixture})
+    endif()
   endif()
 endforeach()
 aslHvSeqZeroTest(dvfirst1 y 7)
