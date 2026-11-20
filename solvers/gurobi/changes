@@ -478,3 +478,8 @@ nodemethod (default is -1), presparsify (1 = MIP only, 2 = all).
 of the current objective were optimized in the wrong direction; their
 .objweight is now negated when passed to Gurobi.  The message for a
 negative .objweight named the wrong objective.
+
+unreleased
+  gurobi.c:  a model with a quadratic constraint followed by a
+nonquadratic nonlinear one could write past a buffer before being
+rejected (an unsigned maximum wrapped on mqpcheckv's error return).
