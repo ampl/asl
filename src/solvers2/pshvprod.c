@@ -2625,7 +2625,10 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, const real *ow, const real 
 		v->dO = *s++;
 		v->adO = v->aO = 0.;
 		}
-	if (!(rw = range_weighted(asl, &ds, r, nobj, ow, y)))
+	/* Only a range with defined variables needs the check (it costs a */
+	/* walk of the range's functions on every call). */
+	rw = 2;
+	if (r->cei && !(rw = range_weighted(asl, &ds, r, nobj, ow, y)))
 		return;	/* the defined variables may not be evaluated at this x */
 	if ((cei = cei0 = r->cei)) {
 		i = *cei0++;
@@ -2765,21 +2768,66 @@ dv_add(ASL_pfgh *asl, Psbinfo *pi, int *v, int n)
 	}
 
  static int *
-dv_used(ASL_pfgh *asl, ps_func *f, int *np)
+dv_used(ASL_pfgh *asl, ps_func *f, int *np, int *pfree)
 {
 	/* The defined variables that evaluating function f uses (indices
 	   < P.ncom, increasing, without repeats), from the ce lists of f and
-	   its groups.  Returns a new_mblk block for del_mblk, or 0 if none. */
-	int i, j, n, *v;
+	   its groups.  *pfree = 1 if the result is a new_mblk block for
+	   del_mblk.  Without groups and split segments, f->pi.ce is copied
+	   in O(n) without a sort (see below). */
+	int c, *ce, dir, i, j, k, last, n, nc, nce, *v;
 	psg_elem *g, *ge;
 
+	*pfree = 0;
 	n = f->pi.ce ? *f->pi.ce : 0;
+	k = 0;
 	for(g = f->g, ge = f->ge; g < ge; g++)
 		if (g->pi.ce)
-			n += *g->pi.ce;
+			k += *g->pi.ce;
 	*np = 0;
-	if (!n)
+	if (!(n + k))
 		return 0;
+	if (!k) {
+		/* f->pi.ce without segments, in a monotone order (the */
+		/* reader's compar1 order is decreasing): copy it in */
+		/* increasing order, O(n), without a sort.  Linarg cells */
+		/* (>= ncom + ndvspout) are left out. */
+		ce = f->pi.ce + 1;
+		nc = asl->P.ncom;
+		nce = nc + asl->P.ndvspout;
+		dir = last = 0;
+		for(i = j = 0; i < n; ++i) {
+			if ((c = ce[i]) >= nce)
+				continue;
+			if (c >= nc || (j && c == last))
+				break;	/* a segment or a repeat */
+			if (j == 1)
+				dir = c > last ? 1 : -1;
+			else if (j > 1 && (c > last ? 1 : -1) != dir)
+				break;
+			last = c;
+			++j;
+			}
+		if (i == n) {
+			if (!j)
+				return 0;
+			v = (int*)new_mblk(htcl(j*sizeof(int)));
+			*pfree = 1;
+			for(i = k = 0; i < n; ++i)
+				if ((c = ce[i]) < nc)
+					v[k++] = c;
+			if (dir < 0)
+				for(i = 0, k = j - 1; i < k; ++i, --k) {
+					c = v[i];
+					v[i] = v[k];
+					v[k] = c;
+					}
+			*np = j;
+			return v;
+			}
+		}
+	n += k;
+	*pfree = 1;
 	v = (int*)new_mblk(htcl(n*sizeof(int)));
 	n = dv_add(asl, &f->pi, v, 0);
 	for(g = f->g; g < ge; g++)
@@ -2813,7 +2861,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
 	real g1, g2, *oc, *s, t, t2, *p0, *w;
-	int dk, *dl, ndl;
+	int dk, *dl, dlfree, ndl;
 	varno_t i;
 
 #ifdef IGNORE_BOGUS_WARNINGS
@@ -2915,7 +2963,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		ew->x0kind |= ASL_x_known;
 		}
 	dl = 0;
-	ndl = 0;
+	dlfree = ndl = 0;
 	if ((ndv = asl->P.ncom)) {
 		dvsp0 = asl->P.dvsp0;
 		ndvsp = asl->P.ndvsp;
@@ -2923,7 +2971,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		c = cexps;
 		/* only the defined variables of this function: the others */
 		/* need not have values at this x, and passing them costs */
-		dl = dv_used(asl, f, &ndl);
+		dl = dv_used(asl, f, &ndl, &dlfree);
 		for(dk = 0; dk < ndl; ++dk) {
 			j = dl[dk];
 			if (j < ndv && (i1 = ndvsp[j])) {
@@ -3040,7 +3088,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		}
 	if (p0)
 		del_mblk(p0);
-	if (dl)
+	if (dlfree)
 		del_mblk(dl);
 	}
 
@@ -3090,7 +3138,7 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
 	real g1, g2, *hve, *oc, *p0, *s, t, t2, *vscale, *w;
-	int dk, *dl, ndl;
+	int dk, *dl, dlfree, ndl;
 	varno_t F, i, rv, *ze;
 
 #ifdef IGNORE_BOGUS_WARNINGS
@@ -3191,14 +3239,14 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 		ew->x0kind |= ASL_x_known;
 		}
 	dl = 0;
-	ndl = 0;
+	dlfree = ndl = 0;
 	if ((ndv = asl->P.ncom)) {
 		dvsp0 = asl->P.dvsp0;
 		ndvsp = asl->P.ndvsp;
 		c = cexps;
 		/* only the defined variables of this function: the others */
 		/* need not have values at this x, and passing them costs */
-		dl = dv_used(asl, f, &ndl);
+		dl = dv_used(asl, f, &ndl, &dlfree);
 		for(dk = 0; dk < ndl; ++dk) {
 			j = dl[dk];
 			if (j < ndv && (i1 = ndvsp[j])) {
@@ -3353,7 +3401,7 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 		}
 	if (p0)
 		del_mblk(p0);
-	if (dl)
+	if (dlfree)
 		del_mblk(dl);
 	return rv;
 	}
