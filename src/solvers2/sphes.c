@@ -394,9 +394,11 @@ alignarg(more_OPCPOW1:)
 			break;
 
 		case OPVARREF:
-			r = (Eresult*)&w[o[2]];
+			/* A plain-variable min/max operand: w[o[2]] is the */
+			/* variable's own cell, whose aO/adO accumulate the */
+			/* contributions of the range; do not clear them. */
 			o += 3;
-			break;
+			goto endchk;
 
 #ifdef X64_bit_pointers
 		case OPGOTOBalign:
@@ -2081,6 +2083,18 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 		spi->hcolstarts = hr = (fint*)(hcolstarts + n1);
 		for(i = 0; i < n1; ++i)
 			hr[i] = hcolstarts[i];
+		}
+	if (!(ew->x0kind & ASL_first_x) && x0len > 0) {
+		/* The setup used cells that evaluations had filled (e.g. */
+		/* the branch an if took): treat the current x as new, so */
+		/* that the next sphes or hvcomp evaluates the functions again. */
+		real *x1 = (real*)new_mblk(htcl(x0len));
+		int xk = ew->x0kind & ASL_x_known;
+		memcpy(x1, ew->Lastx, x0len);
+		ew->x0kind |= ASL_first_x;
+		xp_check_ASL(ew, x1);
+		ew->x0kind |= xk;
+		Del_mblk_ASL((ASL*)asl, x1);
 		}
 	return rv;
 	}

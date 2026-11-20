@@ -3884,7 +3884,13 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			*deriv = 0;
 			dbsave = S->curdb;
 			S->curdb.de = dbsave.d0;
-			db = db2 = 0;
+			/* db2 continues every operand's derivative chain with */
+			/* the derivatives computed before this min/max.  It is */
+			/* created before the operands are read so that an operand */
+			/* that is itself a min, max or if can end its inner chains */
+			/* there; db is set once an operand has derivatives. */
+			db = 0;
+			db2 = db_save(S, &dbsave);
 			if ((ka = atop))
 				kaf = 0;
 			else
@@ -3893,6 +3899,8 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			for(j = 0; j < n; ++j) {
 				ia = 0;
 				mmp[j].f = 0;
+				S->curdb.next = db2;
+				S->curdb.nxt = db2 != S->emptydb;
 				S->dop = &mmp[j].f;
 				S->opprev = oprev[0];
 				opg[j] = ewalk(S, args[j], &ia, ka);
@@ -3913,15 +3921,15 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 						new_derp(S, ia, ka, ica);
 						}
 					if (!db) {
-						if (!(db = db2))
-							db = db2 = db_save(S, &dbsave);
+						db = db2;
 						*deriv = ka;
 						}
+					/* The operand's chain already ends at db2, */
+					/* or at a run-time link (w[rv+5]) when the */
+					/* operand is a nested min/max: keep the link. */
 					mmp[j].db = db1 = (derpblock*)mem(sizeof(derpblock));
 					*db1 = S->curdb;
 					S->curdb.de = S->curdb.d0;
-					if ((db1->next = db) != S->emptydb)
-						db1->nxt = 1;
 					opg1 = nextop(S, 6);
 					if (needalign(opg1,1)) {
 						opg1[0] = OPGOTOF2align;
@@ -3938,8 +3946,6 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 					mmp[j].d = opg[j];
 					}
 				else {
-					if (!db2)
-						db2 = db_save(S, &dbsave);
 					mmp[j].d = -1;
 					mmp[j].db = db2;
 					pg[j] = 0;
@@ -3979,8 +3985,8 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 							*pf = mmp[j].f;
 						pf = &pop[1];
 						}
-					else
-						mmp[j].f = opg3;
+					else	/* OPGOTOMM sets dO = 0 for this operand */
+						mmp[j].f = opg2;
 					}
 				*pf = op;
 				memcpy(opg1, opg, n*sizeof(int));
@@ -3991,6 +3997,13 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				del_mblk(mmp);
 				break;
 				}
+			/* No operand has derivatives (so none created derps): */
+			/* continue the block of the derps that precede this */
+			/* min/max, which S->curdb.de = dbsave.d0 above left out. */
+			/* Needed when the derp chunk overflows inside the operands */
+			/* (dvchunk1): the chaining above leaves next == emptydb */
+			/* with nxt == 0, so new_derp would not note the new block. */
+			S->curdb = dbsave;
 			if (kaf)
 				free_a(S, kaf);
 			if (needalign(op,1))
@@ -4168,9 +4181,14 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		a3 = a2 = wlast;
 		if (a1 > a2)
 			a3 = a1;
-		if (ia && ja)
-			goto newrv;
-		if (i >= af) {
+		if (ia || ja)	/* a branch with derivatives needs the 4 cells */
+			goto newrv;	/* of an Eresult: a temporary may have only 1 */
+		/* Only a temporary of the branches (cell >= a0) may hold */
+		/* the result.  The cell of a constant (negative, shared by */
+		/* every use of the constant), of a variable or of a defined */
+		/* variable must not receive a copy of the other branch, and */
+		/* the forward Hessian pass of the if clears its dO/aO/adO. */
+		if (i >= a0) {
 			if (i == j)
 				rv = i;
 			else if (i < j) {
@@ -4179,12 +4197,12 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				else
 					goto newrv;
 				}
-			else if (j < (int)af || a2 <= i)
+			else if (j < a0 || a2 <= i)
 				rv = i;
 			else
 				goto newrv;
 			}
-		else if (j >= af)
+		else if (j >= a0)
 			rv = j;
 		else {
  newrv:
@@ -4997,8 +5015,8 @@ cexp_walk(Static *S, int kc, int wantdb, int wantdc)
 				if (++k > fmax)
 					goto f1_check;
 				}
-			else if (j >= mxv)
-				continue;
+			else if (j >= mxv)	/* a linear argument (e.g., x+y in sin(x+y)): */
+				goto f1_check;	/* funnelkind 2 does not follow its variables */
 			else if ((vr = cx0[j-nv].vref)) {
 				if (vr[2] == 2)
 					i1 = vr[1];

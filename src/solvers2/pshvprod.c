@@ -517,6 +517,11 @@ hv_back(int *o, real *w, real aO0, real adO0)
 
 	if (!aO0 && !adO0)
 		return;
+	/* A defined variable without operations that have derivatives */
+	/* (e.g. max(0.5, floor(x))) starts at the OPRET in front of its */
+	/* ops: o[2] is not a cell then (cf. hv_back in sphes.c). */
+	if (*o == OPRET || *o == nOPRETB)
+		return;
 	r = (Eresult*)(w + o[2]);
 	r->aO = aO0;
 	r->adO = adO0;
@@ -840,7 +845,18 @@ hv_back(int *o, real *w, real aO0, real adO0)
 	}
 
  static void
+hv_fwd0f(EvalWorkspace *ew, cexp *c, Varval *v, int usefun);
+
+ static void
 hv_fwd0(EvalWorkspace *ew, cexp *c, Varval *v)
+{
+	hv_fwd0f(ew, c, v, 1);
+	}
+
+ static void
+hv_fwd0f(EvalWorkspace *ew, cexp *c, Varval *v, int usefun)
+	/* usefun = 0: a defined variable with a funnel uses its own */
+	/* derivative code, as one without a funnel does */
 {
 	ASL_pfgh *asl;
 	Varval *V, *v1;
@@ -855,7 +871,7 @@ hv_fwd0(EvalWorkspace *ew, cexp *c, Varval *v)
 	w = ew->w;
 	V = (Varval*)w;
 	v->aO = v->adO = 0;
-	if ((hf = c->hfun)) {
+	if ((hf = c->hfun) && (usefun || !c->o.f)) {
 		x = 0;
 		if ((og = hf->og))
 			do x += og->coef * V[og->varno].dO;
@@ -1409,11 +1425,7 @@ funnelhes_ew_ASL(EvalWorkspace *ew)
 				hv_fwd(e, w);
 				hv_back(c->o.b, w, 0., 1.);
 				}
-			else if (*(e = c->o.e) != OPRET) {
-				u = (Eresult*)&w[e[2]];
-				u->aO = 0;
-				u->adO = 1;
-				}
+			/* no derivative code: no contribution */
 			v->dO = 0;
 			vp1 = hf->vp;
 			do {
@@ -1425,6 +1437,118 @@ funnelhes_ew_ASL(EvalWorkspace *ew)
 			}
 			while(vp < vpe);
 		}
+	}
+
+ typedef struct
+Dvsel {	/* the functions in a Hessian-vector product */
+	const real *y;	/* constraint weights, or 0 */
+	const real *ow;	/* weights of objectives no..noe-1; 0: weight 1 */
+	int co;		/* >= 0: constraint co alone, weight 1 */
+	int no, noe;
+	int anyc, anyo;	/* whether some constraint, objective has a weight */
+	} Dvsel;
+
+ static void
+dvsel_init(ASL_pfgh *asl, Dvsel *d, const real *y, int co, int no, int noe, const real *ow)
+{
+	int i;
+
+	d->y = y;
+	d->co = co;
+	d->no = no;
+	d->noe = noe;
+	d->ow = ow;
+	/* Only nonlinear functions are evaluated for a product: weights of
+	   linear ones leave the shared defined variables without values. */
+	d->anyc = co >= 0;
+	if (y)
+		for(i = 0; i < nlc && !d->anyc; ++i)
+			d->anyc = y[i] != 0.;
+	d->anyo = 0;
+	for(i = no; i < noe && i < nlo && !d->anyo; ++i)
+		d->anyo = !ow || ow[i-no] != 0.;
+	}
+
+ static int
+first_range(const int *s, int n, int i)	/* k with s[k] <= i < s[k+1] */
+{
+	int k, lo = 0;
+
+	while(n - lo > 1) {
+		k = (lo + n) >> 1;
+		if (s[k] <= i)
+			lo = k;
+		else
+			n = k;
+		}
+	return lo;
+	}
+
+ static int
+dv_needed(ASL_pfgh *asl, Dvsel *d, int i)
+{
+	/* Whether defined variable i can be used by a function in the
+	   product.  The others need not have been evaluated at this x: their
+	   cells (such as the operand that a min or max selects) may hold no
+	   values yet, so hv_fwd and hv_back must not visit them. */
+	const int *s;
+	int k, nc;
+
+	if (i >= asl->P.ncom)	/* a segment of a split defined variable */
+		i = first_range(asl->P.dvsp0, asl->P.ncom, i);
+	if (i < comb)
+		return 1;
+	if (i < comb + comc)
+		return d->anyc;
+	if (i < comb + comc + como)
+		return d->anyo;
+	nc = asl->i.n_con0;
+	if ((s = c_cexp1st) && i < s[nc + n_lcon]) {
+		if (i >= s[nc])
+			return 0;	/* of a logical constraint */
+		k = first_range(s, nc, i);
+		return d->co >= 0 ? k == d->co : d->y && d->y[k] != 0.;
+		}
+	if ((s = o_cexp1st) && i >= s[0] && i < s[n_obj]) {
+		k = first_range(s, n_obj, i);
+		return k >= d->no && k < d->noe && (!d->ow || d->ow[k - d->no] != 0.);
+		}
+	return 1;
+	}
+
+ static char *
+dv_mask(ASL_pfgh *asl, Dvsel *d)
+{
+	/* dv_needed for every defined variable (not segment), in one pass:
+	   O(P.ncom + n_con + n_obj) instead of a binary search per variable.
+	   Returns a new_mblk block for del_mblk. */
+	char *m;
+	const int *s;
+	int i, ie, k, n, nc;
+
+	n = asl->P.ncom;
+	m = (char*)new_mblk(htcl(n));
+	for(i = 0; i < n; ++i)
+		m[i] = 1;
+	for(i = comb, ie = comb + comc; i < ie; ++i)
+		m[i] = (char)d->anyc;
+	for(ie += como; i < ie; ++i)
+		m[i] = (char)d->anyo;
+	nc = asl->i.n_con0;
+	if ((s = c_cexp1st)) {
+		for(k = 0; k < nc; ++k)
+			for(i = s[k], ie = s[k+1]; i < ie; ++i)
+				m[i] = (char)(d->co >= 0 ? k == d->co
+					: d->y && d->y[k] != 0.);
+		for(i = s[nc], ie = s[nc + n_lcon]; i < ie; ++i)
+			m[i] = 0;	/* of a logical constraint */
+		}
+	if ((s = o_cexp1st))
+		for(k = 0; k < n_obj; ++k)
+			for(i = s[k], ie = s[k+1]; i < ie; ++i)
+				m[i] = (char)(k >= d->no && k < d->noe
+					&& (!d->ow || d->ow[k - d->no] != 0.));
+	return m;
 	}
 
  static void
@@ -1445,6 +1569,8 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
 	real *cscale, g1, g2, *oc, t, t2, *W;
+	Dvsel ds;
+	char *dvm;
 
 #ifdef IGNORE_BOGUS_WARNINGS
 	c = 0;
@@ -1466,6 +1592,8 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 		if (ow)
 			noe = n_obj;
 		}
+	dvsel_init(asl, &ds, y, -1, no, noe, ow);
+	dvm = asl->P.ncom ? dv_mask(asl, &ds) : 0;
 	x0 = (Varval*)W;
 	vp = x0 + asl->i.defvar0;
 	n = c_vars >= o_vars ? c_vars : o_vars;
@@ -1492,6 +1620,8 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 		x1 = (Varval*)ew->dv;
 		c = cexps;
 		for(i = 0; i < ndv; ++i) {
+			if (!dvm[i])
+				continue;
 			if ((i1 = ndvsp[i])) {
 				i1 += i0 = dvsp0[i];
 				do hv_fwd0(ew, c + i0, &vp[i0]);
@@ -1514,11 +1644,9 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 				hv_fwd(e, W);
 				hv_back(b->o.b, W, 0., t2);
 				}
-			else if (*(e = b->o.e) != OPRET) {
-				x = (Varval*)&W[e[2]];
-				x->aO = 0;
-				x->adO = t2;
-				}
+			else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+				((Varval*)&W[e[1]])->adO += t2; /* a defined variable */
+			/* Otherwise no derivative code: no contribution */
 			}
 		for(g = f->g, ge = f->ge; g < ge; g++) {
 			gm = g->gm;
@@ -1528,11 +1656,9 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 					hv_fwd(e, W);
 					hv_back(b->o.b, W, 0., t2*g1);
 					}
-				else if (*(e = b->o.e) != OPRET) {
-					x = (Varval*)&W[e[2]];
-					x->aO = 0;
-					x->adO = t2*g1;
-					}
+				else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+					((Varval*)&W[e[1]])->adO += t2*g1; /* a defined variable */
+				/* Otherwise no derivative code: no contribution */
 				}
 			if ((g2 = W[gm+2])) {
 				oc = W + gm + 3;
@@ -1557,11 +1683,9 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 				hv_fwd(e, W);
 				hv_back(b->o.b, W, 0., t2);
 				}
-			else if (*(e = b->o.e) != OPRET) {
-				x = (Varval*)&W[e[2]];
-				x->aO = 0;
-				x->adO = t2;
-				}
+			else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+				((Varval*)&W[e[1]])->adO += t2; /* a defined variable */
+			/* Otherwise no derivative code: no contribution */
 			}
 		for(g = f->g, ge = f->ge; g < ge; g++) {
 			gm = g->gm;
@@ -1571,11 +1695,9 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 					hv_fwd(e, W);
 					hv_back(b->o.b, W, 0., t2*g1);
 					}
-				else if (*(e = b->o.e) != OPRET) {
-					x = (Varval*)&W[e[2]];
-					x->aO = 0;
-					x->adO = t2*g1;
-					}
+				else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+					((Varval*)&W[e[1]])->adO += t2*g1; /* a defined variable */
+				/* Otherwise no derivative code: no contribution */
 				}
 			if ((g2 = W[gm+2])) {
 				t = 0.;
@@ -1592,6 +1714,20 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 		}
 	    }
 	for(i = ndv; --i >= 0; ) {
+		if (!dvm[i])
+			continue;
+		x = x1 + i;
+		c1 = c + i;
+		if ((t = x->aO) && (L = c1->lp))
+			for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
+				x0[lc->varno].aO += t * lc->coef;
+		if (c1->hfun)
+			funnel_back(ew, c1, x, t);
+		else if ((e = c1->o.b))
+			hv_back(e, W, t, x->adO);
+		/* no derivative code: no contribution */
+		/* The segments of a split defined variable come after the
+		 * variable itself: its backward pass sets their adjoints. */
 		if ((i1 = ndvsp[i])) {
 			i1 += i0 = dvsp0[i];
 			do {
@@ -1604,26 +1740,8 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 					funnel_back(ew, c1, v, t);
 				else if ((e = c1->o.b))
 					hv_back(e, W, t, v->adO);
-				else if (*(e = c1->o.e) != OPRET) {
-					x = (Varval*)&W[e[2]];
-					x->aO = t;
-					x->adO = v->adO;
-					}
+				/* no derivative code: no contribution */
 				} while(i1 > i0);
-			}
-		x = x1 + i;
-		c1 = c + i;
-		if ((t = x->aO) && (L = c1->lp))
-			for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
-				x0[lc->varno].aO += t * lc->coef;
-		if (c1->hfun)
-			funnel_back(ew, c1, x, t);
-		else if ((e = c1->o.b))
-			hv_back(e, W, t, x->adO);
-		else if ((e = c1->o.e) && *e != OPRET) {
-			v = (Varval*)&W[e[2]];
-			v->aO = t;
-			v->adO = x->adO;
 			}
 		}
 	for(la = asl->P.lalist; la; la = la->lnext) {
@@ -1638,6 +1756,8 @@ hvp0comp(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real *ow, c
 	x = x0;
 	while(x < xe)
 		*hv++ = (x++)->aO;
+	if (dvm)
+		del_mblk(dvm);
 	}
 
  static real *	/* Compute vector x0 = mat(h)*y0,	*/
@@ -2411,6 +2531,53 @@ dbprint2(EvalWorkspace *ew, range *r, pthread_t tno)
 #endif
 
 
+ static int
+range_weighted(ASL_pfgh *asl, Dvsel *d, range *r, int nobj, const real *ow, const real *y)
+{
+	/* Whether a function of range r has a nonzero weight, with the
+	   arguments as pshv_prod_ASL uses them; sets *d for dv_needed.  A
+	   range of functions that all have weight 0 (e.g., only objectives
+	   other than nobj) adds nothing; its functions need not have been
+	   evaluated at this x, so their defined variables (such as a min or
+	   max) are not visited.  Some function of the range with a weight was
+	   evaluated, which computed the shared defined variables of its kind:
+	   anyc and anyo come from the range alone (cheaper than all of y). */
+	psb_elem *b;
+	int all, i;
+
+	d->y = y;
+	d->co = -1;
+	d->ow = 0;
+	d->no = d->noe = 0;
+	if (nobj >= 0) {
+		d->no = nobj;
+		d->noe = nobj + 1;
+		}
+	else if (ow) {
+		d->noe = n_obj;
+		d->ow = ow;
+		}
+	d->anyc = d->anyo = 0;
+	all = 1;
+	for(b = r->refs; b; b = b->next) {
+		if ((i = b->conno) < 0) {
+			i = -2 - i;
+			if (i == nobj || (ow && ow[i]))
+				d->anyo = 1;
+			else
+				all = 0;
+			}
+		else if (y && y[i])
+			d->anyc = 1;
+		else
+			all = 0;
+		}
+	/* 0: no weight; 1: some functions without weight (filter with */
+	/* dv_needed); 2: all have weights (every defined variable of the */
+	/* range was evaluated) */
+	return d->anyc | d->anyo ? 2 - !all : 0;
+	}
+
  void
 pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, const real *ow, const real *y)
 {
@@ -2425,6 +2592,8 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, const real *ow, const real 
 	psb_elem *b;
 	psg_elem *g;
 	real *cscale, *s, owi, t, *w;
+	Dvsel ds;
+	int rw;
 #ifdef DMG_DEBUG
 	pthread_t tno;
 #endif
@@ -2456,12 +2625,15 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, const real *ow, const real 
 		v->dO = *s++;
 		v->adO = v->aO = 0.;
 		}
+	if (!(rw = range_weighted(asl, &ds, r, nobj, ow, y)))
+		return;	/* the defined variables may not be evaluated at this x */
 	if ((cei = cei0 = r->cei)) {
 		i = *cei0++;
 		ceie = (cei = cei0) + i;
 		do {
 			i = *cei++;
-			hv_fwd0(ew, cexps + i, &vp[i]);
+			if (rw == 2 || dv_needed(asl, &ds, i))
+				hv_fwd0(ew, cexps + i, &vp[i]);
 			}
 			while(cei < ceie);
 		}
@@ -2495,17 +2667,19 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, const real *ow, const real 
 			hv_fwd(e, w);
 			hv_back(b->o.b, w, 0., t);
 			}
-		else if (*(e = b->o.e) != OPRET) {
-			v = (Varval*)&w[e[2]];
-			v->adO += t;
-			}
-		else {
+		else if (*(e = b->o.e) == OPRET) {	/* a single cell */
 			v = (Varval*)&w[e[1]];
 			v->adO += t;
 			}
+		/* Otherwise the element has no derivative code: it does not */
+		/* depend on the variables (e.g. max(0.5, floor(x)), count()) */
+		/* and contributes nothing.  Its ops do not start with a */
+		/* cell index (o.e[2] can be part of a pointer). */
 		}
 	while(cei > cei0) {
 		i = *--cei;
+		if (rw != 2 && !dv_needed(asl, &ds, i))
+			continue;
 		c = cexps + i;
 		v = &vp[i];
 		if ((t = v->aO) && (L = c->lp)) {
@@ -2520,15 +2694,102 @@ pshv_prod_ASL(EvalWorkspace *ew, range *r, int nobj, const real *ow, const real 
 			funnel_back(ew, c, v, t);
 		else if ((e = c->o.b))
 			hv_back(e, w, t, v->adO);
-		else if ((o = c->o.e) && *o != OPRET) {
-			x = (Varval*)&w[e[2]];
-			x->aO += t;
-			x->adO += v->adO;
-			}
+		/* no derivative code: no contribution */
 		}
 #ifdef DMG_DEBUG
 	dbprint2(ew, r, tno);
 #endif
+	}
+
+ static void
+hvd_eval(EvalWorkspace *ew, int co)
+{
+	/* For hvpcompd and hvpcomps: evaluate function co (co < 0: objective
+	   -1 - co) and its gradient at the current x unless that was done.
+	   These products do not use the funnels (hv_fwd0f(..., 0)): funnels
+	   hold values of all shared defined variables, which need not be
+	   computed at this x, and their code (hfg_fwd) lacks some ops. */
+	ASL_pfgh *asl;
+	int no, nx;
+	ps_func *f;
+
+	asl = (ASL_pfgh*)ew->asl;
+	nx = ew->nxval;
+	if (co >= 0) {
+		if (co >= nlc)
+			return;
+		f = asl->P.cps + co;
+		if (ew->ncxval[co] != nx)
+			conpival_ew_ASL(ew, co, ew->Lastx, 0);
+		if (f->g && ew->ncxgval[co] != nx)
+			conpgrd_ew_ASL(ew, co, ew->Lastx, 0, 0);
+		}
+	else {
+		if ((no = -1 - co) >= nlo)
+			return;
+		f = asl->P.ops + no;
+		if (ew->noxval[no] != nx)
+			objpval_ew_ASL(ew, no, ew->Lastx, 0);
+		if (f->g && ew->noxgval[no] != nx)
+			objpgrd_ew_ASL(ew, no, ew->Lastx, 0, 0);
+		}
+	}
+
+ static int
+intcmp(const void *a, const void *b)
+{
+	return *(const int*)a - *(const int*)b;
+	}
+
+ static int
+dv_add(ASL_pfgh *asl, Psbinfo *pi, int *v, int n)
+{
+	/* Append to v the defined variables in pi->ce: the cells whose
+	   values evaluating pi uses.  A segment of a split defined variable
+	   counts as its variable, which hvpcompd passes with its segments;
+	   linarg cells, which follow the defined variables, are left out. */
+	int *ce, *cee, k, nc, nce;
+
+	if (!(ce = pi->ce))
+		return n;
+	nc = asl->P.ncom;
+	nce = nc + asl->P.ndvspout;
+	for(cee = ce + *ce; ce < cee; ) {
+		if ((k = *++ce) >= nce)
+			continue;
+		if (k >= nc)
+			k = first_range(asl->P.dvsp0, nc, k);
+		v[n++] = k;
+		}
+	return n;
+	}
+
+ static int *
+dv_used(ASL_pfgh *asl, ps_func *f, int *np)
+{
+	/* The defined variables that evaluating function f uses (indices
+	   < P.ncom, increasing, without repeats), from the ce lists of f and
+	   its groups.  Returns a new_mblk block for del_mblk, or 0 if none. */
+	int i, j, n, *v;
+	psg_elem *g, *ge;
+
+	n = f->pi.ce ? *f->pi.ce : 0;
+	for(g = f->g, ge = f->ge; g < ge; g++)
+		if (g->pi.ce)
+			n += *g->pi.ce;
+	*np = 0;
+	if (!n)
+		return 0;
+	v = (int*)new_mblk(htcl(n*sizeof(int)));
+	n = dv_add(asl, &f->pi, v, 0);
+	for(g = f->g; g < ge; g++)
+		n = dv_add(asl, &g->pi, v, n);
+	qsort(v, n, sizeof(int), intcmp);
+	for(i = j = 0; i < n; ++i)
+		if (!j || v[i] != v[j-1])
+			v[j++] = v[i];
+	*np = j;
+	return v;
 	}
 
  void
@@ -2552,6 +2813,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
 	real g1, g2, *oc, *s, t, t2, *p0, *w;
+	int dk, *dl, ndl;
 	varno_t i;
 
 #ifdef IGNORE_BOGUS_WARNINGS
@@ -2574,6 +2836,7 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 	nx = ew->nxval;
 	oxk = ew->x0kind;
 	ew->x0kind |= ASL_x_known;
+	hvd_eval(ew, co);
 
 	p0 = 0;
 	cg0 = 0;
@@ -2596,10 +2859,6 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		if (co >= nlc)
 			return;
 		f = asl->P.cps + co;
-		if (ew->ncxval[co] != nx)
-			conpival_ew_ASL(ew, co, ew->Lastx, 0);
-		if (f->g && ew->ncxgval[co] != nx)
-			conpgrd_ew_ASL(ew, co, ew->Lastx, 0, 0);
 		if ((s = asl->i.lscale))
 			t2 = s[co];
 		cg = cg0 = Cgrad[co];
@@ -2628,10 +2887,6 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		if (no >= nlo)
 			return;
 		f = asl->P.ops + no;
-		if (ew->noxval[no] != nx)
-			objpval_ew_ASL(ew, no, ew->Lastx, 0);
-		if (f->g && ew->noxgval[no] != nx)
-			objpgrd_ew_ASL(ew, no, ew->Lastx, 0, 0);
 		og = og0 = Ograd[no];
 		if ((s = asl->i.vscale)) {
 			kp = htcl(n*sizeof(real));
@@ -2654,22 +2909,29 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 			}
 		}
 	if (ew->Derrs) {
-		ew->x0kind = oxk;
+		if (!(oxk & ASL_x_known))	/* keep the flags set or cleared */
+			ew->x0kind &= ~ASL_x_known;	/* by hvd_eval's evaluations */
 		deriv_errchk_ASL(ew, co, 1, 3);
 		ew->x0kind |= ASL_x_known;
 		}
+	dl = 0;
+	ndl = 0;
 	if ((ndv = asl->P.ncom)) {
 		dvsp0 = asl->P.dvsp0;
 		ndvsp = asl->P.ndvsp;
 		x1 = (Varval*)ew->dv;
 		c = cexps;
-		for(j = 0; j < ndv; ++j) {
-			if ((i1 = ndvsp[j])) {
+		/* only the defined variables of this function: the others */
+		/* need not have values at this x, and passing them costs */
+		dl = dv_used(asl, f, &ndl);
+		for(dk = 0; dk < ndl; ++dk) {
+			j = dl[dk];
+			if (j < ndv && (i1 = ndvsp[j])) {
 				i1 += (i0 = dvsp0[j]);
-				do hv_fwd0(ew, c + i0, &vp[i0]);
+				do hv_fwd0f(ew, c + i0, &vp[i0], 0);
 				   while(++i0 < i1);
 				}
-			hv_fwd0(ew, c + j, vp + j);
+			hv_fwd0f(ew, c + j, vp + j, 0);
 			}
 		}
 	for(b = f->pi.b, be = f->pi.be; b < be; b++) {
@@ -2677,11 +2939,9 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 			hv_fwd(e, w);
 			hv_back(b->o.b, w, 0., t2);
 			}
-		else if (*(e = b->o.e) != OPRET) {
-			x = (Varval*)&w[e[2]];
-			x->aO = 0;
-			x->adO = t2;
-			}
+		else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+			((Varval*)&w[e[1]])->adO += t2; /* a defined variable */
+		/* Otherwise no derivative code: no contribution */
 		}
 	for(g = f->g, ge = f->ge; g < ge; g++) {
 		gm = g->gm;
@@ -2691,11 +2951,9 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 				hv_fwd(e, w);
 				hv_back(b->o.b, w, 0., t2*g1);
 				}
-			else if (*(e = b->o.e) != OPRET) {
-				x = (Varval*)&w[e[2]];
-				x->aO = 0;
-				x->adO = t2*g1;
-				}
+			else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+				((Varval*)&w[e[1]])->adO += t2*g1; /* a defined variable */
+			/* Otherwise no derivative code: no contribution */
 			}
 		if ((g2 = w[gm+2]) && (nov = g->nov) > 0) {
 			ov = g->ov;
@@ -2708,8 +2966,22 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 				V[ov[j]].aO += t*oc[j];
 			}
 		}
-	for(j = ndv; --j >= 0; ) {
-		if ((i1 = ndvsp[j])) {
+	for(dk = ndl; --dk >= 0; ) {
+		j = dl[dk];
+		c1 = c + j;
+		x = x1 + j;
+		if ((t = x->aO) && (L = c1->lp))
+			for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
+				V[lc->varno].aO += t * lc->coef;
+		x = x1 + j;
+		if (c1->hfun && !c1->o.f)	/* as in hv_fwd0f(..., 0) */
+			funnel_back(ew, c1, x, t);
+		else if ((e = c1->o.b))
+			hv_back(e, w, t, x->adO);
+		/* no derivative code: no contribution */
+		/* The segments of a split defined variable come after the
+		 * variable itself: its backward pass sets their adjoints. */
+		if (j < ndv && (i1 = ndvsp[j])) {
 			i1 += i0 = dvsp0[j];
 			do {
 				v = &vp[--i1];
@@ -2717,31 +2989,12 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 				if ((t = v->aO) && (L = c1->lp))
 					for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
 						V[lc->varno].aO += t * lc->coef;
-				if (c1->hfun)
+				if (c1->hfun && !c1->o.f)
 					funnel_back(ew, c1, v, t);
 				else if ((e = c1->o.b))
 					hv_back(e, w, t, v->adO);
-				else if (*(e = c1->o.e) != OPRET) {
-					x = (Varval*)&w[e[2]];
-					x->aO = t;
-					x->adO = v->adO;
-					}
+				/* no derivative code: no contribution */
 				} while(i1 > i0);
-			}
-		c1 = c + j;
-		x = x1 + j;
-		if ((t = x->aO) && (L = c1->lp))
-			for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
-				V[lc->varno].aO += t * lc->coef;
-		x = x1 + j;
-		if (c1->hfun)
-			funnel_back(ew, c1, x, t);
-		else if ((e = c1->o.b))
-			hv_back(e, w, t, x->adO);
-		else if (*(e = c1->o.e) != OPRET) {
-			x = (Varval*)&w[e[2]];
-			x->aO = t;
-			x->adO = x->adO;
 			}
 		}
 	for(la = asl->P.lalist; la; la = la->lnext)
@@ -2787,6 +3040,8 @@ hvpcompd_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co)
 		}
 	if (p0)
 		del_mblk(p0);
+	if (dl)
+		del_mblk(dl);
 	}
 
 /* Variant of hvpcompd_ew_ASL that has a final nerror argument, working
@@ -2835,6 +3090,7 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 	psb_elem *b, *be;
 	psg_elem *g, *ge;
 	real g1, g2, *hve, *oc, *p0, *s, t, t2, *vscale, *w;
+	int dk, *dl, ndl;
 	varno_t F, i, rv, *ze;
 
 #ifdef IGNORE_BOGUS_WARNINGS
@@ -2856,6 +3112,7 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 	nx = ew->nxval;
 	oxk = ew->x0kind;
 	ew->x0kind |= ASL_x_known;
+	hvd_eval(ew, co);
 
 	p0 = 0;
 	cg0 = 0;
@@ -2879,10 +3136,6 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 		if (co >= nlc)
 			return 0;
 		f = asl->P.cps + co;
-		if (ew->ncxval[co] != nx)
-			conpival_ew_ASL(ew, co, ew->Lastx, 0);
-		if (f->g && ew->ncxgval[co] != nx)
-			conpgrd_ew_ASL(ew, co, ew->Lastx, 0, 0);
 		if ((s = asl->i.lscale))
 			t2 = s[co];
 		cg = cg0 = Cgrad[co];
@@ -2910,10 +3163,6 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 		if (no >= nlo)
 			return 0;
 		f = asl->P.ops + no;
-		if (ew->noxval[no] != nx)
-			objpval_ew_ASL(ew, no, ew->Lastx, 0);
-		if (f->g && ew->noxgval[no] != nx)
-			objpgrd_ew_ASL(ew, no, ew->Lastx, 0, 0);
 		og = og0 = Ograd[no];
 		if ((vscale = asl->i.vscale)) {
 			kp = htcl(n*sizeof(real));
@@ -2936,21 +3185,28 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 			}
 		}
 	if (ew->Derrs) {
-		ew->x0kind = oxk;
+		if (!(oxk & ASL_x_known))	/* keep the flags set or cleared */
+			ew->x0kind &= ~ASL_x_known;	/* by hvd_eval's evaluations */
 		deriv_errchk_ASL(ew, co, 1, 3);
 		ew->x0kind |= ASL_x_known;
 		}
+	dl = 0;
+	ndl = 0;
 	if ((ndv = asl->P.ncom)) {
 		dvsp0 = asl->P.dvsp0;
-		ndvsp = asl->P.dvsp0;
+		ndvsp = asl->P.ndvsp;
 		c = cexps;
-		for(j = 0; j < ndv; ++j) {
-			if ((i1 = ndvsp[j])) {
+		/* only the defined variables of this function: the others */
+		/* need not have values at this x, and passing them costs */
+		dl = dv_used(asl, f, &ndl);
+		for(dk = 0; dk < ndl; ++dk) {
+			j = dl[dk];
+			if (j < ndv && (i1 = ndvsp[j])) {
 				i1 += i0 = dvsp0[j];
-				do hv_fwd0(ew, c + i0, &vp[i0]);
+				do hv_fwd0f(ew, c + i0, &vp[i0], 0);
 				   while(++i0 < i1);
 				}
-			hv_fwd0(ew, c + j, vp + j);
+			hv_fwd0f(ew, c + j, vp + j, 0);
 			}
 		}
 	for(b = f->pi.b, be = f->pi.be; b < be; b++) {
@@ -2958,11 +3214,9 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 			hv_fwd(e, w);
 			hv_back(b->o.b, w, 0., t2);
 			}
-		else if (*(e = b->o.e) != OPRET) {
-			x = (Varval*)&w[e[2]];
-			x->aO = 0.;
-			x->adO = t2;
-			}
+		else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+			((Varval*)&w[e[1]])->adO += t2; /* a defined variable */
+		/* Otherwise no derivative code: no contribution */
 		}
 	for(g = f->g, ge = f->ge; g < ge; g++) {
 		gm = g->gm;
@@ -2972,11 +3226,9 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 				hv_fwd(e, w);
 				hv_back(b->o.b, w, 0., t2*g1);
 				}
-			else if (*(e = b->o.e) != OPRET) {
-				x = (Varval*)&w[e[2]];
-				x->aO = 0.;
-				x->adO = t2*g1;
-				}
+			else if ((e = b->o.e) && *e == OPRET && e[1] >= 0)
+				((Varval*)&w[e[1]])->adO += t2*g1; /* a defined variable */
+			/* Otherwise no derivative code: no contribution */
 			}
 		if ((g2 = w[gm+2]) && (nov = g->nov) > 0) {
 			ov = g->ov;
@@ -2989,8 +3241,21 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 				V[ov[j]].aO += t*oc[j];
 			}
 		}
-	for(j = ndv; --j >= 0; ) {
-		if ((i1 = ndvsp[j])) {
+	for(dk = ndl; --dk >= 0; ) {
+		j = dl[dk];
+		c1 = c + j;
+		x1 = vp + j;
+		if ((t = x1->aO) && (L = c1->lp))
+			for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
+				V[lc->varno].aO += t * lc->coef;
+		if (c1->hfun && !c1->o.f)	/* as in hv_fwd0f(..., 0) */
+			funnel_back(ew, c1, x1, t);
+		else if ((e = c1->o.b))
+			hv_back(e, w, t, x1->adO);
+		/* no derivative code: no contribution */
+		/* The segments of a split defined variable come after the
+		 * variable itself: its backward pass sets their adjoints. */
+		if (j < ndv && (i1 = ndvsp[j])) {
 			i1 += i0 = dvsp0[j];
 			do {
 				v = &vp[--i1];
@@ -2998,30 +3263,12 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 				if ((t = v->aO) && (L = c1->lp))
 					for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
 						V[lc->varno].aO += t * lc->coef;
-				if (c1->hfun)
+				if (c1->hfun && !c1->o.f)
 					funnel_back(ew, c1, v, t);
 				else if ((e = c1->o.b))
 					hv_back(e, w, t, v->adO);
-				else if (*(e = c1->o.e) != OPRET) {
-					x = (Varval*)&w[e[2]];
-					x->aO = t;
-					x->adO = v->adO;
-					}
+				/* no derivative code: no contribution */
 				} while(i1 > i0);
-			}
-		c1 = c + j;
-		x1 = vp + j;
-		if ((t = x1->aO) && (L = c1->lp))
-			for(lc = L->lc, lce = lc + L->n; lc < lce; ++lc)
-				V[lc->varno].aO += t * lc->coef;
-		if (c1->hfun)
-			funnel_back(ew, c1, x1, t);
-		else if ((e = c1->o.b))
-			hv_back(e, w, t, x1->adO);
-		else if (*(e = c1->o.e) != OPRET) {
-			x = (Varval*)&w[e[2]];
-			x->aO = t;
-			x->adO = x1->adO;
 			}
 		}
 	for(la = asl->P.lalist; la; la = la->lnext) {
@@ -3106,6 +3353,8 @@ hvpcomps_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int co, varno_t nz, 
 		}
 	if (p0)
 		del_mblk(p0);
+	if (dl)
+		del_mblk(dl);
 	return rv;
 	}
 
