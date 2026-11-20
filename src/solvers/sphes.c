@@ -1326,6 +1326,10 @@ sphese_ASL(ASL *asl, SputInfo **spi, real *H, int nobj, const real *ow, const re
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		sphes_ASL(asl, spi, H, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;

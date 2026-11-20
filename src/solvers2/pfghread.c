@@ -2478,12 +2478,12 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	ASLTYPE *asl;
 	Elemtemp *bt;
 	expr *e, *e1, *e2;
-	int *cp, *cp0, *ce, *cee, i, j, j1, k, n, ncp, nzc2, *ov, *ove, *ui, *vr, *vre;
+	int *cp, *cp0, *ce, *cee, i, j, j1, k, kr, n, ncp, nzc2, *ov, *ove, *ui, *vr, *vre;
 	linarg **lap, **lap1;
 	linarg *tl;
 	ps_func *f;
 	psb_elem *b;
-	range *r;
+	range *r, *r0;
 	size_t len;
 	split_ce *cs;
 
@@ -2513,8 +2513,18 @@ termwalk(Static *S, expr **ep, PSfind *p)
 				}
 			}
 
-	r = (range *)S->_rnz;	/* scratch */
-	if ((ncp = nzc - k)) {
+	/* Scratch for the range, followed by the ncp+1 ints of cp0 and at */
+	/* most nv0x+1 ints of ui.  S->_rnz has room for them before zc1 */
+	/* only when ncp is small; the segments of split defined variables */
+	/* are not counted in its size.  Writing into zc1, which must stay */
+	/* zero, dropped variables from getgroup()'s g->ov. */
+	ncp = nzc - k;
+	r = r0 = (range *)S->_rnz;
+	kr = -1;
+	len = sizeof(range) + (ncp + nv0x + 2)*sizeof(int);
+	if ((char*)r0 + len > (char*)S->zc1)
+		r = r0 = (range *)new_mblk(kr = htcl(len));
+	if (ncp) {
 		zcsort(S, zc, zci+k, nv0x, ncp, -1 /*max_var*/);
 		cp = cp0 = (int*)(r+1);
 		i = k;
@@ -2582,10 +2592,11 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		b = f->pi.b + i;
 		while(k > 0)
 			zc[zci[--k]] = 0;
-		if ((cp = b->ce)
-		 && (*cp != ncp || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
-			/* fix up f->ce */
-			n = *cp;
+		cp = b->ce;
+		if (cp0 && (!cp || *cp != ncp
+			 || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
+			/* fix up f->ce; the element may have had none */
+			n = cp ? *cp : 0;
 			while(k < n)
 				zc[zci[k++] = *++cp] = 1;
 			for(n = 0; n < ncp; )
@@ -2619,6 +2630,8 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		  }
 		}
  done:
+	if (kr >= 0)
+		del_mblk(r0);
 	nzc = 0;
 	}
 
@@ -3261,10 +3274,9 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		rv = wlast;
 		k = n_OPABS0;
 		if (deriv && (ia = *deriv)) {
-			if (ia > S->afirst)
-				free_a(S, ia);
-			if (!(ja = atop))
-				ja = new_a(S);
+			/* uret1 frees ia and allocates ja; doing it here as */
+			/* well freed ia twice, so two later new_a() calls */
+			/* returned the same cell. */
 			k2 = 5;
 			goto uret1;
 			}
@@ -3884,7 +3896,13 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			*deriv = 0;
 			dbsave = S->curdb;
 			S->curdb.de = dbsave.d0;
-			db = db2 = 0;
+			/* db2 continues every operand's derivative chain with */
+			/* the derivatives computed before this min/max.  It is */
+			/* created before the operands are read so that an operand */
+			/* that is itself a min, max or if can end its inner chains */
+			/* there; db is set once an operand has derivatives. */
+			db = 0;
+			db2 = db_save(S, &dbsave);
 			if ((ka = atop))
 				kaf = 0;
 			else
@@ -3893,6 +3911,8 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 			for(j = 0; j < n; ++j) {
 				ia = 0;
 				mmp[j].f = 0;
+				S->curdb.next = db2;
+				S->curdb.nxt = db2 != S->emptydb;
 				S->dop = &mmp[j].f;
 				S->opprev = oprev[0];
 				opg[j] = ewalk(S, args[j], &ia, ka);
@@ -3913,15 +3933,15 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 						new_derp(S, ia, ka, ica);
 						}
 					if (!db) {
-						if (!(db = db2))
-							db = db2 = db_save(S, &dbsave);
+						db = db2;
 						*deriv = ka;
 						}
+					/* The operand's chain already ends at db2, */
+					/* or at a run-time link (w[rv+5]) when the */
+					/* operand is a nested min/max: keep the link. */
 					mmp[j].db = db1 = (derpblock*)mem(sizeof(derpblock));
 					*db1 = S->curdb;
 					S->curdb.de = S->curdb.d0;
-					if ((db1->next = db) != S->emptydb)
-						db1->nxt = 1;
 					opg1 = nextop(S, 6);
 					if (needalign(opg1,1)) {
 						opg1[0] = OPGOTOF2align;
@@ -3938,8 +3958,6 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 					mmp[j].d = opg[j];
 					}
 				else {
-					if (!db2)
-						db2 = db_save(S, &dbsave);
 					mmp[j].d = -1;
 					mmp[j].db = db2;
 					pg[j] = 0;
@@ -3979,8 +3997,8 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 							*pf = mmp[j].f;
 						pf = &pop[1];
 						}
-					else
-						mmp[j].f = opg3;
+					else	/* OPGOTOMM sets dO = 0 for this operand */
+						mmp[j].f = opg2;
 					}
 				*pf = op;
 				memcpy(opg1, opg, n*sizeof(int));
@@ -3991,6 +4009,13 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				del_mblk(mmp);
 				break;
 				}
+			/* No operand has derivatives (so none created derps): */
+			/* continue the block of the derps that precede this */
+			/* min/max, which S->curdb.de = dbsave.d0 above left out. */
+			/* Needed when the derp chunk overflows inside the operands */
+			/* (dvchunk1): the chaining above leaves next == emptydb */
+			/* with nxt == 0, so new_derp would not note the new block. */
+			S->curdb = dbsave;
 			if (kaf)
 				free_a(S, kaf);
 			if (needalign(op,1))
@@ -4168,9 +4193,14 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 		a3 = a2 = wlast;
 		if (a1 > a2)
 			a3 = a1;
-		if (ia && ja)
-			goto newrv;
-		if (i >= af) {
+		if (ia || ja)	/* a branch with derivatives needs the 4 cells */
+			goto newrv;	/* of an Eresult: a temporary may have only 1 */
+		/* Only a temporary of the branches (cell >= a0) may hold */
+		/* the result.  The cell of a constant (negative, shared by */
+		/* every use of the constant), of a variable or of a defined */
+		/* variable must not receive a copy of the other branch, and */
+		/* the forward Hessian pass of the if clears its dO/aO/adO. */
+		if (i >= a0) {
 			if (i == j)
 				rv = i;
 			else if (i < j) {
@@ -4179,12 +4209,12 @@ ewalk(Static *S, expr *e, uint *deriv, uint atop)
 				else
 					goto newrv;
 				}
-			else if (j < (int)af || a2 <= i)
+			else if (j < a0 || a2 <= i)
 				rv = i;
 			else
 				goto newrv;
 			}
-		else if (j >= af)
+		else if (j >= a0)
 			rv = j;
 		else {
  newrv:
@@ -4997,8 +5027,8 @@ cexp_walk(Static *S, int kc, int wantdb, int wantdc)
 				if (++k > fmax)
 					goto f1_check;
 				}
-			else if (j >= mxv)
-				continue;
+			else if (j >= mxv)	/* a linear argument (e.g., x+y in sin(x+y)): */
+				goto f1_check;	/* funnelkind 2 does not follow its variables */
 			else if ((vr = cx0[j-nv].vref)) {
 				if (vr[2] == 2)
 					i1 = vr[1];

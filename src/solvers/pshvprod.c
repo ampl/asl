@@ -957,6 +957,10 @@ hvpcompe_ASL(ASL *asl, real *hv, const real *p, int nobj, const real *ow, const 
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpcomp_ASL(asl, hv, p, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -1352,6 +1356,10 @@ hvpcompde_ASL(ASL *asl, real *hv, const real *p, int co, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpcompd_ASL(asl, hv, p, co);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -1661,6 +1669,8 @@ hvpcompse_ASL(ASL *asl, real *hv, const real *p, int co, varno_t nz, varno_t *z,
 	Jmp_buf **Jp, *Jsave, b;
 	varno_t rv;
 
+	if (!nerror)	/* as without nerror: an error ends the run */
+		return hvpcomps_ASL(asl, hv, p, co, nz, z);
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;

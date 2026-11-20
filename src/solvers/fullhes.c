@@ -164,6 +164,10 @@ fullhese_ASL(ASL *asl, real *H, fint LH, int nobj, const real *ow, const real *y
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		fullhes_ASL(asl, H, LH, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;

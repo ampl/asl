@@ -2861,10 +2861,15 @@ conpval_ew_ASL(EvalWorkspace *ew, const real *X, real *F, fint *nerror)
 	if (ew->x0kind & ASL_need_concom) {
 		dv_comp_ASL(ew, comb, comc);
 		ew->x0kind &= ~ASL_need_concom;
+		if (asl->I.hesthread)	/* funnels read these values */
+			ew->x0kind |= ASL_need_funnel;
 		}
 	je = n_conjac[1];
-	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[je] - c1[j]))
+	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[je] - c1[j])) {
 		dv_comp_ASL(ew, c1[j], nc1);
+		if (asl->I.hesthread)	/* funnels of single-function */
+			ew->x0kind |= ASL_need_funnel;	/* defined variables */
+		}
 	if (!(gr0 = asl->i.Cgrad0))
 		asl->i.Cgrad0 = gr0 = asl->i.Cgrad_;
 	p0 = asl->P.cps;
@@ -3092,9 +3097,14 @@ objpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 	if (ew->x0kind & ASL_need_objcom) {
 		dv_comp_ASL(ew, combc, como);
 		ew->x0kind &= ~ASL_need_objcom;
+		if (asl->I.hesthread)	/* funnels read these values */
+			ew->x0kind |= ASL_need_funnel;
 		}
-	if ((c1 = asl->i.o_cexp1st_) && (nc1 = c1[i+1] - c1[i]))
+	if ((c1 = asl->i.o_cexp1st_) && (nc1 = c1[i+1] - c1[i])) {
 		dv_comp_ASL(ew, c1[i], nc1);
+		if (asl->I.hesthread)	/* funnels of single-function */
+			ew->x0kind |= ASL_need_funnel;	/* defined variables */
+		}
 	p = asl->P.ops + i;
 	if (p->pi.b) {
 		f = copeval(ew, p);
@@ -3286,9 +3296,14 @@ cpval(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 	if (ew->x0kind & ASL_need_concom) {
 		dv_comp_ASL(ew, comb, comc);
 		ew->x0kind &= ~ASL_need_concom;
+		if (asl->I.hesthread)	/* funnels read these values */
+			ew->x0kind |= ASL_need_funnel;
 		}
-	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[i+1] - c1[i]))
+	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[i+1] - c1[i])) {
 		dv_comp_ASL(ew, c1[i], nc1);
+		if (asl->I.hesthread)	/* funnels of single-function */
+			ew->x0kind |= ASL_need_funnel;	/* defined variables */
+		}
 	if (i >= (nc = asl->i.n_con0)) {
 		o = lcon_de[i-nc].o.e;
 		f = eval2_ASL(o, ew);
@@ -3567,7 +3582,7 @@ xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t n
 				(*gv)(ew, i, ew->Lastx, 0, 0);
 			}
 	if (i1 >= 0 && ew->Derrs) {
-		ew->x0kind = oxk;
+		ew->x0kind = oxk | (ew->x0kind & ASL_need_funnel); /* set by evaluations */
 		for(i = i1; i <= i2; i = i1) {
 			i1 = i + 1;
 			if (y[i]) {
@@ -3711,6 +3726,6 @@ xpsg_check_ASL(EvalWorkspace *ew, int nobj, const real *ow, const real *y)
 	else if (ow && no)
 		xpsgchk(ew, f, xv, xvg, no, nx, objpval_ew_ASL, objpgrd_ew_ASL, ow, oxk);
  done:
-	ew->x0kind = oxk;
+	ew->x0kind = oxk | (ew->x0kind & ASL_need_funnel);
 	return;
 	}

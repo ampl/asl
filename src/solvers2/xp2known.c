@@ -544,6 +544,10 @@ hvpinite_ew_ASL(EvalWorkspace *ew, int ndhmax, int nobj, const real *ow, const r
 
 	asl = (ASL_pfgh*)ew->asl;
 	ASL_CHECK(((ASL*)asl), ASL_read_pfgh, "hvpinite");
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpinit_nc_ASL(ew, ndhmax, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;

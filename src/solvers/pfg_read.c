@@ -2127,9 +2127,9 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	ograd *og;
 	linarg **lap, **lap1;
 	linarg *tl;
-	int *cp, *cp0, *ce, *cee, i, j, k, kl, n, ncp, nzc2, *ui;
+	int *cp, *cp0, *ce, *cee, i, j, k, kl, kr, n, ncp, nzc2, *ui;
 	size_t len;
-	range *r;
+	range *r, *r0;
 	list *L;
 	expr *e, *e1, *e2;
 	split_ce *cs;
@@ -2162,8 +2162,18 @@ termwalk(Static *S, expr **ep, PSfind *p)
 				}
 			}
 
-	r = (range *)rnz;	/* scratch */
-	if ((ncp = nzc - k)) {
+	/* Scratch for the range, followed by the ncp+1 ints of cp0 and at */
+	/* most nv0x+1 ints of ui.  rnz has room for them before zc1 only */
+	/* when ncp is small; the segments of split defined variables are */
+	/* not counted in its size.  Writing into zc1, which must stay */
+	/* zero, dropped variables from getgroup()'s g->ov. */
+	ncp = nzc - k;
+	r = r0 = (range *)rnz;
+	kr = -1;
+	len = sizeof(range) + (ncp + nv0x + 2)*sizeof(int);
+	if ((char*)r0 + len > (char*)S->zc1)
+		r = r0 = (range *)new_mblk(kr = htcl(len));
+	if (ncp) {
 		zcsort(S, zc, zci+k, nv0x, ncp, -1 /*max_var*/);
 		cp = cp0 = (int*)(r+1);
 		i = k;
@@ -2230,10 +2240,11 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		b = f->b + i;
 		while(k > 0)
 			zc[zci[--k]] = 0;
-		if ((cp = b->ce)
-		 && (*cp != ncp || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
-			/* fix up f->ce */
-			n = *cp;
+		cp = b->ce;
+		if (cp0 && (!cp || *cp != ncp
+			 || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
+			/* fix up f->ce; the element may have had none */
+			n = cp ? *cp : 0;
 			while(k < n)
 				zc[zci[k++] = *++cp] = 1;
 			for(n = 0; n < ncp; )
@@ -2267,6 +2278,8 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		  }
 		}
  done:
+	if (kr >= 0)
+		del_mblk(kr, r0);
 	nzc = 0;
 	}
 

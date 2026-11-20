@@ -8,8 +8,8 @@ file(MAKE_DIRECTORY ${ASL_TEST_OUT_DIR})
 
 # Checker executables and the readers each library provides.
 set(ASL_TEST_CONFIGS)
-function(aslTestChecker name lib)
-  add_executable(${name} derivcheck.c)
+function(aslTestChecker name lib source)
+  add_executable(${name} ${source})
   target_link_libraries(${name} PRIVATE ${lib})
   target_compile_definitions(${name} PRIVATE ${ARGN})
   if(UNIX)
@@ -19,20 +19,30 @@ function(aslTestChecker name lib)
 endfunction()
 
 if(BUILD_ASL_LIB)
-  aslTestChecker(derivcheck-asl asl)
+  aslTestChecker(derivcheck-asl asl derivcheck.c)
+  aslTestChecker(hvseq-asl asl hvseq.c)
   # pfg_read is left out: the solvers library does not install evaluation
   # routines for ASL_read_pfg ("objval called before fg_read").
   list(APPEND ASL_TEST_CONFIGS asl:fg asl:fgh asl:pfgh)
 endif()
 if(BUILD_ASL2_LIB)
-  aslTestChecker(derivcheck-asl2 asl2 DERIVCHECK_ASL2)
+  aslTestChecker(derivcheck-asl2 asl2 derivcheck.c DERIVCHECK_ASL2)
+  aslTestChecker(hvseq-asl2 asl2 hvseq.c)
+  aslTestChecker(degcheck-asl2 asl2 degcheck.c)
+  aslTestChecker(sphcheck-asl2 asl2 sphcheck.c)
   list(APPEND ASL_TEST_CONFIGS asl2:fg asl2:pfgh)
 endif()
 
 # One test per fixture, reader and point.  The first configuration writes
-# the reference values the others are compared with.
+# the reference values the others are compared with.  A fixture with a
+# "<fixture>.err" file is also evaluated exactly at its start point
+# ("0e"), where the routines listed there must report an error.
 function(aslDerivTests fixture)
-  foreach(point 0v 1v 1g)
+  set(points 0v 1v 1g)
+  if(EXISTS ${ASL_TEST_NL_DIR}/${fixture}.err)
+    list(APPEND points 0e)
+  endif()
+  foreach(point ${points})
     string(SUBSTRING ${point} 0 1 seed)
     string(SUBSTRING ${point} 1 1 order)
     set(refname)
@@ -56,6 +66,44 @@ function(aslDerivTests fixture)
       endif()
     endforeach()
   endforeach()
+endfunction()
+
+# One Hessian-vector product at each point of a sequence (pfgh_read): a
+# product computed with the Hessian of an earlier point is a mismatch.
+# Modes: see hvseq.c.  hvcomp, and modes m and h, for both libraries; the
+# other modes for the solvers2 library only: in the solvers library they
+# still give wrong products with defined variables.  Modes q Q r R y Y
+# (first calls, no pass that finds the points with evaluation errors) are
+# not run for fixtures named skip*, which have such points.
+function(aslHvSeqTests fixture)
+  foreach(lib asl asl2)
+    if(TARGET hvseq-${lib})
+      add_test(NAME hvseq.${fixture}.${lib}-pfgh COMMAND hvseq-${lib}
+        ${ASL_TEST_NL_DIR}/${fixture})
+      if(lib STREQUAL "asl2")
+        set(modes z d s D S m o h F G)
+        if(NOT fixture MATCHES "^skip")
+          list(APPEND modes q Q r R y Y)
+        endif()
+      else()
+        set(modes m h)
+      endif()
+      foreach(mode ${modes})
+        add_test(NAME hvseq.${fixture}.${lib}-pfgh-${mode} COMMAND hvseq-${lib}
+          ${ASL_TEST_NL_DIR}/${fixture} 12 ${mode})
+      endforeach()
+    endif()
+  endforeach()
+endfunction()
+
+# hvseq with some constraint weights 0 (zeromask: bit i for constraint i),
+# solvers2: the defined variables of functions with weight 0 need not have
+# values and must not be visited.
+function(aslHvSeqZeroTest fixture mode zeromask)
+  if(TARGET hvseq-asl2)
+    add_test(NAME hvseq.${fixture}.asl2-pfgh-${mode}-zero${zeromask}
+      COMMAND hvseq-asl2 ${ASL_TEST_NL_DIR}/${fixture} 12 ${mode} ${zeromask})
+  endif()
 endfunction()
 
 # A reader must reject (or accept) a fixture when asked only to read it.
@@ -83,7 +131,36 @@ foreach(file ${ASL_TEST_FIXTURES})
       aslReadTest(${fixture} asl2 fg "${rejected}")
       aslReadTest(${fixture} asl2 pfgh "${rejected}")
     endif()
+  elseif(fixture MATCHES "^sphserr")
+    # An evaluation error at the start point, then sphsetup: it must return.
+    if(TARGET sphcheck-asl2)
+      add_test(NAME sphes1.${fixture}.asl2-pfgh COMMAND sphcheck-asl2
+        ${ASL_TEST_NL_DIR}/${fixture} e)
+      set_tests_properties(sphes1.${fixture}.asl2-pfgh PROPERTIES
+        PASS_REGULAR_EXPRESSION "then sphsetup: nnz=")
+    endif()
+  elseif(fixture MATCHES "^skipall")
+    # Every hvseq point has an evaluation error: hvseq must fail (exit 4).
+    if(TARGET hvseq-asl2)
+      add_test(NAME hvseq.${fixture}.asl2-pfgh COMMAND hvseq-asl2
+        ${ASL_TEST_NL_DIR}/${fixture})
+      set_tests_properties(hvseq.${fixture}.asl2-pfgh PROPERTIES
+        PASS_REGULAR_EXPRESSION "too few points compared: 0")
+    endif()
   else()
     aslDerivTests(${fixture})
+    aslHvSeqTests(${fixture})
+    if(TARGET degcheck-asl2)	# degree_ASL agrees with mqpcheckv
+      add_test(NAME degree.${fixture}.asl2-pfgh COMMAND degcheck-asl2
+        ${ASL_TEST_NL_DIR}/${fixture})
+    endif()
+    if(TARGET sphcheck-asl2)	# sphes setting up inside the call
+      add_test(NAME sphes1.${fixture}.asl2-pfgh COMMAND sphcheck-asl2
+        ${ASL_TEST_NL_DIR}/${fixture})
+    endif()
   endif()
 endforeach()
+aslHvSeqZeroTest(dvfirst1 y 7)
+aslHvSeqZeroTest(dvfirst1 Y 7)
+aslHvSeqZeroTest(dvfirst2 y 2)
+aslHvSeqZeroTest(zw2 Y 7)

@@ -493,6 +493,10 @@ hvcompe_adj(ASL *asl, real *hv, const real *p, int no, const real *ow, const rea
 	Jmp_buf **Jp, *Jsave, b;
 
 	paradj(asl, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Hvcomp_nomap(asl, hv, p, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -517,6 +521,10 @@ hvinite_adj(ASL *asl, int hid_limit, int no, const real *ow, const real *y, fint
 	Jmp_buf **Jp, *Jsave, b;
 
 	paradj(asl, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Hvinit_nomap(asl, hid_limit, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -541,6 +549,10 @@ duthese_adj(ASL *asl, real *H, int no, const real *ow, const real *y, fint *nerr
 	Jmp_buf **Jp, *Jsave, b;
 
 	paradj(asl, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Duthes_nomap(asl, H, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -565,6 +577,10 @@ fulhese_adj(ASL *asl, real *H, fint LH, int no, const real *ow, const real *y, f
 	Jmp_buf **Jp, *Jsave, b;
 
 	paradj(asl, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Fulhes_nomap(asl, H, LH, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -589,6 +605,10 @@ sphese_adj(ASL *asl, SputInfo **spi, real *H, int no, const real *ow, const real
 	Jmp_buf **Jp, *Jsave, b;
 
 	paradj(asl, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Sphes_nomap(asl, spi, H, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
