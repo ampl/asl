@@ -73,6 +73,20 @@ typedef Long ftnlen;
 #include "funcadd.h"
 #endif
 #include "setjmp.h"
+#if defined(__MINGW32__) && defined(__x86_64__) && !defined(__clang__) \
+ && !defined(ASL_SEH_SETJMP)
+/* MinGW-w64 GCC: setjmp records a frame, so that longjmp unwinds the */
+/* stack through SEH (RtlUnwindEx).  The unwind information GCC writes */
+/* for functions with a frame pointer and a large frame, such as */
+/* eval2_ASL, gives XMM save slots relative to the wrong base: the */
+/* unwinder reads above the frame, and past the top of the stack when */
+/* the evaluation is near it, so an evaluation error crashed instead of */
+/* returning through nerror.  ASL code is C and needs no unwinding: */
+/* record no frame, so that longjmp just restores the registers, as on */
+/* other systems.  Compile with -DASL_SEH_SETJMP to keep the default. */
+#undef setjmp
+#define setjmp(BUF) _setjmp((BUF), NULL)
+#endif
 
  typedef size_t (*Fwrite)(const void*, size_t, size_t, FILE*);
  typedef int (*Add_Indicator)(void*, int, int, int, int, int*, real*, real);

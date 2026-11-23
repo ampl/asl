@@ -3540,3 +3540,13 @@ A larger temporary block is now used when the scratch area is too small.
 of abs twice, so two later cells could coincide and gradients could be
 wrong, e.g. for "minimize o: (x/(2 + x^2) - 0.8) - d;" with
 d = abs(1.64 - x).
+
+20261123
+  solvers2/asl.h:  with 64-bit MinGW-w64 GCC, setjmp is now
+_setjmp(buf, NULL), so longjmp does not unwind the stack through SEH.
+The unwind information GCC writes for eval2_ASL (a large function with
+a frame pointer) places its XMM register saves above the frame; an
+evaluation error near the top of the stack (e.g., log of a negative
+number in objval called almost directly from main) then crashed in the
+unwinder instead of returning through nerror, in about half the runs.
+Compile with -DASL_SEH_SETJMP to keep the default setjmp.
