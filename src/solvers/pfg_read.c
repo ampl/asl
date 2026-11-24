@@ -1287,7 +1287,11 @@ afree(Static *S, ograd *og, expr **ep)
 		tlist = la;
 		la->lnext = asl->P.lalist;
 		asl->P.lalist = la;
-		la->hnext = 0;
+		/* No la->hnext = 0 here: lahash has linked la into the */
+		/* hash table, and after a rehash it can head a chain. */
+		/* Clearing hnext dropped the rest of the chain, and a */
+		/* later linear argument equal to a dropped one became a */
+		/* duplicate. */
 		}
 	else {
 		/* !!? Eventually create or adjust la1->v to save cycles. */
