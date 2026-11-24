@@ -1868,7 +1868,7 @@ linpt_read(EdRead *R, int nlin, linpart **plp, int a0)
 	for(;;) {
 		if (Xscanf(R, "%d %lf", &u, &lc->coef) != 2)
 			badline(R);
-		lc->varno = u;
+		lc->varno = linvarno_ASL(R, (int)u);
 		if (++lc >= lce)
 			break;
 		}

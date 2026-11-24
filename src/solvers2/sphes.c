@@ -1388,8 +1388,7 @@ ewalloc3_ASL(ASL_pfgh *asl, EvalWorkspace *ew, int keep)
 	Lh = ew ? 0 : (asl->I.nhop * sizeof(Hesoprod) + sizeof(real) - 1) & ~(sizeof(real)-1);
 /*	Luw = (asl->I.uhlen + sizeof(real) - 1) & ~(sizeof(real)-1); */
 	Luw = 0;
-	if ((nlv = nlvc) < nlvo)
-		nlv = nlvo;
+	nlv = nlvhes_ASL((ASL*)asl);
 	L = La + Le + Lh + Lo + Lu + Luw + Lx + asl->i.derplen
 		+ asl->i.wlen + asl->i.numlen + Lxc
 		+ asl->i.ra_max*sizeof(real) + asl->i.sa_max*sizeof(char*);
@@ -1617,8 +1616,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 		}
 	if (y)
 		y = 1;
-	if ((n = nlvo) < nlvc)
-		n = nlvc;
+	n = nlvhes_ASL((ASL*)asl);
 	ushow = asl->P.sph_opts & 2;
 	if ((spi = *pspi)) {
 		if (spi->ow == ow && spi->y == y && spi->nobj == nobj

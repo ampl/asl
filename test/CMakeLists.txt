@@ -117,7 +117,20 @@ endfunction()
 file(GLOB ASL_TEST_FIXTURES RELATIVE ${ASL_TEST_NL_DIR} ${ASL_TEST_NL_DIR}/*.nl)
 foreach(file ${ASL_TEST_FIXTURES})
   string(REGEX REPLACE "\\.nl$" "" fixture ${file})
-  if(fixture MATCHES "^owner_")
+  if(fixture STREQUAL "linvar_range")
+    # A linear term of a defined variable refers to a variable that does
+    # not exist: rejected by every reader.
+    set(rejected "linear term refers to variable")
+    if(BUILD_ASL_LIB)
+      aslReadTest(${fixture} asl fg "${rejected}")
+      aslReadTest(${fixture} asl fgh "${rejected}")
+      aslReadTest(${fixture} asl pfgh "${rejected}")
+    endif()
+    if(BUILD_ASL2_LIB)
+      aslReadTest(${fixture} asl2 fg "${rejected}")
+      aslReadTest(${fixture} asl2 pfgh "${rejected}")
+    endif()
+  elseif(fixture MATCHES "^owner_")
     # Defined variables whose owner field contradicts the header: rejected,
     # except by the solvers pfg/pfgh reader, which does not use the field.
     set(rejected "contrary to the header")

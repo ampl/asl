@@ -790,8 +790,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		}
 	if (y)
 		y = 1;
-	if ((n = nlvo) < nlvc)
-		n = nlvc;
+	n = nlvhes_ASL((ASL*)asl);
 	if ((spi = *pspi)) {
 		if (spi->ow == ow && spi->y == y && spi->nobj == nobj
 		 && spi->uptri == uptri)
@@ -1125,8 +1124,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, const real *ow, const real
 	rtodo = asl->P.rtodo;
 	utodo = utodoi = asl->P.utodo;
 	s = asl->P.dOscratch;
-	if ((n = nlvo) < nlvc)
-		n = nlvc;
+	n = nlvhes_ASL((ASL*)asl);
 	Hi = H0 = (real*)new_mblk_ASL(a, kh = htcl(n*sizeof(real)));
 	memset(Hi, 0, n * sizeof(real));
 	H0 -= Fortran;

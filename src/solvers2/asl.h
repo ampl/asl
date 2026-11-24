@@ -1140,6 +1140,8 @@ QPinfo {
  extern void *b_search_ASL(void *ow, int owsize, int n, char **sp, char **peq);
  extern void badasl_ASL(ASL*,int,const char*);
  extern void badline(EdRead*);
+ extern int linvarno_ASL(EdRead*, int);
+ extern int nlvhes_ASL(ASL*);
  extern void badread(EdRead*);
  extern char *basename(const char*);
  extern int bscanf(EdRead*, const char*, ...);

@@ -1850,8 +1850,7 @@ ewalloc4_ASL(ASL_pfgh *asl, EvalWorkspace *ew)
 	Lx = x0len;
 	Le = (sizeof(EvalWorkspace) + sizeof(real) - 1) & ~(sizeof(real)-1);
 	Lxc = ((2*(nc + no)+ nlogc)*sizeof(size_t) + sizeof(real) - 1) & ~(sizeof(real)-1);
-	if ((nlv = nlvc) < nlvo)
-		nlv = nlvo;
+	nlv = nlvhes_ASL((ASL*)asl);
 	L = La + Le + Lo + Lu + Lx + asl->i.derplen
 		+ asl->i.wlen + asl->i.numlen + Lxc
 		+ (asl->i.ra_max + 2*nv)*sizeof(real) + asl->i.sa_max*sizeof(char*);

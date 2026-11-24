@@ -4848,7 +4848,7 @@ linpt_read(EdRead *R, int nlin)
 	do {
 		if (Xscanf(R, "%d %lf", &u, &lc->coef) != 2)
 			badline(R);
-		lc->varno = u;
+		lc->varno = linvarno_ASL(R, (int)u);
 		if (i0 > lc->varno)
 			needsort++;
 		i0 = lc->varno;

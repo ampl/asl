@@ -925,6 +925,7 @@ linpt_read(EdRead *R, int nlin)
 	do {
 		if (Xscanf(R, "%d %lf", &L->v.i, &L->fac) != 2)
 			badline(R);
+		linvarno_ASL(R, L->v.i);
 		L++;
 		}
 		while(--nlin > 0);

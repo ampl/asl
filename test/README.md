@@ -147,6 +147,8 @@ power written first (AMPL writes `d` first).
 | `p1`, `p4`, `p5`, `s1`, `t7`, `t9` | piecewise-linear terms inside nonlinear expressions |
 | `v1`, `v4`, `y1`, `y3`, `y4`, `q3` | defined variables holding `min`/`max`/`if`, single-use and shared |
 | `evalerr_03_*`, `pr35_obj_sqrt` | evaluation errors in an objective next to constraints; `.err`: the objective gradient fails at the start point, the constraints do not |
+| `linvar_range` | a linear term of a defined variable refers to a variable index that is neither a variable nor a defined variable (`linvar_range.mod` with the index edited): every reader must reject the file. AMPL has written such files when a variable enters only through the linear part of a defined variable that is used nonlinearly; the readers then read and wrote out of bounds |
+| `linvar_nlv` | `linvar_nlv.mod` with the header's count of nonlinear variables in objectives lowered by one: a variable in the linear part of a defined variable used nonlinearly is counted as linear. Values, derivatives and the sparse Hessian must still include it (AMPL has written such headers) |
 | `owner_*` | defined-variable segments whose owner field contradicts the header: must be rejected by `fg_read`, `fgh_read` (solvers) and `fg_read`, `pfgh_read` (solvers2); the solvers `pfgh` reader ignores the field and accepts them |
 
 ## Limits
@@ -158,6 +160,9 @@ power written first (AMPL writes `d` first).
   finite-difference mismatches; fixtures are chosen to avoid them.
 - `numberof` in algebraic expressions is not covered; `count` only in `elnd4`.
 - `pfg_read` of the solvers library is not covered.
+- An NL header that counts as linear a variable which enters a defined
+  variable's linear part (`linvar_nlv`): Jacobian entries that the file
+  omits for it stay missing.
 - Sequences of points are covered for `hvcomp`, `hvcompd` and `hvcomps` in
   both libraries. Only objective 0 enters the Lagrangian
   (`hvseq` passes objective index 0): objectives 1 and later are not covered.
