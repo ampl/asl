@@ -70,9 +70,10 @@ endfunction()
 
 # One Hessian-vector product at each point of a sequence (pfgh_read): a
 # product computed with the Hessian of an earlier point is a mismatch.
-# Modes: see hvseq.c.  hvcomp, and modes m and h, for both libraries; the
-# other modes for the solvers2 library only: in the solvers library they
-# still give wrong products with defined variables.  Modes q Q r R y Y
+# Modes: see hvseq.c.  hvcomp, and modes m, h, q, Q and y, for both
+# libraries; the other modes for the solvers2 library only: in the solvers
+# library they still give wrong products with defined variables (hvcomp
+# with ihd_limit = 0, hvcompd, hvcomps).  Modes q Q r R y Y
 # (first calls, no pass that finds the points with evaluation errors) are
 # not run for fixtures named skip*, which have such points.
 function(aslHvSeqTests fixture)
@@ -87,6 +88,9 @@ function(aslHvSeqTests fixture)
         endif()
       else()
         set(modes m h)
+        if(NOT fixture MATCHES "^skip")
+          list(APPEND modes q Q y)
+        endif()
       endif()
       foreach(mode ${modes})
         add_test(NAME hvseq.${fixture}.${lib}-pfgh-${mode} COMMAND hvseq-${lib}

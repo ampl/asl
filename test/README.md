@@ -75,8 +75,9 @@ tests use it to check that the defined variables of functions with weight 0
 are not visited (`dvfirst1`, `dvfirst2`, `zw2`).
 
 `hvcompd` and `hvcomps` leave x "known", so `hvseq` calls `xunknown()` after
-them. In the solvers library the modes other than `m` and `h` still give
-wrong products with defined variables and are not run.
+them. In the solvers library only the modes `m`, `h`, `q`, `Q` and `y` are
+run: the others (`hvcomp` with `ihd_limit = 0`, `hvcompd`, `hvcomps`) still
+give wrong products with shared or split defined variables.
 
 `sphcheck` (solvers2) evaluates the functions at the start point and calls
 `sphes` without `sphsetup`, so that `sphes` sets up its structure itself,
