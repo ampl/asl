@@ -35,8 +35,7 @@ This finds Hessian-vector products computed with the Hessian of an earlier
 point, which `derivcheck` cannot see: it calls `hvcomp` once per variable at
 each of its two points.
 
-`hvseq` also runs in other modes (third argument), for the solvers2
-library; `m` and `h` also for the solvers library:
+`hvseq` also runs in other modes (third argument), for both libraries:
 - `z` calls `hvcomp` with `ihd_limit = 0` (the Hessian is not kept,
   `hvp0comp`);
 - `d` and `s` sum `hvcompd` or `hvcomps` over the objective and the weighted
@@ -75,19 +74,19 @@ tests use it to check that the defined variables of functions with weight 0
 are not visited (`dvfirst1`, `dvfirst2`, `zw2`).
 
 `hvcompd` and `hvcomps` leave x "known", so `hvseq` calls `xunknown()` after
-them. In the solvers library only the modes `m`, `h`, `q`, `Q` and `y` are
-run: the others (`hvcomp` with `ihd_limit = 0`, `hvcompd`, `hvcomps`) still
-give wrong products with shared or split defined variables.
+them. All modes run for both libraries.
 
-`sphcheck` (solvers2) evaluates the functions at the start point and calls
+`sphcheck` (both libraries) evaluates the functions at the start point and calls
 `sphes` without `sphsetup`, so that `sphes` sets up its structure itself,
 then calls `sphes` again: both results must be equal. With the `sphserr*`
 fixtures it checks that `sphsetup` returns after an evaluation error at the
 current point.
 
-`degcheck` (solvers2) checks on every fixture that a function which
-`degree_ASL` calls quadratic is accepted by `mqpcheckv`: drivers that pass
-quadratic terms to the solver (Knitro) stop otherwise.
+`degcheck` checks on every fixture that a function which `degree_ASL` calls
+quadratic is accepted by `mqpcheckv`: drivers that pass quadratic terms to
+the solver (Knitro) stop otherwise. The solvers2 library reads with
+`pfgh_read`; the solvers library with `qp_read`, as its QP drivers do (its
+`degree_ASL` needs the operator codes that `fg_read` replaces).
 
 ## Running
 
@@ -157,8 +156,8 @@ power written first (AMPL writes `d` first).
   finite-difference mismatches; fixtures are chosen to avoid them.
 - `numberof` in algebraic expressions is not covered; `count` only in `elnd4`.
 - `pfg_read` of the solvers library is not covered.
-- Sequences of points are covered for `hvcomp`, and in the solvers2 library
-  also for `hvcompd` and `hvcomps`. Only objective 0 enters the Lagrangian
+- Sequences of points are covered for `hvcomp`, `hvcompd` and `hvcomps` in
+  both libraries. Only objective 0 enters the Lagrangian
   (`hvseq` passes objective index 0): objectives 1 and later are not covered.
 - Known open defects of the solvers2 library, not covered by fixtures:
   - `sphes` and `fullhes` with an `if` (even a single one, e.g.

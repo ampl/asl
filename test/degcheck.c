@@ -1,4 +1,6 @@
-/* degree_ASL against mqpcheckv (solvers2, pfgh_read).
+/* degree_ASL against mqpcheckv: solvers2 with pfgh_read; with DEGCHECK_FG
+ * the solvers library with qp_read, as its QP drivers read (its
+ * degree_ASL needs the operator codes, which fg_read replaces).
  *
  * usage: degcheck stub
  * For every objective and every nonlinear constraint, a function that
@@ -7,7 +9,11 @@
  * Knitro); a rejection would stop such a driver.
  * Exit status: 3 if degree_ASL and mqpcheckv disagree.
  */
+#ifdef DEGCHECK_FG
+#include "asl.h"
+#else
 #include "asl_pfgh.h"
+#endif
 
 int main(int argc, char **argv) {
 	ASL *asl;
@@ -16,9 +22,16 @@ int main(int argc, char **argv) {
 	void *vd = 0, *vp = 0;
 	int co, d, bad = 0, nq = 0;
 	if (argc < 2) { fprintf(stderr, "usage: degcheck stub\n"); return 2; }
+	nl = 0;
+#ifdef DEGCHECK_FG
+	asl = ASL_alloc(ASL_read_fg);
+	nl = jac0dim(argv[1], (fint)strlen(argv[1]));
+	qp_read(nl, 0);
+#else
 	asl = ASL_alloc(ASL_read_pfgh);
 	nl = jac0dim(argv[1], (fint)strlen(argv[1]));
 	pfgh_read(nl, ASL_cc_simplify | ASL_sep_U_arrays);
+#endif
 	for (co = -nlc; co < n_obj; co++) {	/* co < 0: constraint -1 - co */
 		d = degree_ASL(asl, co, &vd);
 		if (d != 2)

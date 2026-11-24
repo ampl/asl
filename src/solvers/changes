@@ -3550,3 +3550,19 @@ evaluation error near the top of the stack (e.g., log of a negative
 number in objval called almost directly from main) then crashed in the
 unwinder instead of returning through nerror, in about half the runs.
 Compile with -DASL_SEH_SETJMP to keep the default setjmp.
+
+20261124
+  pshvprod.c:  Hessian-vector products of the solvers library were
+wrong with defined variables in several cases, as in solvers2 before
+this year's fixes:
+ - hvcomp with ihd_limit = 0 (no Hessian kept): a defined variable used
+by both an objective and a constraint, or twice, contributed for only one
+of them (e.g., half the product for "minimize o: d; s.t. c: d <= 100;");
+and a split defined variable passed its contribution to its segments
+before receiving it.
+ - hvcompd and hvcomps (product for one function): they visited every
+shared defined variable, also those of other functions, for which no
+direction was set, and used Hessian funnels that could be stale for a
+function evaluated since; the same two defects as above also applied.
+They now visit only the defined variables of the function, in
+evaluation order, and use no funnels.

@@ -25,7 +25,7 @@
  *      evaluation calls of the run, before the pass that finds the points
  *      to skip: F calls hvcompd for the constraints first, then the
  *      objective, G the objective first.  Shared defined variables of the
- *      functions not yet evaluated have no values then (solvers2 only);
+ *      functions not yet evaluated have no values then;
  *   q  the objective is evaluated and hvcomp gives its product alone, then
  *      hvcomp gives the product of the Lagrangian without evaluating the
  *      constraints first (hvcomp evaluates them);
