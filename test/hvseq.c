@@ -206,7 +206,6 @@ static void first_product_at(real *x, real *p, real *hv, real *w, real *c) {
 /* Modes F and G at the first point: hvcompd for each function as the
  * first evaluation calls of the run; returns 1 on an evaluation error. */
 static int product_first_calls(real *x, real *p, real *hv, real *w) {
-#ifdef _ASL_EW_	/* solvers2: hvcompde reports errors */
 	fint ne = 0; int i, j, k, n = n_con + (n_obj > 0);
 	for (j = 0; j < n_var; j++) hv[j] = 0.;
 	xknown(x);
@@ -215,14 +214,15 @@ static int product_first_calls(real *x, real *p, real *hv, real *w) {
 			i = k < n_con ? k : -1;
 		else			/* the objective first */
 			i = n_obj ? k - 1 : k;
+#ifdef _ASL_EW_
 		asl->p.Hvcompde(asl->i.Ew0, w, p, i, &ne);
+#else
+		asl->p.Hvcompde((ASL*)asl, w, p, i, &ne);
+#endif
 		for (j = 0; j < n_var && !ne; j++) hv[j] += (i < 0 ? 1. : Y[i])*w[j];
 		}
 	xunknown();
 	return ne != 0;
-#else
-	return 1;
-#endif
 	}
 
 /* Values and gradients at x, then one product; returns 1 on an evaluation
