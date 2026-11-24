@@ -3662,7 +3662,13 @@ cexp_walk(Static *S, int k)
 	if ((na = lasta - la0))
 		ce->z.i = la0;
 	else {
-		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k-Ncom])->a0;
+		/* The cell of the expression itself.  A term k >= Ncom of a */
+		/* split defined variable has its expr_vx in varp[k] (ce_split). */
+		/* varp[k-Ncom] was &var_ex[k-Ncom], an expr_v without a0: comsubs */
+		/* then remapped an unrelated cell, and a defined variable used */
+		/* in another split one (d2 = x3^2 + d1, d3 = d2^2 + d1, both */
+		/* used linearly) lost derivatives. */
+		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k])->a0;
 		na = 1;
 		}
 	ce->zlen = na;

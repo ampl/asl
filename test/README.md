@@ -139,6 +139,7 @@ power written first (AMPL writes `d` first).
 | `obj2max1` | a second objective with a defined variable holding a `max`: products for objective 0 must not visit it |
 | `elnd1`..`elnd5` | terms without derivatives (`min`/`max` of `floor`, `count`) next to other terms, also with defined variables (Hessian) |
 | `lahash1`, `lahash2` | the linear-argument hash table of `pfgh_read` grows while the model is read: no linear argument may be lost (a duplicate in a range gave a wrong kept Hessian in `solvers2`, `lahash1`, and wrong gradients and products in `solvers`, `lahash2`); any change in the number of linear arguments moves the rehash |
+| `dvsplit2`, `dvsplit3` | defined variables used linearly are split into terms, one term being another defined variable, which a later split variable uses nonlinearly (`solvers` `pfgh_read`); in `dvsplit3` they are also in a constraint |
 | `dvmerge1`, `dvmerge2` | a term without defined variables, then a term in the same variable with a defined variable of that function only: the merged element must keep the defined variable (Hessian) |
 | `dvgroup1`, `dvgroup2` | a defined variable split into 2 (10) segments, in the objective and in a constraint next to a group term `e^2`: the scratch of `pfgh_read` must not overrun into the group's variable markers (`dvgroup1` overran in the solvers2 library only) |
 | `absdv1` | `abs` in a defined variable subtracted after a quotient and a constant: the adjoint cell of the argument of `abs` must be freed once (gradient, solvers2) |
