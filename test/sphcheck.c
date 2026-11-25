@@ -8,9 +8,17 @@
  * the first result was wrong when the setup came after the evaluations.
  * With "e", the objective is expected to have an evaluation error at the
  * start point, and sphsetup after it must return (it used to end the run).
- * Exit status: 3 if the results differ, 0 otherwise (also when an
- * evaluation error leaves nothing to compare).
+ * With "s", "d" or "f", a second derivative is undefined at the start
+ * point: after the function evaluations, sphsetup and sphes ("s"), duthes
+ * ("d") or fullhes ("f") must report the evaluation error (they used to
+ * return a Hessian without that term, or with Inf or stale values); built
+ * with WANT_INFNAN, they report no error and the first diagonal element
+ * is +Infinity.
+ * Exit status: 3 if the results differ, 4 if no error was reported where
+ * one was expected, 0 otherwise (also when an evaluation error leaves
+ * nothing to compare).
  */
+#include <string.h>
 #include "asl_pfgh.h"
 
 int main(int argc, char **argv) {
@@ -19,7 +27,7 @@ int main(int argc, char **argv) {
 	fint ne = 0, nz;
 	real *c, *g, *H1, *H2, d, t, *x, *y;
 	int i, j, nobj;
-	if (argc < 2) { fprintf(stderr, "usage: sphcheck stub [e]\n"); return 2; }
+	if (argc < 2) { fprintf(stderr, "usage: sphcheck stub [e|s|d|f]\n"); return 2; }
 	asl = ASL_alloc(ASL_read_pfgh);
 	nl = jac0dim(argv[1], (fint)strlen(argv[1]));
 	X0 = (real*)Malloc(n_var*sizeof(real));
@@ -35,6 +43,24 @@ int main(int argc, char **argv) {
 		nz = sphsetup(nobj, 0, n_con > 0, 0);
 		printf("evaluation error %d, then sphsetup: nnz=%d\n", (int)ne, (int)nz);
 		return 0;
+		}
+	if (argc > 2 && strchr("sdf", *argv[2])) {	/* Hessian error expected */
+		if (n_obj) objval(0, x, &ne);
+		if (n_con) conval(x, c, &ne);
+		H1 = (real*)Malloc(((size_t)n_var*n_var + 1)*sizeof(real));
+		if (*argv[2] == 's') {
+			sphsetup(nobj, 0, n_con > 0, 1);
+			sphes(H1, nobj, 0, n_con ? y : 0);
+			}
+		else if (*argv[2] == 'd')
+			duthes(H1, nobj, 0, n_con ? y : 0);
+		else
+			fullhes(H1, n_var, nobj, 0, n_con ? y : 0);
+		/* With WANT_INFNAN no error: H[0] (the first diagonal */
+		/* element in all three layouts) is then +Infinity */
+		printf("no evaluation error reported; H[0] = %g: %s\n", H1[0],
+			H1[0] > 0. && H1[0] * 0. != 0. ? "H0_PLUS_INF" : "H0_OTHER");
+		return 4;
 		}
 	if (n_obj) objval(0, x, &ne);
 	if (n_obj && !ne) objgrd(0, x, g, &ne);

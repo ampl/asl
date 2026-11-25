@@ -60,6 +60,8 @@ duthes_ASL(ASL *a, real *H, int nobj, const real *ow, const real *y)
 	ASL_pfgh *asl;
 
 	asl = pscheck_ASL(a, "duthes");
+	if (a->i.Derrs)	/* undefined second derivatives, as in sphes */
+		deriv2_errchk_ASL(a, 3);
 	xpsg_check_ASL(asl, nobj, ow, y);
 	if (nobj >= 0 && nobj < n_obj) {
 		no = nobj;

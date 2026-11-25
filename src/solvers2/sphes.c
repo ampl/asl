@@ -2199,6 +2199,11 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 		exit(1);
 		}
 	xpsg_check_ASL(ew, nobj1, ow1, y);
+	/* The setup may have evaluated the functions again (sphes_newx), */
+	/* clearing the derivative errors recorded before: check those of */
+	/* this evaluation too. */
+	if (ew->Derrs)
+		deriv2_errchk_ASL(ew, 3);
 	spi = *pspi;
 	otodo = otodoi = (Hesoprod**)(w + asl->P.otodo);
 	rtodo = (range**)(w + asl->P.rtodo);

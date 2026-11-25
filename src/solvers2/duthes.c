@@ -57,6 +57,8 @@ duthes_ew_ASL(EvalWorkspace *ew, real *H, int nobj, const real *ow, const real *
 
 	asl = (ASL_pfgh*)(a = ew->asl);
 	ASL_CHECK(a, ASL_read_pfgh, "duthes");
+	if (ew->Derrs)	/* undefined second derivatives, as in sphes */
+		deriv2_errchk_ASL(ew, 3);
 	xpsg_check_ASL(ew, nobj, ow, y);
 	if (nobj >= 0 && nobj < n_obj) {
 		no = nobj;

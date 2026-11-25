@@ -153,6 +153,24 @@ foreach(file ${ASL_TEST_FIXTURES})
           PASS_REGULAR_EXPRESSION "then sphsetup: nnz=")
       endif()
     endforeach()
+  elseif(fixture MATCHES "^hes2err")
+    # A second derivative undefined at the start point (pow" at 0): every
+    # Hessian entry point must report it, not return a Hessian without it.
+    # Built with WANT_INFNAN, there is no error: H[Q,Q] must be +Infinity.
+    set(hes2err_expect "can't evaluate pow\"")
+    if(CMAKE_C_FLAGS MATCHES "WANT_INFNAN")
+      set(hes2err_expect "H0_PLUS_INF")
+    endif()
+    foreach(lib asl asl2)
+      if(TARGET sphcheck-${lib})
+        foreach(mode s d f)
+          add_test(NAME hes2err.${fixture}.${lib}-${mode}
+            COMMAND sphcheck-${lib} ${ASL_TEST_NL_DIR}/${fixture} ${mode})
+          set_tests_properties(hes2err.${fixture}.${lib}-${mode} PROPERTIES
+            PASS_REGULAR_EXPRESSION "${hes2err_expect}")
+        endforeach()
+      endif()
+    endforeach()
   elseif(fixture MATCHES "^skipall")
     # Every hvseq point has an evaluation error: hvseq must fail (exit 4).
     foreach(lib asl asl2)
