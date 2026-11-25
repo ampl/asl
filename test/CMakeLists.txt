@@ -155,19 +155,37 @@ foreach(file ${ASL_TEST_FIXTURES})
     endforeach()
   elseif(fixture MATCHES "^hes2err")
     # A second derivative undefined at the start point (pow" at 0): every
-    # Hessian entry point must report it, not return a Hessian without it.
-    # Built with WANT_INFNAN, there is no error: H[Q,Q] must be +Infinity.
+    # Hessian entry point must report it, not return a Hessian without it,
+    # also when it evaluates first (upper-case modes). Built with
+    # WANT_INFNAN, there is no error: H[Q,Q] must be +Infinity (hvcomp:
+    # no error only, Inf times 0 may give NaN). In hes2err3 only the
+    # constraint has it: with weight 0 for the constraints (y0) the
+    # Hessian is that of the objective, H[Q,Q] = 2, without an error.
     set(hes2err_expect "can't evaluate pow\"")
+    set(hes2err_hv "can't evaluate pow\"")
     if(CMAKE_C_FLAGS MATCHES "WANT_INFNAN")
       set(hes2err_expect "H0_PLUS_INF")
+      set(hes2err_hv "no evaluation error reported")
     endif()
     foreach(lib asl asl2)
       if(TARGET sphcheck-${lib})
-        foreach(mode s d f)
-          add_test(NAME hes2err.${fixture}.${lib}-${mode}
+        foreach(mode s d f h S D F H)
+          set(name hes2err.${fixture}.${lib}-${mode})
+          add_test(NAME ${name}
             COMMAND sphcheck-${lib} ${ASL_TEST_NL_DIR}/${fixture} ${mode})
-          set_tests_properties(hes2err.${fixture}.${lib}-${mode} PROPERTIES
-            PASS_REGULAR_EXPRESSION "${hes2err_expect}")
+          if(mode MATCHES "[hH]")
+            set_tests_properties(${name} PROPERTIES
+              PASS_REGULAR_EXPRESSION "${hes2err_hv}")
+          else()
+            set_tests_properties(${name} PROPERTIES
+              PASS_REGULAR_EXPRESSION "${hes2err_expect}")
+          endif()
+          if(fixture STREQUAL "hes2err3")
+            add_test(NAME ${name}-y0 COMMAND sphcheck-${lib}
+              ${ASL_TEST_NL_DIR}/${fixture} ${mode} y0)
+            set_tests_properties(${name}-y0 PROPERTIES
+              PASS_REGULAR_EXPRESSION "H\\[0\\] = 2: H0_OTHER")
+          endif()
         endforeach()
       endif()
     endforeach()

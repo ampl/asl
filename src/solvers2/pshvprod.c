@@ -2107,11 +2107,13 @@ hvpcomp_ew_ASL(EvalWorkspace *ew, real *hv, const real *p, int nobj, const real 
 	W = ew->w;
 	V = (Varval*)W;
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcomp");
-	if (ew->Derrs)
-		deriv2_errchk_ASL(ew, 3);
+	deriv2_errchkw_ASL(ew, 3, nobj, ow, y);
 	++ew->stats.hesvec;
 	asl = (ASL_pfgh*)a;
 	xpsg_check_ASL(ew, nobj, ow, y);
+	/* again: sphsetup or this call may have evaluated the functions */
+	/* (sphsetup clears the errors recorded before) */
+	deriv2_errchkw_ASL(ew, 3, nobj, ow, y);
 	nv = n_var;
 	kp = htcl(nv*sizeof(real));
 	p0 = 0;

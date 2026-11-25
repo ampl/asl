@@ -1158,6 +1158,7 @@ QPinfo {
  extern void dense_j_ASL(ASL*);
  extern void densej_(void);
  extern void deriv2_errchk_ASL(EvalWorkspace *ew, int jv);
+ extern void deriv2_errchkw_ASL(EvalWorkspace *ew, int jv, int nobj, const real *ow, const real *y);
  extern void deriv_errchk_ASL(EvalWorkspace *ew, int coi, int n, int jv);
  extern void deriv_errclear_ASL(EvalWorkspace *);
  extern void derprop(derpblock*, real*, real*, real);

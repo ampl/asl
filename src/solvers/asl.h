@@ -1002,6 +1002,7 @@ QPinfo {
  extern void densej_(VOID);
  extern void deriv_errchk_ASL(ASL*, int coi, int n, int jv);
  extern void deriv2_errchk_ASL(ASL *, int jv);
+ extern void deriv2_errchkw_ASL(ASL *, int jv, int nobj, const real *ow, const real *y);
  extern void deriv_errclear_ASL(Edaginfo*);
  extern void derprop(derp *);
  extern char *dtoa_r(double, int, int, int*, int*, char**, char*, size_t);

@@ -1086,9 +1086,11 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, const real *ow, const real
 	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
 
 	asl = pscheck_ASL(a, "sputhes");
-	if (asl->i.Derrs)
-		deriv2_errchk_ASL(a, 3);
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	xpsg_check_ASL(asl, nobj, ow, y);
+	/* Also after the evaluation: when this is the first one at x, */
+	/* the second derivatives are computed in xpsg_check. */
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	if (!pspi)
 		pspi = &a->i.sputinfo_;
 	no = n_obj;

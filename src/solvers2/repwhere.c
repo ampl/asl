@@ -269,6 +269,57 @@ deriv2_errchk_ASL(EvalWorkspace *ew, int jv)
 		}
 	}
 
+ static int
+derr_used(ASL *asl, int k, int nobj, const real *ow, const real *y)
+{
+	if (k < nlc)
+		return y && y[k] != 0.;
+	k -= nlc;
+	if (nobj >= 0 && nobj < n_obj)
+		return k == nobj && (!ow || ow[k] != 0.);
+	return ow && ow[k] != 0.;
+	}
+
+/* deriv2_errchkw_ASL: as deriv2_errchk_ASL, but only for the functions */
+/* that a Hessian call uses: constraint i if y && y[i] != 0; objective i */
+/* if it is nobj (0 <= nobj < n_obj) and !ow || ow[i] != 0, or, for */
+/* other nobj, if ow && ow[i] != 0.  An undefined second derivative of */
+/* a function with weight 0 does not affect the Hessian.  Hessian calls */
+/* check before and after evaluating (xpsg_check), as the functions may */
+/* be first evaluated there. */
+ void
+deriv2_errchkw_ASL(EvalWorkspace *ew, int jv, int nobj, const real *ow, const real *y)
+{
+	ASL *asl;
+	DerivErrInfo *D;
+	DerrRecord *R, **Rp;
+	int coi, k, ke;
+
+	asl = ew->asl;
+	if (!(D = ew->Derrs))
+		return;
+	for(ke = nlc + nlo, k = 0; k < ke; ++k) {
+		Rp = D->R + k;
+		if ((R = *Rp) && R->jv <= jv
+		 && derr_used(asl, k, nobj, ow, y)) {
+			jmp_check(ew->err_jmpw, R->jv);
+			if (ew == asl->i.Ew0)
+				jmp_check(asl->i.err_jmp_, R->jv);
+			if ((coi = k) >= nlc)
+				coi = nlc - k - 1;
+			ew->co_index = coi;
+			ew->cv_index = R->dv;
+			repwhere_ASL(ew, R->jv);
+			R->errprint(ew,R);
+			fflush(Stderr);
+			jmp_check(ew->err_jmpw1, R->jv);
+			if (ew == asl->i.Ew0)
+				jmp_check(asl->i.err_jmp1_, R->jv);
+			exit(1);
+			}
+		}
+	}
+
  static DerivErrInfo *
 new_DerrMblock(EvalWorkspace *ew, size_t len)
 {

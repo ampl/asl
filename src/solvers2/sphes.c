@@ -2160,8 +2160,7 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 	asl = (ASL_pfgh*)(a = ew->asl);
 	ASL_CHECK(a, ASL_read_pfgh, "sputhes");
 	++ew->stats.hesmat;
-	if (ew->Derrs)
-		deriv2_errchk_ASL(ew, 3);
+	deriv2_errchkw_ASL(ew, 3, nobj, ow, y);
 	w = ew->w;
 	V = (Varval*)w;
 	if (!pspi)
@@ -2202,8 +2201,7 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 	/* The setup may have evaluated the functions again (sphes_newx), */
 	/* clearing the derivative errors recorded before: check those of */
 	/* this evaluation too. */
-	if (ew->Derrs)
-		deriv2_errchk_ASL(ew, 3);
+	deriv2_errchkw_ASL(ew, 3, nobj1, ow1, y);
 	spi = *pspi;
 	otodo = otodoi = (Hesoprod**)(w + asl->P.otodo);
 	rtodo = (range**)(w + asl->P.rtodo);

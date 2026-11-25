@@ -757,10 +757,11 @@ hvpcomp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const rea
 	real *cscale, t, t1, t2, *p0, *s, *w, *wi, *x;
 
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcomp");
-	if (a->i.Derrs)
-		deriv2_errchk_ASL(a, 3);
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	asl = (ASL_pfgh*)a;
 	xpsg_check_ASL(asl, nobj, ow, y);
+	/* again: the functions may be first evaluated just above */
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	nv = n_var;
 	kp = htcl(nv*sizeof(real));
 	p0 = 0;
