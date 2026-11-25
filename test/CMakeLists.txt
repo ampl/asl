@@ -203,6 +203,15 @@ foreach(file ${ASL_TEST_FIXTURES})
         endforeach()
       endif()
     endforeach()
+  elseif(fixture MATCHES "^negbase")
+    # A negative constant base: values are defined, derivatives w.r.t. the
+    # exponent are not (an error at every point, so no hvseq or sphcheck);
+    # the readers' values are compared with each other.  Not with
+    # WANT_INFNAN: solvers2 pfgh still reports pow' there, the other
+    # readers give NaN.
+    if(NOT CMAKE_C_FLAGS MATCHES "WANT_INFNAN")
+      aslDerivTests(${fixture})
+    endif()
   elseif(fixture MATCHES "^skipall")
     # Every hvseq point has an evaluation error: hvseq must fail (exit 4).
     foreach(lib asl asl2)

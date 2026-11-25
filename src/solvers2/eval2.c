@@ -430,8 +430,8 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				r->dL = negInfinity;
-				r->O = r->dL2 = Infinity;
+				r->dL = r->dL2 = 0.;	/* constant base 0: as eval1, solvers */
+				r->O = Infinity;
 				goto top;
 				}
 #endif
@@ -483,7 +483,10 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 			if (L != 0.) {
  badpowder:
 				introuble2("pow'",L,R,2);
-				break; /* not reached */
+				/* a derivative error is deferred (it returns): the */
+				/* result is stored and o advanced, go on (a break */
+				/* ended the whole evaluation with this term's value) */
+				goto top;
 				}
 			if (R > 1.) {
 				if (R == 2.)
@@ -2181,8 +2184,8 @@ alignarg(more_func1:)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				r->dL = negInfinity;
-				r->O = r->dL2 = Infinity;
+				r->dL = r->dL2 = 0.;	/* constant base 0: as eval1, solvers */
+				r->O = Infinity;
 				goto top;
 				}
 #endif
@@ -2242,7 +2245,7 @@ alignarg(more_func1:)
 			if (L != 0.) {
  badsignpowder:
 				introuble2("signpow'",L,R,2);
-				break; /* not reached */
+				goto top;	/* deferred, as at badpowder */
 				}
 			if (R > 1.) {
 				if (R == 2.)
@@ -2424,8 +2427,8 @@ alignarg(more_Csignpow1:)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				g->dL = negInfinity;
-				g->O = g->dL2 = Infinity;
+				g->dL = g->dL2 = 0.;	/* constant base 0: as eval1, solvers */
+				g->O = Infinity;
 				goto top;
 				}
 #endif
