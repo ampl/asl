@@ -221,18 +221,18 @@ f_OP1POW(expr *e A_ASL)
 			e->dL = 0.;
 			if (R >= 2.)
 				e->dL2 = 0.;
-			else
+			else	/* R(R-1)L^(R-2) -> +Infinity */
 #ifdef WANT_INFNAN
-				e->dL2 = negInfinity;
+				e->dL2 = Infinity;
 #else
 				introuble2("pow\"",L,R,3);
 #endif
 			}
 		/* R == 1. does not arise here */
-		else {
+		else {	/* 0 < R < 1: RL^(R-1) -> +Inf, R(R-1)L^(R-2) -> -Inf */
 #ifdef WANT_INFNAN
-			e->dL = negInfinity;
-			e->dL2 = Infinity;
+			e->dL = Infinity;
+			e->dL2 = negInfinity;
 #else
 			introuble2("pow'",L,R,2);
 #endif
