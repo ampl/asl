@@ -5608,7 +5608,7 @@ Psb_walk(Static *S, Psbinfo *pi)
 	b = pi->b;
 	be = pi->be;
 	ja = 0;
-	if (be > b + 1) {
+	if (b && be > b + 1) {	/* b is null without elements */
 		ja = new_a(S);
 		af = S->afirst;
 		ica = S->one;
