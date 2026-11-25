@@ -324,7 +324,7 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				g->dL2 = Infinity;
 #else
 				introuble2("pow\"",L,R,3);
 #endif
@@ -373,7 +373,7 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				r->dL2 = Infinity;
 #else
 				introuble2("pow\"",L,R,3);
 #endif
@@ -2095,7 +2095,7 @@ alignarg(more_func1:)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				g->dL2 = Infinity;
 #else
 				introuble2("signpow\"",L,R,3);
 #endif
@@ -2152,7 +2152,7 @@ alignarg(more_func1:)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				r->dL2 = Infinity;
 #else
 				introuble2("signpow\"",L,R,3);
 #endif

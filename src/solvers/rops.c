@@ -1330,7 +1330,7 @@ f_OP1signpow(expr *e A_ASL)
 		if (!L && R < 0.) {
 			errno_set(0);
 			e->dL = negInfinity;
-			return e->dL2 = Infinity;
+			return Infinity;	/* fg: no second derivatives */
 			}
 #endif
 		introuble2("signpow",L,R,1);
@@ -1391,7 +1391,7 @@ f_OPCsignpow(expr *e A_ASL)
 #ifdef WANT_INFNAN
 		if (!L && R < 0.) {
 			errno_set(0);
-			e->dR = e->dR2 = 0;
+			e->dR = 0;
 			return Infinity;
 			}
 #endif
@@ -1410,7 +1410,7 @@ f_OPCsignpow(expr *e A_ASL)
 			union { unsigned int x[2]; real r; } u;
 			u.x[0] = QNaN0;
 			u.x[1] = QNaN1;
-			e->dR = e->dR2 = u.r;
+			e->dR = u.r;
 #else
 			introuble2("signpow'",L,R,2);
 #endif
