@@ -165,6 +165,8 @@ Errprint(const char *fmt, ...)
  void deriv_errclear_ASL(Edaginfo *I) {}
  void deriv_errchk_ASL(ASL *asl, int coi, int n, int jv) {}
  void deriv2_errchk_ASL(ASL *asl, int jv) {}
+ void deriv2_errchkw_ASL(ASL *asl, int jv, int nobj, const real *ow,
+	const real *y) {}
 #else /*}{*/
  typedef struct DerrRecord DerrRecord;
  typedef void (*DerrPrint)(ASL*, DerrRecord*);
@@ -264,6 +266,51 @@ deriv2_errchk_ASL(ASL *asl, int jv)
 	for(ke = nlc + nlo, k = 0; k < ke; ++k) {
 		Rp = D->R + k;
 		if ((R = *Rp) && R->jv <= jv) {
+			jmp_check(err_jmp, R->jv);
+			if ((coi = k) >= nlc)
+				coi = nlc - k - 1;
+			co_index = coi;
+			cv_index = R->dv;
+			repwhere_ASL(asl, R->jv);
+			R->errprint(asl,R);
+			fflush(Stderr);
+			jmp_check(err_jmp1, R->jv);
+			exit(1);
+			}
+		}
+	}
+
+ static int
+derr_used(ASL *asl, int k, int nobj, const real *ow, const real *y)
+{
+	if (k < nlc)
+		return y && y[k] != 0.;
+	k -= nlc;
+	if (nobj >= 0 && nobj < n_obj)
+		return k == nobj && (!ow || ow[k] != 0.);
+	return ow && ow[k] != 0.;
+	}
+
+/* deriv2_errchkw_ASL: as deriv2_errchk_ASL, but only for the functions */
+/* that a Hessian call uses: constraint i if y && y[i] != 0; objective i */
+/* if it is nobj (0 <= nobj < n_obj) and !ow || ow[i] != 0, or, for */
+/* other nobj, if ow && ow[i] != 0.  An undefined second derivative of */
+/* a function with weight 0 does not affect the Hessian.  Hessian calls */
+/* check before and after evaluating (xpsg_check), as the functions may */
+/* be first evaluated there. */
+ void
+deriv2_errchkw_ASL(ASL *asl, int jv, int nobj, const real *ow, const real *y)
+{
+	DerivErrInfo *D;
+	DerrRecord *R, **Rp, **Rpe;
+	int coi, k, ke;
+
+	if (!(D = asl->i.Derrs))
+		return;
+	for(ke = nlc + nlo, k = 0; k < ke; ++k) {
+		Rp = D->R + k;
+		if ((R = *Rp) && R->jv <= jv
+		 && derr_used(asl, k, nobj, ow, y)) {
 			jmp_check(err_jmp, R->jv);
 			if ((coi = k) >= nlc)
 				coi = nlc - k - 1;

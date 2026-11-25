@@ -514,6 +514,12 @@ degree_ASL(ASL *asl, int co, void **pv)
 		rv = 0;
 		if ((b = f->pi.b))
 			for(be = f->pi.be; b < be; ++b) {
+				/* An element without derivative code that is not a */
+				/* single cell, e.g. min(1, floor(z)): its value depends */
+				/* on variables but is not polynomial (mqpcheckv rejects */
+				/* it), so the function is more general nonlinear. */
+				if (!b->o.f && (o = b->o.e) && *o != OPRET)
+					goto ret3;
 				i = kind2(b->o.e, w, 0);
 				if (rv < i && (rv = i) >= 3)
 					goto ret;

@@ -84,7 +84,8 @@ M2alloc(Static *S, size_t len, int dbl_align)
 	if (dbl_align)
 		*vp = (void**)(((size_t)*vp + (sizeof(void*)-1)) & ~(sizeof(void*)-1));
 	n = (len + (sizeof(void*)-1))/sizeof(void*);
-	if (*vp + n >= S->ve[ct]) {
+	/* Compare the space left: *vp is null before the first block */
+	if (!*vp || n >= (size_t)(S->ve[ct] - *vp)) {
 		mb = S->mb[ct];
 		if (!mb || !(mb1 = mb->next)) {
 			S->mblast[ct] = mb1 = (Memblock*)Malloc(sizeof(Memblock));

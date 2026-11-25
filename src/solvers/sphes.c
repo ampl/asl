@@ -790,8 +790,7 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 		}
 	if (y)
 		y = 1;
-	if ((n = nlvo) < nlvc)
-		n = nlvc;
+	n = nlvhes_ASL((ASL*)asl);
 	if ((spi = *pspi)) {
 		if (spi->ow == ow && spi->y == y && spi->nobj == nobj
 		 && spi->uptri == uptri)
@@ -836,7 +835,8 @@ sphes_setup_ASL(ASL *a, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 					if (y)
 						goto keep;
 					}
-				else if (b->conno == robjno)
+				else if (b->conno == robjno
+				 || (ow && b->conno <= -2))	/* objectives by ow */
 					goto keep;
 				}
 			continue;
@@ -1087,9 +1087,11 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, const real *ow, const real
 	uHeswork *uhw, *uhwi, **utodo, **utodoi, **utodoj;
 
 	asl = pscheck_ASL(a, "sputhes");
-	if (asl->i.Derrs)
-		deriv2_errchk_ASL(a, 3);
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	xpsg_check_ASL(asl, nobj, ow, y);
+	/* Also after the evaluation: when this is the first one at x, */
+	/* the second derivatives are computed in xpsg_check. */
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	if (!pspi)
 		pspi = &a->i.sputinfo_;
 	no = n_obj;
@@ -1103,7 +1105,8 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, const real *ow, const real
 		no = nobj;
 		noe = no + 1;
 		owi = ow ? ow + no : &edag_one_ASL;
-		ow = 0;
+		/* ow stays: pshv_prod applies ow[nobj] (0: no objective), */
+		/* as in duthes and fullhes */
 		}
 	else {
 		nobj = -1;
@@ -1125,8 +1128,7 @@ sphes_ASL(ASL *a, SputInfo **pspi, real *H, int nobj, const real *ow, const real
 	rtodo = asl->P.rtodo;
 	utodo = utodoi = asl->P.utodo;
 	s = asl->P.dOscratch;
-	if ((n = nlvo) < nlvc)
-		n = nlvc;
+	n = nlvhes_ASL((ASL*)asl);
 	Hi = H0 = (real*)new_mblk_ASL(a, kh = htcl(n*sizeof(real)));
 	memset(Hi, 0, n * sizeof(real));
 	H0 -= Fortran;
@@ -1326,6 +1328,10 @@ sphese_ASL(ASL *asl, SputInfo **spi, real *H, int nobj, const real *ow, const re
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		sphes_ASL(asl, spi, H, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;

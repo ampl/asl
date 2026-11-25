@@ -1216,9 +1216,9 @@ eval1(int *o, EvalWorkspace *ew)
 			else if (L < 0.) {
 	#if defined(WANT_INFNAN) && defined(QNaN0)
 				U u;
-				u.ui[0] = QNaN0;
-				u.ui[1] = QNaN1;
-				t = u.r;
+				u.u[0] = QNaN0;
+				u.u[1] = QNaN1;
+				t = u.d;
 	#else
 				introuble2("pow'",L,R,2);
 	#endif

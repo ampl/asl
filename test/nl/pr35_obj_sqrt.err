@@ -1,0 +1,3 @@
+# sqrt(x) at x = 0: the objective gradient is undefined; the constraints
+# (one nonlinear, four linear) evaluate without error.
+objgrd 0

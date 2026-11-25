@@ -73,6 +73,20 @@ typedef Long ftnlen;
 #include "funcadd.h"
 #endif
 #include "setjmp.h"
+#if defined(__MINGW32__) && defined(__x86_64__) && !defined(__clang__) \
+ && !defined(ASL_SEH_SETJMP)
+/* MinGW-w64 GCC: setjmp records a frame, so that longjmp unwinds the */
+/* stack through SEH (RtlUnwindEx).  The unwind information GCC writes */
+/* for functions with a frame pointer and a large frame, such as */
+/* eval2_ASL, gives XMM save slots relative to the wrong base: the */
+/* unwinder reads above the frame, and past the top of the stack when */
+/* the evaluation is near it, so an evaluation error crashed instead of */
+/* returning through nerror.  ASL code is C and needs no unwinding: */
+/* record no frame, so that longjmp just restores the registers, as on */
+/* other systems.  Compile with -DASL_SEH_SETJMP to keep the default. */
+#undef setjmp
+#define setjmp(BUF) _setjmp((BUF), NULL)
+#endif
 
  typedef size_t (*Fwrite)(const void*, size_t, size_t, FILE*);
  typedef int (*Add_Indicator)(void*, int, int, int, int, int*, real*, real);
@@ -1126,6 +1140,8 @@ QPinfo {
  extern void *b_search_ASL(void *ow, int owsize, int n, char **sp, char **peq);
  extern void badasl_ASL(ASL*,int,const char*);
  extern void badline(EdRead*);
+ extern int linvarno_ASL(EdRead*, int);
+ extern int nlvhes_ASL(ASL*);
  extern void badread(EdRead*);
  extern char *basename(const char*);
  extern int bscanf(EdRead*, const char*, ...);
@@ -1142,6 +1158,7 @@ QPinfo {
  extern void dense_j_ASL(ASL*);
  extern void densej_(void);
  extern void deriv2_errchk_ASL(EvalWorkspace *ew, int jv);
+ extern void deriv2_errchkw_ASL(EvalWorkspace *ew, int jv, int nobj, const real *ow, const real *y);
  extern void deriv_errchk_ASL(EvalWorkspace *ew, int coi, int n, int jv);
  extern void deriv_errclear_ASL(EvalWorkspace *);
  extern void derprop(derpblock*, real*, real*, real);

@@ -321,7 +321,9 @@ hv_back(expr *e)
 	}
 
  static void
-hv_fwd0(ASL_pfgh *asl, cexp *c, expr_v *v)
+hv_fwd0(ASL_pfgh *asl, cexp *c, expr_v *v, int usefun)
+	/* Forward pass for defined variable v (cexp c).  With usefun = 0,
+	 * c's funnel is not used: its expression is visited instead. */
 {
 	expr_v **vp, **vpe;
 	hes_fun *hf;
@@ -332,7 +334,7 @@ hv_fwd0(ASL_pfgh *asl, cexp *c, expr_v *v)
 	real *g, x;
 
 	v->aO = v->adO = 0;
-	if ((hf = c->hfun)) {
+	if (usefun && (hf = c->hfun)) {
 		x = 0;
 		if ((og = hf->og))
 			do x += og->coef * var_e[og->varno].dO.r;
@@ -535,6 +537,56 @@ funnelhes(ASL_pfgh *asl)
 	}
 
  static void
+hv_back0(ASL_pfgh *asl, cexp *c, expr_v *v, int usefun)
+	/* Backward pass for defined variable v (cexp c): the reverse of
+	 * hv_fwd0, with the same usefun.  A variable defined as another
+	 * variable may be shared, so its adjoints accumulate. */
+{
+	expr *e;
+	linarg *la;
+	linpart *L, *Le;
+	real t;
+
+	if ((t = v->aO)) {
+		if ((la = c->la))
+			la->v->aO += t * asl->P.dv[c - cexps].scale;
+		else if ((L = c->L))
+			for(Le = L + c->nlin; L < Le; L++)
+				((expr_v*)L->v.vp)->aO += t * L->fac;
+		}
+	if (usefun && c->hfun)
+		funnel_back(asl, c, v, t);
+	else if ((e = c->ee)) {
+		e->aO = t;
+		e->adO = v->adO;
+		hv_back(e);
+		}
+	else if ((e = c->e)->op != f_OPNUM) {
+		e->aO += t;
+		e->adO += v->adO;
+		}
+	}
+
+ static void
+hv_elem(psb_elem *b, real t)
+	/* Seed the backward pass of element b with weight t.  An element
+	 * that is a variable, perhaps a defined one that other functions or
+	 * elements use too, accumulates. */
+{
+	expr *e;
+
+	if ((e = b->D.ef)) {
+		hv_fwd(e);
+		e = b->D.ee;
+		e->aO = 0;
+		e->adO = t;
+		hv_back(e);
+		}
+	else if ((e = b->D.e)->op != f_OPNUM)
+		e->adO += t;
+	}
+
+ static void
 hvp0comp_ASL(ASL_pfgh *asl, real *hv, const real *p, int nobj, const real *ow, const real *y)
 	/* p = direction */
 	/* y = Lagrange multipliers */
@@ -542,11 +594,9 @@ hvp0comp_ASL(ASL_pfgh *asl, real *hv, const real *p, int nobj, const real *ow, c
 {
 	cexp *c, *c1, *ce;
 	const real *p1;
-	expr *e;
-	expr_v *v, *x, *x0, *xe;
+	expr_v *x, *x0, *xe;
 	int *dvsp0, i, i0, i1, n, nc, no, noe;
 	linarg *la;
-	linpart *L, *Le;
 	ograd *og;
 	ps_func *f, *f0;
 	psb_elem *b, *be;
@@ -594,8 +644,8 @@ hvp0comp_ASL(ASL_pfgh *asl, real *hv, const real *p, int nobj, const real *ow, c
 		i0 = *dvsp0;
 		for(ce = c1 = c + asl->P.ncom; c < ce; c++) {
 			for(i1 = *++dvsp0; i0 < i1; i0++)
-				hv_fwd0(asl, c1++, asl->P.vp[i0]);
-			hv_fwd0(asl, c, x++);
+				hv_fwd0(asl, c1++, asl->P.vp[i0], 1);
+			hv_fwd0(asl, c, x++, 1);
 			}
 		}
 	if (!y || (nc = n_con) <= 0)
@@ -607,33 +657,11 @@ hvp0comp_ASL(ASL_pfgh *asl, real *hv, const real *p, int nobj, const real *ow, c
 		if (cscale)
 			t2 *= cscale[i];
 		f = f0 + i;
-		for(b = f->b, be = b + f->nb; b < be; b++) {
-			if ((e = b->D.ef)) {
-				hv_fwd(e);
-				e = b->D.ee;
-				e->aO = 0;
-				e->adO = t2;
-				hv_back(e);
-				}
-			else if ((e = b->D.e)->op != f_OPNUM) {
-				e->aO = 0;
-				e->adO = t2;
-				}
-			}
+		for(b = f->b, be = b + f->nb; b < be; b++)
+			hv_elem(b, t2);
 		for(g = f->g, ge = g + f->ng; g < ge; g++) {
-			for(b = g->E, be = b + g->ns; b < be; b++) {
-				if ((e = b->D.ef)) {
-					hv_fwd(e);
-					e = b->D.ee;
-					e->aO = 0;
-					e->adO = t2*g->g1;
-					hv_back(e);
-					}
-				else if ((e = b->D.e)->op != f_OPNUM) {
-					e->aO = 0;
-					e->adO = t2*g->g1;
-					}
-				}
+			for(b = g->E, be = b + g->ns; b < be; b++)
+				hv_elem(b, t2*g->g1);
 			if (g->g2) {
 				t = 0.;
 				for(og = g->og; og; og = og->next)
@@ -649,33 +677,11 @@ hvp0comp_ASL(ASL_pfgh *asl, real *hv, const real *p, int nobj, const real *ow, c
 	for(; no < noe; no++) {
 	    if ((t2 = *ow++)) {
 		f = asl->P.ops + no;
-		for(b = f->b, be = b + f->nb; b < be; b++) {
-			if ((e = b->D.ef)) {
-				hv_fwd(e);
-				e = b->D.ee;
-				e->aO = 0;
-				e->adO = t2;
-				hv_back(e);
-				}
-			else if ((e = b->D.e)->op != f_OPNUM) {
-				e->aO = 0;
-				e->adO = t2;
-				}
-			}
+		for(b = f->b, be = b + f->nb; b < be; b++)
+			hv_elem(b, t2);
 		for(g = f->g, ge = g + f->ng; g < ge; g++) {
-			for(b = g->E, be = b + g->ns; b < be; b++) {
-				if ((e = b->D.ef)) {
-					hv_fwd(e);
-					e = b->D.ee;
-					e->aO = 0;
-					e->adO = t2*g->g1;
-					hv_back(e);
-					}
-				else if ((e = b->D.e)->op != f_OPNUM) {
-					e->aO = 0;
-					e->adO = t2*g->g1;
-					}
-				}
+			for(b = g->E, be = b + g->ns; b < be; b++)
+				hv_elem(b, t2*g->g1);
 			if (g->g2) {
 				t = 0.;
 				for(og = g->og; og; og = og->next)
@@ -688,39 +694,13 @@ hvp0comp_ASL(ASL_pfgh *asl, real *hv, const real *p, int nobj, const real *ow, c
 		}
 	    }
 	if (asl->P.ncom) {
+	    /* Reverse of the forward pass: each shared defined variable,
+	     * then the segments of its split linear part, which come before
+	     * it in the forward pass: its backward pass sets their adjoints. */
 	    for(c = cexps; c < ce--; ) {
-		for(i0 = *--dvsp0; i0 < i1; ) {
-			v = asl->P.vp[--i1];
-			--c1;
-			if ((t = v->aO) && (L = c1->L))
-				for(Le = L + c1->nlin; L < Le; L++)
-					((expr_v*)L->v.vp)->aO += t * L->fac;
-			if (c1->hfun)
-				funnel_back(asl, c1, v, t);
-			else if ((e = c1->ee)) {
-				e->aO = t;
-				e->adO = v->adO;
-				hv_back(e);
-				}
-			else if ((e = c1->e)->op != f_OPNUM) {
-				e->aO = t;
-				e->adO = v->adO;
-				}
-			}
-		if ((t = (--x)->aO) && (L = ce->L))
-			for(Le = L + ce->nlin; L < Le; L++)
-				((expr_v*)L->v.vp)->aO += t * L->fac;
-		if (ce->hfun)
-			funnel_back(asl, ce, x, t);
-		else if ((e = ce->ee)) {
-			e->aO = t;
-			e->adO = x->adO;
-			hv_back(e);
-			}
-		else if ((e = ce->e)->op != f_OPNUM) {
-			e->aO = t;
-			e->adO = x->adO;
-			}
+		hv_back0(asl, ce, --x, 1);
+		for(i0 = *--dvsp0; i0 < i1; )
+			hv_back0(asl, --c1, asl->P.vp[--i1], 1);
 		}
 	    }
 	x = var_e;
@@ -777,10 +757,11 @@ hvpcomp_ASL(ASL *a, real *hv, const real *p, int nobj, const real *ow, const rea
 	real *cscale, t, t1, t2, *p0, *s, *w, *wi, *x;
 
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcomp");
-	if (a->i.Derrs)
-		deriv2_errchk_ASL(a, 3);
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	asl = (ASL_pfgh*)a;
 	xpsg_check_ASL(asl, nobj, ow, y);
+	/* again: the functions may be first evaluated just above */
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	nv = n_var;
 	kp = htcl(nv*sizeof(real));
 	p0 = 0;
@@ -957,6 +938,10 @@ hvpcompe_ASL(ASL *asl, real *hv, const real *p, int nobj, const real *ow, const 
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpcomp_ASL(asl, hv, p, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -1007,7 +992,7 @@ pshv_prod_ASL(ASL_pfgh *asl, range *r, int nobj, const real *ow, const real *y)
 		ceie = (cei = cei0) + i;
 		do {
 			i = *cei++;
-			hv_fwd0(asl, cexps + i, asl->P.vp[i]);
+			hv_fwd0(asl, cexps + i, asl->P.vp[i], 1);
 			}
 			while(cei < ceie);
 		}
@@ -1094,6 +1079,142 @@ funpset_ASL(ASL_pfgh *asl, funnel *f)
 		}
 	}
 
+ static int
+hvd_cecompar(const void *a0, const void *b0, void *v)
+	/* The order of common expressions in range.cei and psb_elem.ce
+	 * (hscompar in pfg_read.c): the evaluation order. */
+{
+	ASL_pfgh *asl = (ASL_pfgh*)v;
+	int a, b, c, ncom, *zl;
+
+	ncom = asl->P.ncom;
+	zl = asl->P.zlsave;
+	if ((a = *(int*)a0) >= ncom) {
+		a = zl[a];
+		if ((b = *(int*)b0) >= ncom) {
+			if ((c = a - zl[b]))
+				return c;
+			return *(int*)a0 - b;
+			}
+		a -= asl->P.nv0_;
+		if (a == b)
+			return -1;
+		}
+	else if ((b = *(int*)b0) >= ncom) {
+		b = zl[b] - asl->P.nv0_;
+		if (a == b)
+			return 1;
+		}
+	return a - b;
+	}
+
+ static int *
+hvd_dvlist(ASL_pfgh *asl, ps_func *f, int *pn, int *pk)
+	/* The common expressions that function f uses (union of the ce
+	 * lists of its elements), in evaluation order; *pn = their number.
+	 * *pk >= 0: the list was allocated by new_mblk(*pk). */
+{
+	int *ce, *ce1, *d, *d1, *de, k, n, nl;
+	psb_elem *b, *be;
+	psg_elem *g, *ge;
+
+	*pk = -1;
+	n = nl = 0;
+	ce1 = 0;
+	for(b = f->b, be = b + f->nb; b < be; b++)
+		if ((ce = b->ce) && *ce) {
+			n += *ce;
+			++nl;
+			ce1 = ce;
+			}
+	for(g = f->g, ge = g + f->ng; g < ge; g++)
+		for(b = g->E, be = b + g->ns; b < be; b++)
+			if ((ce = b->ce) && *ce) {
+				n += *ce;
+				++nl;
+				ce1 = ce;
+				}
+	if (nl <= 1) {	/* one list, already in order */
+		*pn = n;
+		return ce1 ? ce1 + 1 : 0;
+		}
+	*pk = k = htcl(n*sizeof(int));
+	d = d1 = (int*)new_mblk(k);
+	for(b = f->b, be = b + f->nb; b < be; b++)
+		if ((ce = b->ce))
+			for(k = 1; k <= *ce; ++k)
+				*d1++ = ce[k];
+	for(g = f->g, ge = g + f->ng; g < ge; g++)
+		for(b = g->E, be = b + g->ns; b < be; b++)
+			if ((ce = b->ce))
+				for(k = 1; k <= *ce; ++k)
+					*d1++ = ce[k];
+	qsortv(d, n, sizeof(int), hvd_cecompar, asl);
+	for(d1 = d, de = d + n; ++d1 < de; )	/* drop duplicates */
+		if (*d1 == d1[-1])
+			break;
+	if (d1 < de) {
+		int *d2 = d1;
+		while(++d1 < de)
+			if (*d1 != d2[-1])
+				*d2++ = *d1;
+		n = d2 - d;
+		}
+	*pn = n;
+	return d;
+	}
+
+ static void
+hvd_core(ASL_pfgh *asl, ps_func *f, real t2, const real *p)
+	/* hvpcompd_ASL and hvpcomps_ASL: product for function f with weight
+	 * t2, after the direction p has been set for f's variables.  Only
+	 * the defined variables that f uses are visited (the others have no
+	 * direction), without funnels: funnelhes computes them for all
+	 * functions at once, so they can be stale for a function evaluated
+	 * since.  Leaves the result in var_e[i].aO for f's variables. */
+{
+	cexp *c;
+	expr_v *x;
+	int *d, *de, *dv, kd, nd;
+	linarg *la;
+	ograd *og;
+	psb_elem *b, *be;
+	psg_elem *g, *ge;
+	real t;
+
+	x = var_e;
+	c = cexps;
+	dv = hvd_dvlist(asl, f, &nd, &kd);
+	for(d = dv, de = dv + nd; d < de; ++d)
+		hv_fwd0(asl, c + *d, asl->P.vp[*d], 0);
+	for(b = f->b, be = b + f->nb; b < be; b++)
+		hv_elem(b, t2);
+	for(g = f->g, ge = g + f->ng; g < ge; g++) {
+		for(b = g->E, be = b + g->ns; b < be; b++)
+			hv_elem(b, t2*g->g1);
+		if (g->g2) {
+			t = 0.;
+			for(og = g->og; og; og = og->next)
+				t += og->coef * p[og->varno];
+			t *= t2*g->g2;
+			for(og = g->og; og; og = og->next)
+				x[og->varno].aO += t*og->coef;
+			}
+		}
+	while(de > dv) {	/* reverse order */
+		--de;
+		hv_back0(asl, c + *de, asl->P.vp[*de], 0);
+		}
+	if (kd >= 0)
+		del_mblk(kd, dv);
+	for(la = asl->P.lalist; la; la = la->lnext)
+		if ((t = la->v->aO)) {
+			og = la->nz;
+			do x[og->varno].aO += t*og->coef;
+				while((og = og->next));
+			}
+	}
+
  void
 hvpcompd_ASL(ASL *a, real *hv, const real *p, int co)
 	/* p = direction */
@@ -1102,27 +1223,15 @@ hvpcompd_ASL(ASL *a, real *hv, const real *p, int co)
 	/* co < 0: behave like hvpcomp_ASL with nobj = -1 - co, ow = 0, y = 0 */
 {
 	ASL_pfgh *asl;
-	cexp *c, *c1, *ce;
 	cgrad *cg, *cg0;
-	expr *e;
-	expr_v *v, *x, *x0;
-	int *dvsp0, i0, i1, kp, n, no, nx, oxk;
+	expr_v *x, *x0;
+	int kp, n, no, nx, oxk;
 	linarg *la;
-	linpart *L, *Le;
 	ograd *og, *og0;
 	ps_func *f;
-	psb_elem *b, *be;
-	psg_elem *g, *ge;
 	real *s, t, t2, *p0;
 	varno_t i;
 
-#ifdef IGNORE_BOGUS_WARNINGS
-	c1 = ce = 0;
-	dvsp0 = 0;
-	i1 = 0;
-	v = 0;
-	x = 0;
-#endif
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcompi");
 	asl = (ASL_pfgh*)a;
 	if (x0kind == ASL_first_x) {
@@ -1217,96 +1326,7 @@ hvpcompd_ASL(ASL *a, real *hv, const real *p, int co)
 		deriv_errchk_ASL(a, co, 1, 3);
 		asl->i.x_known = 1;
 		}
-	if (asl->P.ncom) {
-		x = var_ex;
-		dvsp0 = asl->P.dvsp0;
-		c = cexps;
-		i0 = *dvsp0;
-		for(ce = c1 = c + asl->P.ncom; c < ce; c++) {
-			for(i1 = *++dvsp0; i0 < i1; i0++)
-				hv_fwd0(asl, c1++, asl->P.vp[i0]);
-			hv_fwd0(asl, c, x++);
-			}
-		}
-	for(b = f->b, be = b + f->nb; b < be; b++) {
-		if ((e = b->D.ef)) {
-			hv_fwd(e);
-			e = b->D.ee;
-			e->aO = 0;
-			e->adO = t2;
-			hv_back(e);
-			}
-		else if ((e = b->D.e)->op != f_OPNUM) {
-			e->aO = 0;
-			e->adO = t2;
-			}
-		}
-	for(g = f->g, ge = g + f->ng; g < ge; g++) {
-		for(b = g->E, be = b + g->ns; b < be; b++) {
-			if ((e = b->D.ef)) {
-				hv_fwd(e);
-				e = b->D.ee;
-				e->aO = 0;
-				e->adO = t2*g->g1;
-				hv_back(e);
-				}
-			else if ((e = b->D.e)->op != f_OPNUM) {
-				e->aO = 0;
-				e->adO = t2*g->g1;
-				}
-			}
-		if (g->g2) {
-			t = 0.;
-			for(og = g->og; og; og = og->next)
-				t += og->coef * p[og->varno];
-			t *= t2*g->g2;
-			for(og = g->og; og; og = og->next)
-				x0[og->varno].aO += t*og->coef;
-			}
-		}
-	if (asl->P.ncom) {
-	    for(c = cexps; c < ce--; ) {
-		for(i0 = *--dvsp0; i0 < i1; ) {
-			v = asl->P.vp[--i1];
-			--c1;
-			if ((t = v->aO) && (L = c1->L))
-				for(Le = L + c1->nlin; L < Le; L++)
-					((expr_v*)L->v.vp)->aO += t * L->fac;
-			if (c1->hfun)
-				funnel_back(asl, c1, v, t);
-			else if ((e = c1->ee)) {
-				e->aO = t;
-				e->adO = v->adO;
-				hv_back(e);
-				}
-			else if ((e = c1->e)->op != f_OPNUM) {
-				e->aO = t;
-				e->adO = v->adO;
-				}
-			}
-		if ((t = (--x)->aO) && (L = ce->L))
-			for(Le = L + ce->nlin; L < Le; L++)
-				((expr_v*)L->v.vp)->aO += t * L->fac;
-		if (ce->hfun)
-			funnel_back(asl, ce, x, t);
-		else if ((e = ce->ee)) {
-			e->aO = t;
-			e->adO = x->adO;
-			hv_back(e);
-			}
-		else if ((e = ce->e)->op != f_OPNUM) {
-			e->aO = t;
-			e->adO = x->adO;
-			}
-		}
-	    }
-	x = var_e;
-	for(la = asl->P.lalist; la; la = la->lnext)
-		if ((t = la->v->aO)) {
-			og = la->nz;
-			do x[og->varno].aO += t*og->coef;
-				while((og = og->next));
-			}
+	hvd_core(asl, f, t2, p);
 	if ((cg = cg0)) {
 		if (s) {
 			while(cg) {
@@ -1352,6 +1372,10 @@ hvpcompde_ASL(ASL *asl, real *hv, const real *p, int co, fint *nerror)
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		hvpcompd_ASL(asl, hv, p, co);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -1371,27 +1395,15 @@ hvpcomps_ASL(ASL *a, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 	/* co < 0: behave like hvpcomp_ASL with nobj = -1 - co, ow = 0, y = 0 */
 {
 	ASL_pfgh *asl;
-	cexp *c, *c1, *ce;
 	cgrad *cg, *cg0;
-	expr *e;
-	expr_v *v, *x, *x0;
-	int *dvsp0, i0, i1, kp, n, no, nx, oxk;
+	expr_v *x, *x0;
+	int kp, n, no, nx, oxk;
 	linarg *la;
-	linpart *L, *Le;
 	ograd *og, *og0;
 	ps_func *f;
-	psb_elem *b, *be;
-	psg_elem *g, *ge;
 	real *hve, *p0, *s, t, t2, *vscale;
 	varno_t F, i, rv, *ze;
 
-#ifdef IGNORE_BOGUS_WARNINGS
-	c1 = ce = 0;
-	dvsp0 = 0;
-	i1 = 0;
-	v = 0;
-	x = 0;
-#endif
 	ASL_CHECK(a, ASL_read_pfgh, "hvpcompi");
 	asl = (ASL_pfgh*)a;
 	if (x0kind == ASL_first_x) {
@@ -1486,96 +1498,7 @@ hvpcomps_ASL(ASL *a, real *hv, const real *p, int co, varno_t nz, varno_t *z)
 		deriv_errchk_ASL(a, co, 1, 3);
 		asl->i.x_known = 1;
 		}
-	if (asl->P.ncom) {
-		x = var_ex;
-		dvsp0 = asl->P.dvsp0;
-		c = cexps;
-		i0 = *dvsp0;
-		for(ce = c1 = c + asl->P.ncom; c < ce; c++) {
-			for(i1 = *++dvsp0; i0 < i1; i0++)
-				hv_fwd0(asl, c1++, asl->P.vp[i0]);
-			hv_fwd0(asl, c, x++);
-			}
-		}
-	for(b = f->b, be = b + f->nb; b < be; b++) {
-		if ((e = b->D.ef)) {
-			hv_fwd(e);
-			e = b->D.ee;
-			e->aO = 0;
-			e->adO = t2;
-			hv_back(e);
-			}
-		else if ((e = b->D.e)->op != f_OPNUM) {
-			e->aO = 0;
-			e->adO = t2;
-			}
-		}
-	for(g = f->g, ge = g + f->ng; g < ge; g++) {
-		for(b = g->E, be = b + g->ns; b < be; b++) {
-			if ((e = b->D.ef)) {
-				hv_fwd(e);
-				e = b->D.ee;
-				e->aO = 0;
-				e->adO = t2*g->g1;
-				hv_back(e);
-				}
-			else if ((e = b->D.e)->op != f_OPNUM) {
-				e->aO = 0;
-				e->adO = t2*g->g1;
-				}
-			}
-		if (g->g2) {
-			t = 0.;
-			for(og = g->og; og; og = og->next)
-				t += og->coef * p[og->varno];
-			t *= t2*g->g2;
-			for(og = g->og; og; og = og->next)
-				x0[og->varno].aO += t*og->coef;
-			}
-		}
-	if (asl->P.ncom) {
-	    for(c = cexps; c < ce--; ) {
-		for(i0 = *--dvsp0; i0 < i1; ) {
-			v = asl->P.vp[--i1];
-			--c1;
-			if ((t = v->aO) && (L = c1->L))
-				for(Le = L + c1->nlin; L < Le; L++)
-					((expr_v*)L->v.vp)->aO += t * L->fac;
-			if (c1->hfun)
-				funnel_back(asl, c1, v, t);
-			else if ((e = c1->ee)) {
-				e->aO = t;
-				e->adO = v->adO;
-				hv_back(e);
-				}
-			else if ((e = c1->e)->op != f_OPNUM) {
-				e->aO = t;
-				e->adO = v->adO;
-				}
-			}
-		if ((t = (--x)->aO) && (L = ce->L))
-			for(Le = L + ce->nlin; L < Le; L++)
-				((expr_v*)L->v.vp)->aO += t * L->fac;
-		if (ce->hfun)
-			funnel_back(asl, ce, x, t);
-		else if ((e = ce->ee)) {
-			e->aO = t;
-			e->adO = x->adO;
-			hv_back(e);
-			}
-		else if ((e = ce->e)->op != f_OPNUM) {
-			e->aO = t;
-			e->adO = x->adO;
-			}
-		}
-	    }
-	x = var_e;
-	for(la = asl->P.lalist; la; la = la->lnext)
-		if ((t = la->v->aO)) {
-			og = la->nz;
-			do x[og->varno].aO += t*og->coef;
-				while((og = og->next));
-			}
+	hvd_core(asl, f, t2, p);
 	rv = 0;
 	if ((ze = z))
 		ze += nz;
@@ -1661,6 +1584,8 @@ hvpcompse_ASL(ASL *asl, real *hv, const real *p, int co, varno_t nz, varno_t *z,
 	Jmp_buf **Jp, *Jsave, b;
 	varno_t rv;
 
+	if (!nerror)	/* as without nerror: an error ends the run */
+		return hvpcomps_ASL(asl, hv, p, co, nz, z);
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;

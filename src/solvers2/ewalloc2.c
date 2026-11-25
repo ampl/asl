@@ -77,8 +77,7 @@ ewalloc2_ASL(ASL *a)
 	Lxc = ((2*(nc + no)+ nlogc)*sizeof(size_t) + sizeof(real) - 1) & ~(sizeof(real)-1);
 	Lh =  (asl->I.nhop * sizeof(Hesoprod) + sizeof(real) - 1) & ~(sizeof(real)-1);
 	Luw = (asl->I.uhlen + sizeof(real) - 1) & ~(sizeof(real)-1);
-	if ((nlv = nlvc) < nlvo)
-		nlv = nlvo;
+	nlv = nlvhes_ASL((ASL*)asl);
 	Lh0 = (nlv*sizeof(real) + asl->P.nran*sizeof(range*) + sizeof(real) - 1) & ~(sizeof(real)-1);
 	L = La + Le + Lh + Lh0 + Lo + Lu + Luw + Lx + asl->i.derplen
 		+ asl->i.wlen + asl->i.numlen + Lxc

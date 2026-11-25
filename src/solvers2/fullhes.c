@@ -57,7 +57,12 @@ fullhes_ew_ASL(EvalWorkspace *ew, real *H, fint LH, int nobj, const real *ow, co
 
 	asl = (ASL_pfgh*)(a = ew->asl);
 	ASL_CHECK(a, ASL_read_pfgh, "fullhes");
+	/* undefined second derivatives of the functions used */
+	deriv2_errchkw_ASL(ew, 3, nobj, ow, y);
 	xpsg_check_ASL(ew, nobj, ow, y);
+	/* Also after the evaluation: when this is the first one at x, */
+	/* the second derivatives are computed in xpsg_check. */
+	deriv2_errchkw_ASL(ew, 3, nobj, ow, y);
 	if (nobj >= 0 && nobj < n_obj) {
 		no = nobj;
 		noe = no + 1;
@@ -165,6 +170,10 @@ fullhese_ew_ASL(EvalWorkspace *ew, real *H, fint LH, int nobj, const real *ow, c
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		fullhes_ew_ASL(ew, H, LH, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;

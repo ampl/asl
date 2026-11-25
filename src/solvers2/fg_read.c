@@ -342,11 +342,10 @@ nextop(Static *S, int n)
 	int *op, *op1;
 
 	op = opnext;
-	op1 = op + n;
-	if (op1 > oplast) {
+	/* Compare the space left: opnext is null before the first block */
+	if (!op || n > oplast - op)
 		op = new_opblock(S, n);
-		op1 = op + n;
-		}
+	op1 = op + n;
 	opnext = op1;
 	return op;
 	}
@@ -364,7 +363,7 @@ eread(EdRead *R, uint *deriv, uint atop)
 	char *dig;
 	derpblock dbsave, *db, *db1, *db2, **pdb;
 	func_info *fi;
-	int a0, a1, *at, i, ica, j, jca, k, k1, k2, k3, kd, numargs;
+	int a0, a1, a2, *at, i, ica, j, jca, k, k1, k2, k3, kd, numargs;
 	int *op, *ope[2], *opg, *opg1, *opg2, *opg3, **pop, *powops, rv, symargs;
 	plterm *p;
 	real *b, t;
@@ -934,24 +933,27 @@ eread(EdRead *R, uint *deriv, uint atop)
 				k = powops[2];
 				new_derp(S, ja, ka, rv+1);
 				if (i < 0) {
+					/* A constant base of any sign, as in solvers: */
+					/* derivatives w.r.t. the constant are not */
+					/* needed (for base 0 they do not exist). */
 					t = S->htvals_end[i];
-					if (t > 0.) {
-						op = nextop(S, 7);
-						if (isodd(op,1)) {
-							op[0] = powops[8];
-							op[1] = j;
-							b = (real*)&op[2];
-							}
-						else {
-							op[0] = powops[7];
-							b = (real*)&op[1];
-							op[5] = j;
-							}
-						b[0] = t;
-						b[1] = log(t);
-						opnext = op + 7;
-						return op[6] = rv;
+					op = nextop(S, 7);
+					if (isodd(op,1)) {
+						op[0] = powops[8];
+						op[1] = j;
+						b = (real*)&op[2];
 						}
+					else {
+						op[0] = powops[7];
+						b = (real*)&op[1];
+						op[5] = j;
+						}
+					b[0] = t;
+					/* eval1: dR = b[1]*t^R for t > 0; */
+					/* 0 for t = 0; an error for t < 0 */
+					b[1] = t > 0. ? log(t) : 0.;
+					opnext = op + 7;
+					return op[6] = rv;
 					}
 				}
 			}
@@ -1157,28 +1159,31 @@ eread(EdRead *R, uint *deriv, uint atop)
 			*deriv = 0;
 			dbsave = S->curdb;
 			S->curdb.de = dbsave.d0;
+			/* db2 continues every operand's derivative chain with */
+			/* the derps that precede this min/max.  It is created */
+			/* before the operands are read, so that an operand that */
+			/* is itself a min, max or if ends its inner chains there */
+			/* and the run-time link it leaves in S->curdb is copied */
+			/* to pdb[j] unchanged. */
 			db = db2 = 0;
+			if (dbsave.d0) {
+				db2 = (derpblock*)mem(sizeof(derpblock));
+				*db2 = dbsave;
+				if (!dbsave.nxt && !dbsave.next)
+					note_firstdb(S, db2);
+				}
 			ka = 0;
 			af = S->afirst;
 			for(j = 0; j < i; ++j) {
 				ia = 0;
+				S->curdb.next = db2;
+				S->curdb.nxt = db2 ? 1 : 0;
 				opg[j] = eread(R, &ia, 0);
 				if (ia) {
 					if (ia > af)
 						free_a(S, ia);
 					if (!db) {
-						if (dbsave.d0) {
-							db2 = db = (derpblock*)mem(sizeof(derpblock));
-							*db = dbsave;
-							if (!dbsave.nxt && !dbsave.next)
-								note_firstdb(S, db);
-							for(k = 0; k < j; ++k)
-								pdb[k] = db;
-							S->curdb.nxt = 1;
-							S->curdb.next = db;
-							}
-						else
-							db = &dbsave;
+						db = db2 ? db2 : &dbsave;	/* flag */
 						if (!(ka = atop))
 							ka = new_a(S);
 						*deriv = ka;
@@ -1194,10 +1199,18 @@ eread(EdRead *R, uint *deriv, uint atop)
 					pdb[j] = db1 = (derpblock*)mem(sizeof(derpblock));
 					*db1 = S->curdb;
 					S->curdb.de = S->curdb.d0;
-					S->curdb.nxt = (S->curdb.next = db2) ? 1 : 0;
 					}
 				else
 					pdb[j] = db2;
+				}
+			if (!db) {
+				/* No operand has derivatives (so none created derps): */
+				/* continue the block of the derps that precede this */
+				/* min/max, which S->curdb.de = dbsave.d0 above left out. */
+				/* Defensive: no known model differs without it (the */
+				/* chaining of db2 above gives the same chain here; */
+				/* cf. pfghread.c, where it is needed). */
+				S->curdb = dbsave;
 				}
 			if (db) {
 				++S->ncond;
@@ -1341,6 +1354,11 @@ eread(EdRead *R, uint *deriv, uint atop)
 				new_derp(S, ia, ka, S->one);
 			db1 = (derpblock*)mem(sizeof(derpblock));
 			*db1 = S->curdb;
+			/* The "then" chain also ends where dbsave ends: */
+			/* note it, so derpcopy() appends the derps of the */
+			/* shared defined variables used (as db above). */
+			if (!db1->nxt)
+				note_firstdb(S, db1);
 			S->curdb.de = S->curdb.d0;
 			if ((S->curdb.next = db))
 				S->curdb.nxt = 1;
@@ -1363,8 +1381,16 @@ eread(EdRead *R, uint *deriv, uint atop)
 			}
 		if (rv < j)
 			rv = j;
+		a2 = wlast;
 		if (wlast < a1)
 			wlast = a1;
+		/* Each branch uses cells from a0 on (a0..a1-1, a0..a2-1). */
+		/* A branch whose result is copied into rv must not have */
+		/* rv among its cells: the copy would overwrite one that */
+		/* its derivatives still use (e.g. that of 2*x for x^2). */
+		if ((rv != i && rv >= a0 && rv < a1)
+		 || (rv != j && rv >= a0 && rv < a2))
+			rv = wlast;
 		if (rv == wlast)
 			wlast = rv + 1;
 		if (rv != j) {
@@ -1403,6 +1429,10 @@ eread(EdRead *R, uint *deriv, uint atop)
 			if (ja) {
 				db1 = (derpblock*)mem(sizeof(derpblock));
 				*db1 = S->curdb;
+				/* Without derps in the "then" branch, this */
+				/* chain ends where dbsave ends: note it too. */
+				if (!db1->nxt)
+					note_firstdb(S, db1);
 				}
 			pdb[1] = db1;
 			S->curdb.de = S->curdb.d0;
@@ -1594,7 +1624,11 @@ eread1(EdRead *R, derpblock **pdb, uint *pia, uint atop)
 	op[1] = rv;
 #ifndef Just_Linear
 	if (pia && (ia = *pia)) {
-		if (S->curdb.d0 == S->curdb.de && !S->curdb.nxt) {
+		/* A body that owns its derp block (pdb) needs a first derp, */
+		/* whose b is seeded by derpropa().  The derps of a defined */
+		/* variable (pdb == 0) are linked to its own adjoint by the */
+		/* caller; a derp to a new cell would never be seeded. */
+		if (pdb && S->curdb.d0 == S->curdb.de && !S->curdb.nxt) {
 			ka = new_a(S);
 			new_derp(S, ia, ka, S->one);
 			}
@@ -1804,6 +1838,11 @@ co_read(EdRead *R, cde *d, int k, int wd, int *cexp1st)
 				c[ci[--nz]] = 0;
 			}
 		}
+	/* The chain ends noted while reading this body belong to it: */
+	/* derpcopy() above links them to the derps of the defined */
+	/* variables it uses.  A body without such variables must not */
+	/* leave them for the next body that has some. */
+	S->firstdb1 = S->firstdb0;
 #endif
 	}
 
@@ -1831,7 +1870,7 @@ linpt_read(EdRead *R, int nlin, linpart **plp, int a0)
 	for(;;) {
 		if (Xscanf(R, "%d %lf", &u, &lc->coef) != 2)
 			badline(R);
-		lc->varno = u;
+		lc->varno = linvarno_ASL(R, (int)u);
 		if (++lc >= lce)
 			break;
 		}
@@ -1860,6 +1899,8 @@ cexp_read(EdRead *R, int kc, int nlin)
 	ncond0 = S->ncond;
 	nd0 = S->nderp;
 	ce->o.e = eread1(R, 0, &ia, kc+1);
+	if (ia && ia != kc + 1)	/* body is a variable or defined variable */
+		new_derp(S, ia, kc + 1, S->one);
 	if (amax1 < alast)
 		amax1 = alast;
 	nz = nzc;
@@ -2260,7 +2301,8 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 #else /* Just_Linear */
 #define ASL_readtype ASL_read_fg
 #undef ncom1
-	int ncom, ncom1, nv;
+	int ncom, ncom1, nv, nVread = 0;
+	char *Vseen = 0;	/* defined variables read */
 	func_info *fi;
 	char fname[128];
 	int nlin;
@@ -2424,6 +2466,14 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 		ER.can_end = 1;
 		i = edag_peek(R);
 		if (i == EOF) {
+#ifndef Just_Linear
+			/* Every defined variable the header counts must be in */
+			/* the file (left out, its expression stays null). */
+			if (nVread < ncom)
+				scream(R, ASL_readerr_corrupt,
+		"%d of the %d defined variables in the header are not in the file\n",
+					ncom - nVread, ncom);
+#endif
 			adjust(S, flags);
 			nzjac = nz;
 			fclose(nl);
@@ -2495,6 +2545,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
+				++nVread;	/* see the check at EOF */
 				/* The owner must agree with the header: a zero owner */
 				/* for a variable counted as used by one constraint */
 				/* or objective (or the converse) would select the */
@@ -2507,6 +2558,13 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 					k += SS.nvinc;
 				if (k < nvr || k >= nv)
 					badline(R);
+				/* A repeated V segment would hide a missing one */
+				/* from the count checked at EOF. */
+				if (!Vseen)
+					Vseen = (char*)M1zapalloc(nv - nvr);
+				if (Vseen[k - nvr]++)
+					scream(R, ASL_readerr_corrupt,
+						"defined variable %d is defined twice\n", k);
 				if (j)
 					cexp1_read(R, j, k, nlin);
 				else

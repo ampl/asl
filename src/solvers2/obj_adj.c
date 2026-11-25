@@ -497,6 +497,10 @@ hvcompe_adj(EvalWorkspace *ew, real *hv, const real *p, int no, const real *ow, 
 
 	asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Hvcomp_nomap(ew, hv, p, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -524,6 +528,10 @@ hvinite_adj(EvalWorkspace *ew, int hid_limit, int no, const real *ow, const real
 
 	asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Hvinit_nomap(ew, hid_limit, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -551,6 +559,10 @@ duthese_adj(EvalWorkspace *ew, real *H, int no, const real *ow, const real *y, f
 
 	asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Duthes_nomap(ew, H, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -578,6 +590,10 @@ fulhese_adj(EvalWorkspace *ew, real *H, fint LH, int no, const real *ow, const r
 
 	asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Fulhes_nomap(ew, H, LH, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;
@@ -605,6 +621,10 @@ sphese_adj(EvalWorkspace *ew, SputInfo **spi, real *H, int no, const real *ow, c
 
 	asl = ew->asl;
 	paradj(ew, &no, &ow, &y);
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		asl->p.Sphes_nomap(ew, spi, H, no, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;

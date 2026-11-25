@@ -1287,7 +1287,11 @@ afree(Static *S, ograd *og, expr **ep)
 		tlist = la;
 		la->lnext = asl->P.lalist;
 		asl->P.lalist = la;
-		la->hnext = 0;
+		/* No la->hnext = 0 here: lahash has linked la into the */
+		/* hash table, and after a rehash it can head a chain. */
+		/* Clearing hnext dropped the rest of the chain, and a */
+		/* later linear argument equal to a dropped one became a */
+		/* duplicate. */
 		}
 	else {
 		/* !!? Eventually create or adjust la1->v to save cycles. */
@@ -2127,9 +2131,9 @@ termwalk(Static *S, expr **ep, PSfind *p)
 	ograd *og;
 	linarg **lap, **lap1;
 	linarg *tl;
-	int *cp, *cp0, *ce, *cee, i, j, k, kl, n, ncp, nzc2, *ui;
+	int *cp, *cp0, *ce, *cee, i, j, k, kl, kr, n, ncp, nzc2, *ui;
 	size_t len;
-	range *r;
+	range *r, *r0;
 	list *L;
 	expr *e, *e1, *e2;
 	split_ce *cs;
@@ -2162,8 +2166,18 @@ termwalk(Static *S, expr **ep, PSfind *p)
 				}
 			}
 
-	r = (range *)rnz;	/* scratch */
-	if ((ncp = nzc - k)) {
+	/* Scratch for the range, followed by the ncp+1 ints of cp0 and at */
+	/* most nv0x+1 ints of ui.  rnz has room for them before zc1 only */
+	/* when ncp is small; the segments of split defined variables are */
+	/* not counted in its size.  Writing into zc1, which must stay */
+	/* zero, dropped variables from getgroup()'s g->ov. */
+	ncp = nzc - k;
+	r = r0 = (range *)rnz;
+	kr = -1;
+	len = sizeof(range) + (ncp + nv0x + 2)*sizeof(int);
+	if ((char*)r0 + len > (char*)S->zc1)
+		r = r0 = (range *)new_mblk(kr = htcl(len));
+	if (ncp) {
 		zcsort(S, zc, zci+k, nv0x, ncp, -1 /*max_var*/);
 		cp = cp0 = (int*)(r+1);
 		i = k;
@@ -2230,10 +2244,11 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		b = f->b + i;
 		while(k > 0)
 			zc[zci[--k]] = 0;
-		if ((cp = b->ce)
-		 && (*cp != ncp || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
-			/* fix up f->ce */
-			n = *cp;
+		cp = b->ce;
+		if (cp0 && (!cp || *cp != ncp
+			 || memcmp(cp+1, cp0+1, ncp*sizeof(int)))) {
+			/* fix up f->ce; the element may have had none */
+			n = cp ? *cp : 0;
 			while(k < n)
 				zc[zci[k++] = *++cp] = 1;
 			for(n = 0; n < ncp; )
@@ -2267,6 +2282,8 @@ termwalk(Static *S, expr **ep, PSfind *p)
 		  }
 		}
  done:
+	if (kr >= 0)
+		del_mblk(kr, r0);
 	nzc = 0;
 	}
 
@@ -3409,6 +3426,7 @@ linpt_read(EdRead *R, int nlin)
 	do {
 		if (Xscanf(R, "%d %lf", &L->v.i, &L->fac) != 2)
 			badline(R);
+		linvarno_ASL(R, L->v.i);
 		if (i0 > L->v.i)
 			needsort++;
 		i0 = L->v.i;
@@ -3645,7 +3663,13 @@ cexp_walk(Static *S, int k)
 	if ((na = lasta - la0))
 		ce->z.i = la0;
 	else {
-		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k-Ncom])->a0;
+		/* The cell of the expression itself.  A term k >= Ncom of a */
+		/* split defined variable has its expr_vx in varp[k] (ce_split). */
+		/* varp[k-Ncom] was &var_ex[k-Ncom], an expr_v without a0: comsubs */
+		/* then remapped an unrelated cell, and a defined variable used */
+		/* in another split one (d2 = x3^2 + d1, d3 = d2^2 + d1, both */
+		/* used linearly) lost derivatives. */
+		ce->z.i = k < Ncom ? ka : ((expr_vx*)varp[k])->a0;
 		na = 1;
 		}
 	ce->zlen = na;
@@ -4294,6 +4318,8 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	func_info *fi;
 	int allG, i, i1, j, k, *ka, kseen, maxfwd1, nc, nc0, nco, nlin, nlogc, no;
 	int nv, nvc, nvo, nvr, nvextra, nvx, readall;
+	int nVread = 0;
+	char *Vseen = 0;	/* defined variables read */
 	int (*Xscanf)(EdRead*, const char*, ...);
 	ograd *og, **ogp;
 	real t;
@@ -4430,6 +4456,14 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		ER.can_end = 1;
 		i = edag_peek(R);
 		if (i == EOF) {
+#ifndef Just_Linear
+			/* Every defined variable the header counts must be in */
+			/* the file (left out, its expression stays null). */
+			if (nVread < Ncom)
+				scream(R, ASL_readerr_corrupt,
+		"%d of the %d defined variables in the header are not in the file\n",
+					Ncom - nVread, Ncom);
+#endif
 			fclose(nl);
 			do_ewalk(S);
 			if (imap)
@@ -4530,10 +4564,18 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
+				++nVread;	/* see the check at EOF */
 				if (k >= SS.nvar0)
 					k += SS.nvinc;
 				if (k < nvr || k >= nv)
 					badline(R);
+				/* A repeated V segment would hide a missing one */
+				/* from the count checked at EOF. */
+				if (!Vseen)
+					Vseen = (char*)M1zapalloc(nv - nvr);
+				if (Vseen[k - nvr]++)
+					scream(R, ASL_readerr_corrupt,
+						"defined variable %d is defined twice\n", k);
 				cexp_read(R, k, nlin);
 				break;
 			case 'G':

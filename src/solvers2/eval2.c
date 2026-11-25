@@ -324,7 +324,7 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				g->dL2 = Infinity;
 #else
 				introuble2("pow\"",L,R,3);
 #endif
@@ -373,7 +373,7 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				r->dL2 = Infinity;
 #else
 				introuble2("pow\"",L,R,3);
 #endif
@@ -400,10 +400,10 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 		o += 4;
 		if (errchk(rv)) {
 #ifdef WANT_INFNAN
-			if (!L && R < 0.) {
-				errno_set(0);
-				g->dL = negInfinity;
-				g->O = g->dL2 = Infinity;
+			if (!L && R < 0.) {	/* 0^R = Infinity, as in */
+				errno_set(0);	/* eval1: no derivative w.r.t. R */
+				g->dL = g->dL2 = 0.;
+				g->O = Infinity;
 				goto top;
 				}
 #endif
@@ -418,13 +418,8 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 				}
 			else if (L != 0.)
 				goto badpowder;
-			else {
+			else	/* 0^x: 0 for x > 0, as in solvers (f_OPCPOW) */
 				g->dL = g->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("pow\"",L,R,3);
-#endif
-				}
 			}
 		goto top;
 	  case nOPPOW01:
@@ -435,8 +430,8 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				r->dL = negInfinity;
-				r->O = r->dL2 = Infinity;
+				r->dL = r->dL2 = 0.;	/* constant base 0: as eval1, solvers */
+				r->O = Infinity;
 				goto top;
 				}
 #endif
@@ -450,11 +445,8 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 			else if (L != 0.)
 				goto badpowder;
 			else {
+				/* 0^R: 0 for R > 0, as in solvers (f_OPCPOW) */
 				r->dL = r->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("pow\"",L,R,3);
-#endif
 				}
 			}
 		goto top;
@@ -491,7 +483,10 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 			if (L != 0.) {
  badpowder:
 				introuble2("pow'",L,R,2);
-				break; /* not reached */
+				/* a derivative error is deferred (it returns): the */
+				/* result is stored and o advanced, go on (a break */
+				/* ended the whole evaluation with this term's value) */
+				goto top;
 				}
 			if (R > 1.) {
 				if (R == 2.)
@@ -2095,7 +2090,7 @@ alignarg(more_func1:)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				g->dL2 = Infinity;
 #else
 				introuble2("signpow\"",L,R,3);
 #endif
@@ -2152,7 +2147,7 @@ alignarg(more_func1:)
 					goto top;
 					}
 #ifdef WANT_INFNAN
-				e->dL2 = Infinity;
+				r->dL2 = Infinity;
 #else
 				introuble2("signpow\"",L,R,3);
 #endif
@@ -2189,8 +2184,8 @@ alignarg(more_func1:)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				r->dL = negInfinity;
-				r->O = r->dL2 = Infinity;
+				r->dL = r->dL2 = 0.;	/* constant base 0: as eval1, solvers */
+				r->O = Infinity;
 				goto top;
 				}
 #endif
@@ -2204,11 +2199,8 @@ alignarg(more_func1:)
 			else if (L != 0.)
 				goto badsignpowder;
 			else {
+				/* signpow(0,R) = 0 for R > 0 */
 				r->dL = r->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("signpow\"",L,R,3);
-#endif
 				}
 			}
 		goto top;
@@ -2253,7 +2245,7 @@ alignarg(more_func1:)
 			if (L != 0.) {
  badsignpowder:
 				introuble2("signpow'",L,R,2);
-				break; /* not reached */
+				goto top;	/* deferred, as at badpowder */
 				}
 			if (R > 1.) {
 				if (R == 2.)
@@ -2435,8 +2427,8 @@ alignarg(more_Csignpow1:)
 #ifdef WANT_INFNAN
 			if (!L && R < 0.) {
 				errno_set(0);
-				g->dL = negInfinity;
-				g->O = g->dL2 = Infinity;
+				g->dL = g->dL2 = 0.;	/* constant base 0: as eval1, solvers */
+				g->O = Infinity;
 				goto top;
 				}
 #endif
@@ -2452,11 +2444,8 @@ alignarg(more_Csignpow1:)
 			else if (L != 0.)
 				goto badsignpowder;
 			else {
+				/* signpow(0,R) = 0 for R > 0 */
 				g->dL = g->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("pow\"",L,R,3);
-#endif
 				}
 			}
 		goto top;
@@ -2861,10 +2850,15 @@ conpval_ew_ASL(EvalWorkspace *ew, const real *X, real *F, fint *nerror)
 	if (ew->x0kind & ASL_need_concom) {
 		dv_comp_ASL(ew, comb, comc);
 		ew->x0kind &= ~ASL_need_concom;
+		if (asl->I.hesthread)	/* funnels read these values */
+			ew->x0kind |= ASL_need_funnel;
 		}
 	je = n_conjac[1];
-	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[je] - c1[j]))
+	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[je] - c1[j])) {
 		dv_comp_ASL(ew, c1[j], nc1);
+		if (asl->I.hesthread)	/* funnels of single-function */
+			ew->x0kind |= ASL_need_funnel;	/* defined variables */
+		}
 	if (!(gr0 = asl->i.Cgrad0))
 		asl->i.Cgrad0 = gr0 = asl->i.Cgrad_;
 	p0 = asl->P.cps;
@@ -3092,9 +3086,14 @@ objpval_ew_ASL(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 	if (ew->x0kind & ASL_need_objcom) {
 		dv_comp_ASL(ew, combc, como);
 		ew->x0kind &= ~ASL_need_objcom;
+		if (asl->I.hesthread)	/* funnels read these values */
+			ew->x0kind |= ASL_need_funnel;
 		}
-	if ((c1 = asl->i.o_cexp1st_) && (nc1 = c1[i+1] - c1[i]))
+	if ((c1 = asl->i.o_cexp1st_) && (nc1 = c1[i+1] - c1[i])) {
 		dv_comp_ASL(ew, c1[i], nc1);
+		if (asl->I.hesthread)	/* funnels of single-function */
+			ew->x0kind |= ASL_need_funnel;	/* defined variables */
+		}
 	p = asl->P.ops + i;
 	if (p->pi.b) {
 		f = copeval(ew, p);
@@ -3286,9 +3285,14 @@ cpval(EvalWorkspace *ew, int i, const real *X, fint *nerror)
 	if (ew->x0kind & ASL_need_concom) {
 		dv_comp_ASL(ew, comb, comc);
 		ew->x0kind &= ~ASL_need_concom;
+		if (asl->I.hesthread)	/* funnels read these values */
+			ew->x0kind |= ASL_need_funnel;
 		}
-	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[i+1] - c1[i]))
+	if ((c1 = asl->i.c_cexp1st_) && (nc1 = c1[i+1] - c1[i])) {
 		dv_comp_ASL(ew, c1[i], nc1);
+		if (asl->I.hesthread)	/* funnels of single-function */
+			ew->x0kind |= ASL_need_funnel;	/* defined variables */
+		}
 	if (i >= (nc = asl->i.n_con0)) {
 		o = lcon_de[i-nc].o.e;
 		f = eval2_ASL(o, ew);
@@ -3549,7 +3553,7 @@ conpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t nx,
 	real (*ev)(EvalWorkspace *ew, int i, const real *X, fint *nerror),
 	void (*gv)(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror),
-	const real *y, int oxk)
+	const real *y, int oxk, int isobj)
 {
 	int i, i1, i2, needeval;
 	ps_func *f;
@@ -3567,13 +3571,14 @@ xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t n
 				(*gv)(ew, i, ew->Lastx, 0, 0);
 			}
 	if (i1 >= 0 && ew->Derrs) {
-		ew->x0kind = oxk;
+		ew->x0kind = oxk | (ew->x0kind & ASL_need_funnel); /* set by evaluations */
 		for(i = i1; i <= i2; i = i1) {
 			i1 = i + 1;
 			if (y[i]) {
 				while(i1 <= i2 && y[i1])
 					++i1;
-				deriv_errchk_ASL(ew, i, i1-i, 2);
+				/* objective i is -(i+1), as in solvers */
+				deriv_errchk_ASL(ew, isobj ? -(i+1) : i, i1-i, 2);
 				}
 			}
 		ew->x0kind |= ASL_x_known;
@@ -3688,7 +3693,7 @@ xpsg_check_ASL(EvalWorkspace *ew, int nobj, const real *ow, const real *y)
 	ew->x0kind = oxk | ASL_x_known;
 	if (y)
 		xpsgchk(ew, asl->P.cps, ew->ncxval, ew->ncxgval, nc,
-			nx, conpival_ew_ASL, conpgrd_ew_ASL, y, oxk);
+			nx, conpival_ew_ASL, conpgrd_ew_ASL, y, oxk, 0);
 	f = asl->P.ops;
 	xv = ew->noxval;
 	xvg = ew->noxgval;
@@ -3709,8 +3714,8 @@ xpsg_check_ASL(EvalWorkspace *ew, int nobj, const real *ow, const real *y)
 			objpgrd_ew_ASL(ew, nobj, ew->Lastx, 0, 0);
 		}
 	else if (ow && no)
-		xpsgchk(ew, f, xv, xvg, no, nx, objpval_ew_ASL, objpgrd_ew_ASL, ow, oxk);
+		xpsgchk(ew, f, xv, xvg, no, nx, objpval_ew_ASL, objpgrd_ew_ASL, ow, oxk, 1);
  done:
-	ew->x0kind = oxk;
+	ew->x0kind = oxk | (ew->x0kind & ASL_need_funnel);
 	return;
 	}

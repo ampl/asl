@@ -60,7 +60,12 @@ duthes_ASL(ASL *a, real *H, int nobj, const real *ow, const real *y)
 	ASL_pfgh *asl;
 
 	asl = pscheck_ASL(a, "duthes");
+	/* undefined second derivatives of the functions used */
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	xpsg_check_ASL(asl, nobj, ow, y);
+	/* Also after the evaluation: when this is the first one at x, */
+	/* the second derivatives are computed in xpsg_check. */
+	deriv2_errchkw_ASL(a, 3, nobj, ow, y);
 	if (nobj >= 0 && nobj < n_obj) {
 		no = nobj;
 		noe = no + 1;
@@ -142,6 +147,10 @@ duthese_ASL(ASL *asl, real *H, int nobj, const real *ow, const real *y, fint *ne
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		duthes_ASL(asl, H, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &err_jmp : &err_jmp1;
 	Jsave = *Jp;
 	*Jp = &b;

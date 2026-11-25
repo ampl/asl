@@ -394,9 +394,11 @@ alignarg(more_OPCPOW1:)
 			break;
 
 		case OPVARREF:
-			r = (Eresult*)&w[o[2]];
+			/* A plain-variable min/max operand: w[o[2]] is the */
+			/* variable's own cell, whose aO/adO accumulate the */
+			/* contributions of the range; do not clear them. */
 			o += 3;
-			break;
+			goto endchk;
 
 #ifdef X64_bit_pointers
 		case OPGOTOBalign:
@@ -1386,8 +1388,7 @@ ewalloc3_ASL(ASL_pfgh *asl, EvalWorkspace *ew, int keep)
 	Lh = ew ? 0 : (asl->I.nhop * sizeof(Hesoprod) + sizeof(real) - 1) & ~(sizeof(real)-1);
 /*	Luw = (asl->I.uhlen + sizeof(real) - 1) & ~(sizeof(real)-1); */
 	Luw = 0;
-	if ((nlv = nlvc) < nlvo)
-		nlv = nlvo;
+	nlv = nlvhes_ASL((ASL*)asl);
 	L = La + Le + Lh + Lo + Lu + Luw + Lx + asl->i.derplen
 		+ asl->i.wlen + asl->i.numlen + Lxc
 		+ asl->i.ra_max*sizeof(real) + asl->i.sa_max*sizeof(char*);
@@ -1509,6 +1510,36 @@ ewalloc3_ASL(ASL_pfgh *asl, EvalWorkspace *ew, int keep)
 	}
 #endif
 
+ static void
+sphes_newx(EvalWorkspace *ew)
+{
+	/* After sphes_setup: the setup used cells that evaluations had */
+	/* filled (e.g. the branch an if took), so treat the current x as */
+	/* new: the next sphes or hvcomp evaluates the functions again. */
+	/* An evaluation error here (the caller may call sphsetup after an */
+	/* error at this x) is not reported: the functions stay marked as */
+	/* not evaluated, and their next evaluation reports it. */
+	ASL *a;
+	Jmp_buf b, *Jsave;
+	real *x1;
+	int xk;
+
+	a = ew->asl;
+	x1 = (real*)new_mblk_ASL(a, htcl_ASL(a->i.x0len_));
+	xk = ew->x0kind & ASL_x_known;
+	memcpy(x1, ew->Lastx, a->i.x0len_);
+	Jsave = ew->err_jmpw;
+	ew->err_jmpw = &b;
+	ew->x0kind |= ASL_first_x;
+	if (!setjmp(b.jb))
+		xp_check_ASL(ew, x1);
+	else
+		++ew->nxval;	/* the functions are not evaluated at x */
+	ew->err_jmpw = Jsave;
+	ew->x0kind = (ew->x0kind & ~ASL_first_x) | xk;
+	Del_mblk_ASL(a, x1);
+	}
+
  fint
 sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, int uptri)
 {
@@ -1585,8 +1616,7 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 		}
 	if (y)
 		y = 1;
-	if ((n = nlvo) < nlvc)
-		n = nlvc;
+	n = nlvhes_ASL((ASL*)asl);
 	ushow = asl->P.sph_opts & 2;
 	if ((spi = *pspi)) {
 		if (spi->ow == ow && spi->y == y && spi->nobj == nobj
@@ -1632,7 +1662,8 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 					if (y)
 						goto keep;
 					}
-				else if (b->conno == robjno)
+				else if (b->conno == robjno
+				 || (ow && b->conno <= -2))	/* objectives by ow */
 					goto keep;
 				}
 			continue;
@@ -2082,12 +2113,16 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 		for(i = 0; i < n1; ++i)
 			hr[i] = hcolstarts[i];
 		}
+	if (!(ew->x0kind & ASL_first_x) && x0len > 0)
+		sphes_newx(ew);
 	return rv;
 	}
 
  void
 sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *ow, const real *y)
 {
+	const real *ow1;
+	int nobj1;
 	/* sparse upper triangle of Hessian */
 
 	ASL *a;
@@ -2126,21 +2161,22 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 	asl = (ASL_pfgh*)(a = ew->asl);
 	ASL_CHECK(a, ASL_read_pfgh, "sputhes");
 	++ew->stats.hesmat;
-	if (ew->Derrs)
-		deriv2_errchk_ASL(ew, 3);
+	deriv2_errchkw_ASL(ew, 3, nobj, ow, y);
 	w = ew->w;
 	V = (Varval*)w;
-	xpsg_check_ASL(ew, nobj, ow, y);
 	if (!pspi)
 		pspi = &ew->Sputinfo;
 	i = j = 0;
 	if (y)
 		j = 1;
+	nobj1 = nobj;
+	ow1 = ow;
 	if (nobj >= 0 && nobj < n_obj) {
 		no = nobj;
 		noe = no + 1;
 		owi = ow ? ow + no : &edag_one_ASL;
-		ow = 0;
+		/* ow stays: pshv_prod applies ow[nobj] (0: no objective), */
+		/* as in duthes and fullhes */
 		}
 	else {
 		nobj = -1;
@@ -2150,6 +2186,8 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 			i = 1;
 			}
 		}
+	/* The setup (e.g. on a new workspace) comes before the evaluations: */
+	/* it uses cells that evaluations fill. */
 	if (ew->hes_setup_called != 3 || !(spi = *pspi)) {
 		uptri = 0;
 		if ((ew0 = asl->i.Ew0) && (spi0 = ew0->Sputinfo))
@@ -2161,6 +2199,11 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 		 "\nsphes() call inconsistent with previous sphsetup()\n");
 		exit(1);
 		}
+	xpsg_check_ASL(ew, nobj1, ow1, y);
+	/* The setup may have evaluated the functions again (sphes_newx), */
+	/* clearing the derivative errors recorded before: check those of */
+	/* this evaluation too. */
+	deriv2_errchkw_ASL(ew, 3, nobj1, ow1, y);
 	spi = *pspi;
 	otodo = otodoi = (Hesoprod**)(w + asl->P.otodo);
 	rtodo = (range**)(w + asl->P.rtodo);
@@ -2625,6 +2668,10 @@ sphese_ew_ASL(EvalWorkspace *ew, SputInfo **spi, real *H, int nobj, const real *
 {
 	Jmp_buf **Jp, *Jsave, b;
 
+	if (!nerror) {	/* as without nerror: an error ends the run */
+		sphes_ew_ASL(ew, spi, H, nobj, ow, y);
+		return;
+		}
 	Jp = !nerror || *nerror >= 0 ? &ew->err_jmpw : &ew->err_jmpw1;
 	Jsave = *Jp;
 	*Jp = &b;

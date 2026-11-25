@@ -559,6 +559,51 @@ badread(EdRead *R)
 	fprintf(Stderr, "error reading line %ld of %s:\n\t", R->Line, R->asl->i.filename_);
 	}
 
+/* Check the variable of a linear term in a defined variable's V segment:
+   an index outside the variables and defined variables that the header
+   declares (in the file's numbering) would be used to address the
+   evaluation arrays.  AMPL has written such files (a variable that enters
+   only through the linear part of a defined variable was dropped from the
+   problem, and its internal index kept).  Call it before the evaluation
+   workspaces and Lastx are allocated: it may enlarge x0len.  Returns i. */
+
+ int
+linvarno_ASL(EdRead *R, int i)
+{
+	ASL *asl = R->asl;
+	int n;
+
+	n = asl->i.n_var0 + comb + comc + como + comc1 + como1;
+	if (i < 0 || i >= n)
+		scream(R, ASL_readerr_corrupt,
+			"line %ld of %s: a defined variable's linear term refers to "
+			"variable %d, not one of the %d variables and defined variables\n",
+			R->Line, filename, i, n);
+	/* The values of the first x0len/sizeof(real) variables (the nonlinear */
+	/* ones, by the header) are copied for evaluations.  AMPL has counted */
+	/* a variable as linear that enters a defined variable used nonlinearly */
+	/* only through its linear part: copy that variable's value too. */
+	if (i < asl->i.n_var0 && x0len < (i + 1)*sizeof(real))
+		x0len = (i + 1)*sizeof(real);
+	return i;
+	}
+
+/* Number of leading variables that the sparse Hessian covers: the header's
+   nonlinear variables, or more when linvarno_ASL found a variable beyond
+   them in a defined variable's linear part (x0len was enlarged then). */
+
+ int
+nlvhes_ASL(ASL *asl)
+{
+	int n;
+
+	if ((n = nlvo) < nlvc)
+		n = nlvc;
+	if (n < (int)(x0len/sizeof(real)))
+		n = (int)(x0len/sizeof(real));
+	return n;
+	}
+
  void
 badline(EdRead *R)
 {
@@ -839,7 +884,9 @@ mem_ASL(ASL *asl, unsigned int len)
 #endif
 	ACQUIRE_DTOA_LOCK(MEM_LOCK);
 	memNext = asl->i.memNext;
-	if (memNext + len >= asl->i.memLast) {
+	/* Compare the space left, not memNext + len: memNext is null */
+	/* before the first block, and null + len is undefined. */
+	if (!memNext || len >= (unsigned int)(asl->i.memLast - memNext)) {
 		memNext = (char *)M1alloc(k = Egulp*Sizeof(expr) + len);
 		asl->i.memLast = memNext + k;
 		}

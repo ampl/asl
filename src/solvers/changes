@@ -3522,3 +3522,75 @@ the constraint or objective.
   pfg_read.c:  pfgh_read now provides hvcompe (asl->p.Hvcompe).
   asl.h:  macro fullhese called Fulhes instead of Fulhese (it did not
 compile); new macro sphese (as in solvers2/asl.h).
+
+20261121
+  pfg_read.c and solvers2/pfghread.c:  pfgh_read (and pfg_read) lost the
+defined variables of a term that was merged into an element without
+any, e.g. the term -d in "minimize o: x^3 - d;" with d = (1.64 - x)^2.
+Hessian computations (sphes, fullhes, duthes, and hvcomp with the
+Hessian kept) then omitted the second derivatives of d.
+  pfg_read.c and solvers2/pfghread.c:  in small models with split
+defined variables (several nonlinear terms on different variables),
+pfgh_read wrote a temporary list past the end of its scratch area into
+an array that must stay zero, so a later group term (such as e^2 with
+e a defined variable) lost variables: wrong gradients, Jacobians and
+Hessians; in larger cases memory beyond the block could be overwritten.
+A larger temporary block is now used when the scratch area is too small.
+  solvers2/pfghread.c:  pfgh_read freed the adjoint cell of the argument
+of abs twice, so two later cells could coincide and gradients could be
+wrong, e.g. for "minimize o: (x/(2 + x^2) - 0.8) - d;" with
+d = abs(1.64 - x).
+
+20261123
+  solvers2/asl.h:  with 64-bit MinGW-w64 GCC, setjmp is now
+_setjmp(buf, NULL), so longjmp does not unwind the stack through SEH.
+The unwind information GCC writes for eval2_ASL (a large function with
+a frame pointer) places its XMM register saves above the frame; an
+evaluation error near the top of the stack (e.g., log of a negative
+number in objval called almost directly from main) then crashed in the
+unwinder instead of returning through nerror, in about half the runs.
+Compile with -DASL_SEH_SETJMP to keep the default setjmp.
+
+20261124
+  pshvprod.c:  Hessian-vector products of the solvers library were
+wrong with defined variables in several cases, as in solvers2 before
+this year's fixes:
+ - hvcomp with ihd_limit = 0 (no Hessian kept): a defined variable used
+by both an objective and a constraint, or twice, contributed for only one
+of them (e.g., half the product for "minimize o: d; s.t. c: d <= 100;");
+and a split defined variable passed its contribution to its segments
+before receiving it.
+ - hvcompd and hvcomps (product for one function): they visited every
+shared defined variable, also those of other functions, for which no
+direction was set, and used Hessian funnels that could be stale for a
+function evaluated since; the same two defects as above also applied.
+They now visit only the defined variables of the function, in
+evaluation order, and use no funnels.
+
+20261125
+  Hessian evaluation errors (both libraries):  an undefined second
+derivative (e.g., of Q^1.852 at Q = 0) is now reported by sphes, duthes,
+fullhes and hvcomp (and their nerror variants) only for a function with
+a nonzero weight, also when the function was evaluated before the
+Hessian call; before, an error of a function with weight 0 could be
+reported, and one found while evaluating inside the Hessian call could
+be missed (the Hessian then lacked that term).  solvers2 checked an
+objective's errors under the index of a constraint.
+  sphes.c:  with nobj >= 0, sphes now applies the weight ow[nobj] to the
+whole objective, as duthes, fullhes and hvcomp did; it was applied only
+to the objective's group parts.  With nobj = -1, ow and
+y = NULL, sphsetup omitted the objectives' Hessian structure.
+  solvers2:  a constant base 0 (0^y) has derivatives 0 w.r.t. the
+exponent, as in solvers (an error was reported); with a negative
+constant base, pfgh evaluation returned the value of the power alone
+for the whole function after a deferred derivative error.
+  fg_read.c, fgh_read.c, pfg_read.c, solvers2/fg_read.c, pfghread.c:
+an NL file is rejected when a defined variable counted in the header
+has no V segment, or has two (the expression was left null, and
+evaluation or mqpcheckv crashed); fgh_read also rejects the use of a
+defined variable before its V segment.
+  WANT_INFNAN builds compile again; with them, the infinite derivatives
+of x^p and of a constant base 0 at the singular points have consistent
+signs in both libraries.
+  misc.c, mqpcheckv.c, solvers2/fg_read.c, pfghread.c:  no pointer
+arithmetic on a null pointer (reported by UBSan).
