@@ -23,6 +23,7 @@ if(BUILD_ASL_LIB)
   aslTestChecker(hvseq-asl asl hvseq.c)
   aslTestChecker(degcheck-asl asl degcheck.c DEGCHECK_FG)
   aslTestChecker(sphcheck-asl asl sphcheck.c)
+  aslTestChecker(hesmatrix-asl asl hesmatrix.c)
   # pfg_read is left out: the solvers library does not install evaluation
   # routines for ASL_read_pfg ("objval called before fg_read").
   list(APPEND ASL_TEST_CONFIGS asl:fg asl:fgh asl:pfgh)
@@ -32,6 +33,7 @@ if(BUILD_ASL2_LIB)
   aslTestChecker(hvseq-asl2 asl2 hvseq.c)
   aslTestChecker(degcheck-asl2 asl2 degcheck.c)
   aslTestChecker(sphcheck-asl2 asl2 sphcheck.c)
+  aslTestChecker(hesmatrix-asl2 asl2 hesmatrix.c)
   list(APPEND ASL_TEST_CONFIGS asl2:fg asl2:pfgh)
 endif()
 
@@ -245,3 +247,21 @@ aslHvSeqZeroTest(dvfirst1 y 7)
 aslHvSeqZeroTest(dvfirst1 Y 7)
 aslHvSeqZeroTest(dvfirst2 y 2)
 aslHvSeqZeroTest(zw2 Y 7)
+
+# Every Hessian entry point after every prior evaluation and with every
+# weight setting: an error exactly when a function with an undefined
+# derivative (the second argument: objective o, constraints c) has a
+# nonzero weight.  One process per fixture and library (a few hundred
+# combinations, each on a freshly read stub).
+# "n": with WANT_INFNAN the derivative is Inf/NaN, not an error (pow").
+foreach(case hes2err1:ocn hes2err3:cn hes2err4:on owerr1:c)
+  string(REPLACE ":" ";" parts ${case})
+  list(GET parts 0 fixture)
+  list(GET parts 1 who)
+  foreach(lib asl asl2)
+    if(TARGET hesmatrix-${lib})
+      add_test(NAME hesmatrix.${fixture}.${lib} COMMAND hesmatrix-${lib}
+        ${ASL_TEST_NL_DIR}/${fixture} ${who})
+    endif()
+  endforeach()
+endforeach()

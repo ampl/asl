@@ -1662,7 +1662,8 @@ sphes_setup_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, int nobj, int ow, int y, 
 					if (y)
 						goto keep;
 					}
-				else if (b->conno == robjno)
+				else if (b->conno == robjno
+				 || (ow && b->conno <= -2))	/* objectives by ow */
 					goto keep;
 				}
 			continue;
@@ -2174,7 +2175,8 @@ sphes_ew_ASL(EvalWorkspace *ew, SputInfo **pspi, real *H, int nobj, const real *
 		no = nobj;
 		noe = no + 1;
 		owi = ow ? ow + no : &edag_one_ASL;
-		ow = 0;
+		/* ow stays: pshv_prod applies ow[nobj] (0: no objective), */
+		/* as in duthes and fullhes */
 		}
 	else {
 		nobj = -1;
