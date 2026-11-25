@@ -342,11 +342,10 @@ nextop(Static *S, int n)
 	int *op, *op1;
 
 	op = opnext;
-	op1 = op + n;
-	if (op1 > oplast) {
+	/* Compare the space left: opnext is null before the first block */
+	if (!op || n > oplast - op)
 		op = new_opblock(S, n);
-		op1 = op + n;
-		}
+	op1 = op + n;
 	opnext = op1;
 	return op;
 	}

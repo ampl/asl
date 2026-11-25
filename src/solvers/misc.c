@@ -884,7 +884,9 @@ mem_ASL(ASL *asl, unsigned int len)
 #endif
 	ACQUIRE_DTOA_LOCK(MEM_LOCK);
 	memNext = asl->i.memNext;
-	if (memNext + len >= asl->i.memLast) {
+	/* Compare the space left, not memNext + len: memNext is null */
+	/* before the first block, and null + len is undefined. */
+	if (!memNext || len >= (unsigned int)(asl->i.memLast - memNext)) {
 		memNext = (char *)M1alloc(k = Egulp*Sizeof(expr) + len);
 		asl->i.memLast = memNext + k;
 		}
