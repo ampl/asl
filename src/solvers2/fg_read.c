@@ -933,8 +933,11 @@ eread(EdRead *R, uint *deriv, uint atop)
 				k = powops[2];
 				new_derp(S, ja, ka, rv+1);
 				if (i < 0) {
+					/* A constant base of any sign, as in solvers: */
+					/* derivatives w.r.t. the constant are not */
+					/* needed (for base 0 they do not exist). */
 					t = S->htvals_end[i];
-					if (t > 0.) {
+					{
 						op = nextop(S, 7);
 						if (isodd(op,1)) {
 							op[0] = powops[8];
@@ -947,7 +950,9 @@ eread(EdRead *R, uint *deriv, uint atop)
 							op[5] = j;
 							}
 						b[0] = t;
-						b[1] = log(t);
+						/* eval1: dR = b[1]*t^R for t > 0; */
+						/* 0 for t = 0; an error for t < 0 */
+						b[1] = t > 0. ? log(t) : 0.;
 						opnext = op + 7;
 						return op[6] = rv;
 						}

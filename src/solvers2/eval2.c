@@ -418,13 +418,8 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 				}
 			else if (L != 0.)
 				goto badpowder;
-			else {
+			else	/* 0^x: 0 for x > 0, as in solvers (f_OPCPOW) */
 				g->dL = g->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("pow\"",L,R,3);
-#endif
-				}
 			}
 		goto top;
 	  case nOPPOW01:

@@ -137,6 +137,7 @@ power written first (AMPL writes `d` first).
 | `skip1`, `skipall1` | evaluation errors at some (all) `hvseq` points: points are skipped; with none left, `hvseq` must fail |
 | `ifsphes1` | a single `if` whose branches both have derivatives: `sphes` after the evaluations, with an explicit or an implicit setup |
 | `sphserr1` | a shared defined variable that cannot be evaluated at the start point: `sphsetup` after the evaluation error |
+| `cbase1` | a constant base 0 (`0^(y + 2*z)`, a group function): its derivatives w.r.t. the exponent are 0; solvers2 reported `pow'` (fg) or `pow"` (pfgh) for the derivatives w.r.t. the constant. A constant base in an element (`y * 0^z`) is still rejected by solvers2 pfgh |
 | `hes2err1`, `hes2err2` | `Q^1.852` (`(Q + y)^1.852`) with `Q` fixed at 0 by its bounds: the second derivative is undefined there; `duthes` and `fullhes` returned a Hessian without that term (solvers: 0, solvers2: Inf or NaN) and `sphes` after `sphsetup` did so in solvers2 |
 | `obj2max2` | as `obj2max1`, with both objectives on the same variables (one range): the range is visited, its defined variable of objective 1 is not |
 | `funnel1` | a defined variable shared by the constraints only, with a Hessian funnel |
