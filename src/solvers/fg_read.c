@@ -1437,6 +1437,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 #else /* Just_Linear */
 #define ASL_readtype ASL_read_fg
 	int maxfwd1, ncom, nVread = 0;
+	char *Vseen = 0;	/* defined variables read */
 	func_info *fi;
 	char fname[128];
 	int nlin;
@@ -1689,6 +1690,13 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 					k += SS.nvinc;
 				if (k < nvr || k >= nv)
 					badline(R);
+				/* A repeated V segment would hide a missing one */
+				/* from the count checked at EOF. */
+				if (!Vseen)
+					Vseen = (char*)M1zapalloc(nv - nvr);
+				if (Vseen[k - nvr]++)
+					scream(R, ASL_readerr_corrupt,
+						"defined variable %d is defined twice\n", k);
 				if (j)
 					cexp1_read(R, j, k, nlin);
 				else

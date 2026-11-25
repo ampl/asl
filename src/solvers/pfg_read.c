@@ -4319,6 +4319,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	int allG, i, i1, j, k, *ka, kseen, maxfwd1, nc, nc0, nco, nlin, nlogc, no;
 	int nv, nvc, nvo, nvr, nvextra, nvx, readall;
 	int nVread = 0;
+	char *Vseen = 0;	/* defined variables read */
 	int (*Xscanf)(EdRead*, const char*, ...);
 	ograd *og, **ogp;
 	real t;
@@ -4568,6 +4569,13 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 					k += SS.nvinc;
 				if (k < nvr || k >= nv)
 					badline(R);
+				/* A repeated V segment would hide a missing one */
+				/* from the count checked at EOF. */
+				if (!Vseen)
+					Vseen = (char*)M1zapalloc(nv - nvr);
+				if (Vseen[k - nvr]++)
+					scream(R, ASL_readerr_corrupt,
+						"defined variable %d is defined twice\n", k);
 				cexp_read(R, k, nlin);
 				break;
 			case 'G':
