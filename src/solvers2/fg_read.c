@@ -937,25 +937,23 @@ eread(EdRead *R, uint *deriv, uint atop)
 					/* derivatives w.r.t. the constant are not */
 					/* needed (for base 0 they do not exist). */
 					t = S->htvals_end[i];
-					{
-						op = nextop(S, 7);
-						if (isodd(op,1)) {
-							op[0] = powops[8];
-							op[1] = j;
-							b = (real*)&op[2];
-							}
-						else {
-							op[0] = powops[7];
-							b = (real*)&op[1];
-							op[5] = j;
-							}
-						b[0] = t;
-						/* eval1: dR = b[1]*t^R for t > 0; */
-						/* 0 for t = 0; an error for t < 0 */
-						b[1] = t > 0. ? log(t) : 0.;
-						opnext = op + 7;
-						return op[6] = rv;
+					op = nextop(S, 7);
+					if (isodd(op,1)) {
+						op[0] = powops[8];
+						op[1] = j;
+						b = (real*)&op[2];
 						}
+					else {
+						op[0] = powops[7];
+						b = (real*)&op[1];
+						op[5] = j;
+						}
+					b[0] = t;
+					/* eval1: dR = b[1]*t^R for t > 0; */
+					/* 0 for t = 0; an error for t < 0 */
+					b[1] = t > 0. ? log(t) : 0.;
+					opnext = op + 7;
+					return op[6] = rv;
 					}
 				}
 			}

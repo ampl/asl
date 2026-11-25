@@ -400,10 +400,10 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 		o += 4;
 		if (errchk(rv)) {
 #ifdef WANT_INFNAN
-			if (!L && R < 0.) {
-				errno_set(0);
-				g->dL = negInfinity;
-				g->O = g->dL2 = Infinity;
+			if (!L && R < 0.) {	/* 0^R = Infinity, as in */
+				errno_set(0);	/* eval1: no derivative w.r.t. R */
+				g->dL = g->dL2 = 0.;
+				g->O = Infinity;
 				goto top;
 				}
 #endif

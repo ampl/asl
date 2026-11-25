@@ -185,9 +185,9 @@ f_OP1POW(expr *e A_ASL) /* f_OPPOW for R = numeric constant */
 		else if (R > 1.)
 			e->dL = 0.;
 		/* R == 1. does not arise here */
-		else {
+		else {	/* 0 < R < 1: RL^(R-1) -> +Infinity */
 #ifdef WANT_INFNAN
-			e->dL = negInfinity;
+			e->dL = Infinity;
 #else
 			introuble2("pow'",L,R,2);
 #endif
