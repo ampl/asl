@@ -132,6 +132,19 @@ foreach(file ${ASL_TEST_FIXTURES})
       aslReadTest(${fixture} asl2 fg "${rejected}")
       aslReadTest(${fixture} asl2 pfgh "${rejected}")
     endif()
+  elseif(fixture MATCHES "^dvmiss")
+    # A defined variable counted in the header is not in the file: every
+    # reader must reject it (at the end of the file, or, fgh, at its use).
+    set(rejected "not in the file|used before its definition")
+    if(BUILD_ASL_LIB)
+      aslReadTest(${fixture} asl fg "${rejected}")
+      aslReadTest(${fixture} asl fgh "${rejected}")
+      aslReadTest(${fixture} asl pfgh "${rejected}")
+    endif()
+    if(BUILD_ASL2_LIB)
+      aslReadTest(${fixture} asl2 fg "${rejected}")
+      aslReadTest(${fixture} asl2 pfgh "${rejected}")
+    endif()
   elseif(fixture MATCHES "^owner_")
     # Defined variables whose owner field contradicts the header: rejected,
     # except by the solvers pfg/pfgh reader, which does not use the field.

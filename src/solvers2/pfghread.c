@@ -6035,6 +6035,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	func_info *fi;
 	int Ncom1, allG, i, i1, j, k, *ka, kseen, nc, nc0, nco, nlcon, nlin, nlogc, no;
 	int nv, nv01, nvc, nvo, nvr, nvextra, nvx, *o, readall;
+	int nVread = 0;
 	int (*Xscanf)(EdRead*, const char*, ...);
 	ograd *og, **ogp;
 	real *oc, t;
@@ -6245,6 +6246,14 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		ER.can_end = 1;
 		i = edag_peek(R);
 		if (i == EOF) {
+#ifndef Just_Linear
+			/* Every defined variable the header counts must be in */
+			/* the file (left out, its expression stays null). */
+			if (nVread < Ncom)
+				scream(R, ASL_readerr_corrupt,
+		"%d of the %d defined variables in the header are not in the file\n",
+					Ncom - nVread, Ncom);
+#endif
 			fclose(nl);
 			do_ewalk(S);
 			for(etofree1 = SS.etofree; (etofree = etofree1); ) {
@@ -6333,6 +6342,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
+				++nVread;	/* see the check at EOF */
 				/* The owner must agree with the header: a zero owner */
 				/* for a variable counted as used by one constraint */
 				/* or objective (or the converse) would select the */

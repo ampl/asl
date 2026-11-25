@@ -1436,7 +1436,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 #define ASL_readtype ASL_read_f
 #else /* Just_Linear */
 #define ASL_readtype ASL_read_fg
-	int maxfwd1, ncom;
+	int maxfwd1, ncom, nVread = 0;
 	func_info *fi;
 	char fname[128];
 	int nlin;
@@ -1581,6 +1581,14 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 		i = edag_peek(R);
 		if (i == EOF) {
 #ifndef Just_Linear
+			/* Every defined variable the header counts must be in */
+			/* the file (left out, its expression stays null). */
+			if (nVread < ncom)
+				scream(R, ASL_readerr_corrupt,
+		"%d of the %d defined variables in the header are not in the file\n",
+					ncom - nVread, ncom);
+#endif
+#ifndef Just_Linear
 			free(imap);
 			/* Make amax long enough for nlc to handle */
 			/* var_e[i].a for common variables i. */
@@ -1668,6 +1676,7 @@ fg_read_ASL(ASL *a, FILE *nl, int flags)
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
+				++nVread;	/* see the check at EOF */
 				/* The owner must agree with the header: a zero owner */
 				/* for a variable counted as used by one constraint */
 				/* or objective (or the converse) would select the */

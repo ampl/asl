@@ -153,6 +153,7 @@ power written first (AMPL writes `d` first).
 | `cbase2` | the same in elements (`y * 0^(1 + z^2)`): solvers2 pfgh reported `pow"` for its Hessian |
 | `owerr1` | `sqrt(Q)` with `Q` fixed at 0 in the constraint only, the objective given by its weight (`nobj = -1`, `ow`) and the constraint with weight 0: no error may be reported (solvers2 checked the objective under the constraint's index) |
 | `negbase1` | a negative constant base with an integer exponent, `(-2)^w + w^2` at `w = 2`: the values (8, and 8 for the constraint) must agree between the readers; solvers2 pfgh returned the power term's value for the whole function (4) because its deferred derivative error ended the evaluation. Only the derivative tests run (the derivative is undefined at every point), not with `WANT_INFNAN` (solvers2 pfgh then reports `pow'`, the other readers give NaN) |
+| `dvmiss1` | `dvmiss1.mod` with the V segment of one defined variable removed (the header counts it): every reader must reject the file; they left a null expression, and `mqpcheckv` (qp_read users) crashed on it |
 | `hes2err4` | `Q^1.852` with `Q` fixed at 0 in the objective only |
 | `hes2err3` | `Q^1.852` with `Q` fixed at 0 in the constraint only: an error with the constraint's weight, none with weight 0 |
 | `hes2err1`, `hes2err2` | `Q^1.852` (`(Q + y)^1.852`) with `Q` fixed at 0 by its bounds: the second derivative is undefined there; `duthes` and `fullhes` returned a Hessian without that term (solvers: 0, solvers2: Inf or NaN) and `sphes` after `sphsetup` did so in solvers2 |

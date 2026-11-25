@@ -427,6 +427,13 @@ eread(EdRead *R, int deriv)
 				k += nvinc;
 			if (k > max_var)
 				badline(R);
+			/* A defined variable must be read before it is used: */
+			/* its fields (e.g., a for imap) are not set before. */
+			if (k >= nv0 && k < max_var
+			 && !(k < nv01 ? cexps[k-nv0].e : cexps1[k-nv01].e))
+				scream(R, ASL_readerr_corrupt,
+					"defined variable %d is used before its definition\n",
+					k);
 			if (k < nv01 && deriv && !zc[k]++)
 				zci[nzc++] = k;
 			return (expr *)(var_e + k);
@@ -1403,6 +1410,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 	expr_v *e;
 	func_info *fi;
 	int i, j, k, *ka, maxfwd1, nc, nc0, nc1, nco, ncom, nlcon, nlin;
+	int nVread = 0;
 	int no, nv, nvc, nvo, nvr, nxv, readall;
 	int (*Xscanf)(EdRead*, const char*, ...);
 	ograd *og, **ogp;
@@ -1521,6 +1529,14 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 		ER.can_end = 1;
 		i = edag_peek(R);
 		if (i == EOF) {
+#ifndef Just_Linear
+			/* Every defined variable the header counts must be in */
+			/* the file (left out, its expression stays null). */
+			if (nVread < ncom)
+				scream(R, ASL_readerr_corrupt,
+		"%d of the %d defined variables in the header are not in the file\n",
+					ncom - nVread, ncom);
+#endif
 			free(imap);
 			adjoints = (real *)M1zapalloc(amax*Sizeof(real));
 			adjoints_nv1 = &adjoints[nv1];
@@ -1659,6 +1675,7 @@ fgh_read_ASL(ASL *a, FILE *nl, int flags)
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
+				++nVread;	/* see the check at EOF */
 				/* The owner must agree with the header: a zero owner */
 				/* for a variable counted as used by one constraint */
 				/* or objective (or the converse) would select the */

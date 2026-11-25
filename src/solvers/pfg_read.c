@@ -4318,6 +4318,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 	func_info *fi;
 	int allG, i, i1, j, k, *ka, kseen, maxfwd1, nc, nc0, nco, nlin, nlogc, no;
 	int nv, nvc, nvo, nvr, nvextra, nvx, readall;
+	int nVread = 0;
 	int (*Xscanf)(EdRead*, const char*, ...);
 	ograd *og, **ogp;
 	real t;
@@ -4454,6 +4455,14 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 		ER.can_end = 1;
 		i = edag_peek(R);
 		if (i == EOF) {
+#ifndef Just_Linear
+			/* Every defined variable the header counts must be in */
+			/* the file (left out, its expression stays null). */
+			if (nVread < Ncom)
+				scream(R, ASL_readerr_corrupt,
+		"%d of the %d defined variables in the header are not in the file\n",
+					Ncom - nVread, Ncom);
+#endif
 			fclose(nl);
 			do_ewalk(S);
 			if (imap)
@@ -4554,6 +4563,7 @@ pfg_read_ASL(ASL *a, FILE *nl, int flags)
 			case 'V':
 				if (Xscanf(R, "%d %d %d", &k, &nlin, &j) != 3)
 					badline(R);
+				++nVread;	/* see the check at EOF */
 				if (k >= SS.nvar0)
 					k += SS.nvinc;
 				if (k < nvr || k >= nv)
