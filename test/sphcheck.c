@@ -13,7 +13,8 @@
  * so that the Hessian call evaluates first), sphsetup and sphes ("s"),
  * sphsetup and hvcomp ("h"), duthes ("d") or fullhes ("f") must report
  * the evaluation error; with a third argument "y0" the constraints have
- * weight 0 and no error may be reported for them (they used to
+ * weight 0 and no error may be reported for them; with "ow" the same,
+ * with the objective given by its weight (nobj = -1, ow = {1}) (they used to
  * return a Hessian without that term, or with Inf or stale values); built
  * with WANT_INFNAN, they report no error and the first diagonal element
  * is +Infinity.
@@ -31,7 +32,7 @@ int main(int argc, char **argv) {
 	fint ne = 0, nz;
 	real *c, *g, *H1, *H2, d, t, *x, *y;
 	int i, j, nobj;
-	if (argc < 2) { fprintf(stderr, "usage: sphcheck stub [e|s|d|f|h|S|D|F|H [y0]]\n"); return 2; }
+	if (argc < 2) { fprintf(stderr, "usage: sphcheck stub [e|s|d|f|h|S|D|F|H [y0|ow]]\n"); return 2; }
 	asl = ASL_alloc(ASL_read_pfgh);
 	nl = jac0dim(argv[1], (fint)strlen(argv[1]));
 	X0 = (real*)Malloc(n_var*sizeof(real));
@@ -49,9 +50,16 @@ int main(int argc, char **argv) {
 		return 0;
 		}
 	if (argc > 2 && strchr("sdfhSDFH", *argv[2])) {	/* Hessian error expected */
-		real *yw = n_con ? y : 0, *v;
+		real *yw = n_con ? y : 0, *v, *ow = 0, one = 1.;
 		if (argc > 3 && !strcmp(argv[3], "y0"))
 			yw = 0;	/* constraints with weight 0: no error */
+		if (argc > 3 && !strcmp(argv[3], "ow")) {
+			/* objective by its weight (nobj = -1), constraints with */
+			/* weight 0: their errors must not be reported */
+			yw = 0;
+			ow = &one;
+			nobj = -1;
+			}
 		if (islower(*argv[2])) {	/* else the Hessian call evaluates */
 			if (n_obj) objval(0, x, &ne);
 			if (n_con) conval(x, c, &ne);
@@ -60,19 +68,19 @@ int main(int argc, char **argv) {
 			xknown(x);
 		H1 = (real*)Malloc(((size_t)n_var*(n_var + 2) + 1)*sizeof(real));
 		if (tolower(*argv[2]) == 's') {
-			sphsetup(nobj, 0, yw != 0, 1);
-			sphes(H1, nobj, 0, yw);
+			sphsetup(nobj, ow != 0, yw != 0, 1);
+			sphes(H1, nobj, ow, yw);
 			}
 		else if (tolower(*argv[2]) == 'h') {	/* sphsetup, then hvcomp */
-			sphsetup(nobj, 0, yw != 0, 1);	/* clears the errors */
+			sphsetup(nobj, ow != 0, yw != 0, 1);	/* clears the errors */
 			v = H1 + n_var;
 			for (i = 0; i < n_var; i++) v[i] = i == 0;
-			hvcomp(H1, v, nobj, 0, yw);	/* H1[0] = H[0,0] */
+			hvcomp(H1, v, nobj, ow, yw);	/* H1[0] = H[0,0] */
 			}
 		else if (tolower(*argv[2]) == 'd')
-			duthes(H1, nobj, 0, yw);
+			duthes(H1, nobj, ow, yw);
 		else
-			fullhes(H1, n_var, nobj, 0, yw);
+			fullhes(H1, n_var, nobj, ow, yw);
 		/* With WANT_INFNAN no error: H[0] (the first diagonal */
 		/* element in all layouts) is then +Infinity (hvcomp: may be */
 		/* NaN, Inf times 0 in the products) */

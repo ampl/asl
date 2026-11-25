@@ -139,7 +139,9 @@ power written first (AMPL writes `d` first).
 | `skip1`, `skipall1` | evaluation errors at some (all) `hvseq` points: points are skipped; with none left, `hvseq` must fail |
 | `ifsphes1` | a single `if` whose branches both have derivatives: `sphes` after the evaluations, with an explicit or an implicit setup |
 | `sphserr1` | a shared defined variable that cannot be evaluated at the start point: `sphsetup` after the evaluation error |
-| `cbase1` | a constant base 0 (`0^(y + 2*z)`, a group function): its derivatives w.r.t. the exponent are 0; solvers2 reported `pow'` (fg) or `pow"` (pfgh) for the derivatives w.r.t. the constant. A constant base in an element (`y * 0^z`) still makes the solvers2 pfgh Hessian report `pow"` |
+| `cbase1` | a constant base 0 (`0^(y + 2*z)`, a group function): its derivatives w.r.t. the exponent are 0; solvers2 reported `pow'` (fg) or `pow"` (pfgh) for the derivatives w.r.t. the constant. |
+| `cbase2` | the same in elements (`y * 0^(1 + z^2)`): solvers2 pfgh reported `pow"` for its Hessian |
+| `owerr1` | `sqrt(Q)` with `Q` fixed at 0 in the constraint only, the objective given by its weight (`nobj = -1`, `ow`) and the constraint with weight 0: no error may be reported (solvers2 checked the objective under the constraint's index) |
 | `hes2err3` | `Q^1.852` with `Q` fixed at 0 in the constraint only: an error with the constraint's weight, none with weight 0 |
 | `hes2err1`, `hes2err2` | `Q^1.852` (`(Q + y)^1.852`) with `Q` fixed at 0 by its bounds: the second derivative is undefined there; `duthes` and `fullhes` returned a Hessian without that term (solvers: 0, solvers2: Inf or NaN) and `sphes` after `sphsetup` did so in solvers2 |
 | `obj2max2` | as `obj2max1`, with both objectives on the same variables (one range): the range is visited, its defined variable of objective 1 is not |

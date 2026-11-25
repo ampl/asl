@@ -445,11 +445,8 @@ eval2_ASL(int *o, EvalWorkspace *ew)
 			else if (L != 0.)
 				goto badpowder;
 			else {
+				/* 0^R: 0 for R > 0, as in solvers (f_OPCPOW) */
 				r->dL = r->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("pow\"",L,R,3);
-#endif
 				}
 			}
 		goto top;
@@ -2199,11 +2196,8 @@ alignarg(more_func1:)
 			else if (L != 0.)
 				goto badsignpowder;
 			else {
+				/* signpow(0,R) = 0 for R > 0 */
 				r->dL = r->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("signpow\"",L,R,3);
-#endif
 				}
 			}
 		goto top;
@@ -2447,11 +2441,8 @@ alignarg(more_Csignpow1:)
 			else if (L != 0.)
 				goto badsignpowder;
 			else {
+				/* signpow(0,R) = 0 for R > 0 */
 				g->dL = g->dL2 = 0.;
-#ifndef WANT_INFNAM
-				if (R < 2.)
-					introuble2("pow\"",L,R,3);
-#endif
 				}
 			}
 		goto top;
@@ -3559,7 +3550,7 @@ conpgrd_ew_ASL(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror)
 xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t nx,
 	real (*ev)(EvalWorkspace *ew, int i, const real *X, fint *nerror),
 	void (*gv)(EvalWorkspace *ew, int i, const real *X, real *G, fint *nerror),
-	const real *y, int oxk)
+	const real *y, int oxk, int isobj)
 {
 	int i, i1, i2, needeval;
 	ps_func *f;
@@ -3583,7 +3574,8 @@ xpsgchk(EvalWorkspace *ew, ps_func *f0, size_t *xv, size_t *xvg, int n, size_t n
 			if (y[i]) {
 				while(i1 <= i2 && y[i1])
 					++i1;
-				deriv_errchk_ASL(ew, i, i1-i, 2);
+				/* objective i is -(i+1), as in solvers */
+				deriv_errchk_ASL(ew, isobj ? -(i+1) : i, i1-i, 2);
 				}
 			}
 		ew->x0kind |= ASL_x_known;
@@ -3698,7 +3690,7 @@ xpsg_check_ASL(EvalWorkspace *ew, int nobj, const real *ow, const real *y)
 	ew->x0kind = oxk | ASL_x_known;
 	if (y)
 		xpsgchk(ew, asl->P.cps, ew->ncxval, ew->ncxgval, nc,
-			nx, conpival_ew_ASL, conpgrd_ew_ASL, y, oxk);
+			nx, conpival_ew_ASL, conpgrd_ew_ASL, y, oxk, 0);
 	f = asl->P.ops;
 	xv = ew->noxval;
 	xvg = ew->noxgval;
@@ -3719,7 +3711,7 @@ xpsg_check_ASL(EvalWorkspace *ew, int nobj, const real *ow, const real *y)
 			objpgrd_ew_ASL(ew, nobj, ew->Lastx, 0, 0);
 		}
 	else if (ow && no)
-		xpsgchk(ew, f, xv, xvg, no, nx, objpval_ew_ASL, objpgrd_ew_ASL, ow, oxk);
+		xpsgchk(ew, f, xv, xvg, no, nx, objpval_ew_ASL, objpgrd_ew_ASL, ow, oxk, 1);
  done:
 	ew->x0kind = oxk | (ew->x0kind & ASL_need_funnel);
 	return;

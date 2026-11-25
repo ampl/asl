@@ -189,6 +189,20 @@ foreach(file ${ASL_TEST_FIXTURES})
         endforeach()
       endif()
     endforeach()
+  elseif(fixture MATCHES "^owerr")
+    # An undefined derivative only in a constraint with weight 0, the
+    # objective by its weight (nobj = -1, ow): no error may be reported
+    # (solvers2 checked the objective under the constraint's index).
+    foreach(lib asl asl2)
+      if(TARGET sphcheck-${lib})
+        foreach(mode s d f h)
+          add_test(NAME owerr.${fixture}.${lib}-${mode} COMMAND sphcheck-${lib}
+            ${ASL_TEST_NL_DIR}/${fixture} ${mode} ow)
+          set_tests_properties(owerr.${fixture}.${lib}-${mode} PROPERTIES
+            PASS_REGULAR_EXPRESSION "no evaluation error reported")
+        endforeach()
+      endif()
+    endforeach()
   elseif(fixture MATCHES "^skipall")
     # Every hvseq point has an evaluation error: hvseq must fail (exit 4).
     foreach(lib asl asl2)
