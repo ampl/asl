@@ -91,7 +91,7 @@ may be reported (built with `WANT_INFNAN`: no error, and `H[Q,Q]` is `+inf`).
 Hessian entry point (`sphes` with and without `sphsetup`, `sphese`, `hvcomp`
 with and without `sphsetup`, `duthes`, `duthese`, `fullhes`, `fullhese`),
 prior evaluation at the start point (none, `objval`, `conval`, both, `xknown`)
-and weights (`nobj`, `ow`, `y`, including zero weights), 270 in all, and checks
+and weights (`nobj`, `ow`, `y`, including zero weights and a weight 2.5), 360 in all, and checks
 that an evaluation error is reported exactly when a function with an undefined
 derivative has a nonzero weight (built with `WANT_INFNAN`: never for `pow"`;
 `sqrt'` still reports). It runs on

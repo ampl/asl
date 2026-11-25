@@ -10,7 +10,8 @@
  *   - prior evaluation at x: none (the Hessian call evaluates first),
  *     objval, conval, both, xknown;
  *   - weights: (nobj, ow, y) = (0, -, 1), (0, -, -), (0, {0}, 1),
- *     (-1, {1}, -), (-1, -, 1), (-1, {1}, 0),
+ *     (-1, {1}, -), (-1, -, 1), (-1, {1}, 0), (0, {2.5}, 1), (-1, {2.5}, -)
+ *     (2.5 shows a weight that is applied as 1 or ignored),
  * the stub is read again (a fresh state), the calls are made, and an
  * evaluation error must be reported exactly when a function named by WHO
  * has a nonzero weight.  Built with WANT_INFNAN and "n", no error is
@@ -24,7 +25,7 @@
 #include <string.h>
 #include "asl_pfgh.h"
 
-enum { ENTRIES = 9, PRIORS = 5, WEIGHTS = 6 };
+enum { ENTRIES = 9, PRIORS = 5, WEIGHTS = 8 };
 static const char *entry_name[ENTRIES] = { "sphes", "setup+sphes",
 	"setup+sphese", "hvcomp", "setup+hvcomp", "duthes", "duthese",
 	"fullhes", "fullhese" };
@@ -35,14 +36,14 @@ static const char *prior_name[PRIORS] = { "none", "objval", "conval",
    zeros); the objective and the constraints are used when their weight
    is nonzero */
 static void weights(int w, int *nobj, real **ow, real **y, real *zero1,
-	real *one1, real *ones, real *zeros, int *uo, int *uc)
+	real *one1, real *two5, real *ones, real *zeros, int *uo, int *uc)
 {
-	static const int nob[WEIGHTS] = { 0, 0, 0, -1, -1, -1 };
+	static const int nob[WEIGHTS] = { 0, 0, 0, -1, -1, -1, 0, -1 };
 	*nobj = nob[w];
-	*ow = w == 2 ? zero1 : w == 3 || w == 5 ? one1 : 0;
-	*y = w == 0 || w == 2 || w == 4 ? ones : w == 5 ? zeros : 0;
-	*uo = w == 0 || w == 1 || w == 3 || w == 5;
-	*uc = w == 0 || w == 2 || w == 4;
+	*ow = w == 2 ? zero1 : w == 3 || w == 5 ? one1 : w >= 6 ? two5 : 0;
+	*y = w == 0 || w == 2 || w == 4 || w == 6 ? ones : w == 5 ? zeros : 0;
+	*uo = w != 2 && w != 4;
+	*uc = w == 0 || w == 2 || w == 4 || w == 6;
 	}
 
 /* |a - b| small relative to their size (both finite) */
@@ -99,7 +100,7 @@ static int run(const char *stub, int e, int p, int w, int *val)
 	FILE *nl;
 	Jmp_buf jb;
 	fint ne = 0;
-	real *H, *c, *ones, *zeros, *ow, *y, *v, zero1 = 0., one1 = 1.;
+	real *H, *c, *ones, *zeros, *ow, *y, *v, zero1 = 0., one1 = 1., two5 = 2.5;
 	int i, nobj, uo, uc, err;
 
 	asl = ASL_alloc(ASL_read_pfgh);
@@ -115,7 +116,8 @@ static int run(const char *stub, int e, int p, int w, int *val)
 		ones[i] = 1.;
 		zeros[i] = 0.;
 		}
-	weights(w, &nobj, &ow, &y, &zero1, &one1, ones, zeros, &uo, &uc);
+	weights(w, &nobj, &ow, &y, &zero1, &one1, &two5, ones, zeros,
+		&uo, &uc);
 	err = 0;
 	err_jmp = &jb;	/* an error longjmps here silently */
 	if (setjmp(jb.jb))
@@ -183,7 +185,7 @@ int main(int argc, char **argv)
 	for(e = 0; e < ENTRIES; ++e)
 	 for(p = 0; p < PRIORS; ++p)
 	  for(w = 0; w < WEIGHTS; ++w) {
-		weights(w, &nobj, &ow, &y, zp, zp, zp, zp, &uo, &uc);
+		weights(w, &nobj, &ow, &y, zp, zp, zp, zp, zp, &uo, &uc);
 		expect = (o && uo) || (c && uc);
 #ifdef WANT_INFNAN
 		if (strchr(argv[2], 'n'))
