@@ -165,6 +165,8 @@ Errprint(const char *fmt, ...)
  void deriv_errclear_ASL(Edaginfo *I) {}
  void deriv_errchk_ASL(ASL *asl, int coi, int n, int jv) {}
  void deriv2_errchk_ASL(ASL *asl, int jv) {}
+ void deriv2_errchkw_ASL(ASL *asl, int jv, int nobj, const real *ow,
+	const real *y) {}
 #else /*}{*/
  typedef struct DerrRecord DerrRecord;
  typedef void (*DerrPrint)(ASL*, DerrRecord*);
